@@ -1,0 +1,105 @@
+name: Release
+
+# 打 tag 即出包：push `v*` 标签触发（如 v2.0.0）→ 类型检查 + 构建 →
+# 打包 chrome / edge / firefox 三种产物 → 创建 GitHub Release 并附上下载链接。
+on:
+    push:
+        tags:
+            - 'v*'
+    # 手动触发：只构建并上传工作流产物，不创建 Release，便于发版前试包
+    workflow_dispatch:
+
+permissions:
+    contents: write
+
+concurrency:
+    group: release-${{ github.ref }}
+    cancel-in-progress: false
+
+jobs:
+    build:
+        name: Build & Package
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Node
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 22
+                  cache: npm
+
+            - name: Install dependencies
+              run: npm ci
+
+            - name: Type check
+              run: npm run compile
+
+            - name: Verify tag matches package.json version
+              if: startsWith(github.ref, 'refs/tags/')
+              run: |
+                  TAG="${GITHUB_REF_NAME#v}"
+                  PKG="$(node -p "require('./package.json').version")"
+                  if [ "$TAG" != "$PKG" ]; then
+                    echo "::error::tag v$TAG 与 package.json 版本 $PKG 不一致，请先同步版本号再打 tag"
+                    exit 1
+                  fi
+                  echo "版本校验通过：$PKG"
+
+            - name: Package (chrome / edge / firefox)
+              run: |
+                  npx wxt zip -b chrome
+                  npx wxt zip -b edge
+                  npx wxt zip -b firefox --mv2
+                  ls -lh .output/*.zip
+
+            - name: Collect artifacts
+              run: |
+                  VERSION="$(node -p "require('./package.json').version")"
+                  mkdir -p dist
+                  for browser in chrome edge firefox; do
+                    src=".output/new-tab-vue3-chrome-extension-${VERSION}-${browser}.zip"
+                    if [ ! -f "$src" ]; then
+                      echo "::error::缺少产物 $src"
+                      exit 1
+                    fi
+                    cp "$src" "dist/new-tab-pro-v${VERSION}-${browser}.zip"
+                  done
+                  # Firefox 商店要求附带源码包；存在就一并收
+                  if [ -f ".output/new-tab-vue3-chrome-extension-${VERSION}-sources.zip" ]; then
+                    cp ".output/new-tab-vue3-chrome-extension-${VERSION}-sources.zip" "dist/new-tab-pro-v${VERSION}-sources.zip"
+                  fi
+                  cd dist && sha256sum *.zip > SHA256SUMS.txt && cat SHA256SUMS.txt
+
+            - name: Upload workflow artifacts
+              uses: actions/upload-artifact@v4
+              with:
+                  name: release-zips
+                  path: dist/*
+
+            - name: Create GitHub Release
+              if: startsWith(github.ref, 'refs/tags/')
+              uses: softprops/action-gh-release@v2
+              with:
+                  tag_name: ${{ github.ref_name }}
+                  name: New Tab Pro ${{ github.ref_name }}
+                  draft: false
+                  prerelease: contains(github.ref_name, '-')
+                  generate_release_notes: true
+                  files: dist/*
+                  body: |
+                      ## 安装
+
+                      扩展需先解压再「加载已解压的扩展程序」；以下包都无需构建。
+
+                      | 包 | 适用 | 安装方式 |
+                      | --- | --- | --- |
+                      | `new-tab-pro-${{ github.ref_name }}-chrome.zip` | Chrome / 基于 Chromium 的浏览器 | 解压后打开 `chrome://extensions` → 开发者模式 → 「加载已解压的扩展程序」 |
+                      | `new-tab-pro-${{ github.ref_name }}-edge.zip` | Microsoft Edge | 解压后打开 `edge://extensions` → 开发者模式 → 「加载解压缩的扩展」 |
+                      | `new-tab-pro-${{ github.ref_name }}-firefox.zip` | Firefox（Manifest V2） | 解压后在 `about:debugging#/runtime/this-firefox` 临时载入，或提交 AMO |
+                      | `new-tab-pro-${{ github.ref_name }}-sources.zip` | Firefox 商店审核用源码包 | 开发者/审核用 |
+
+                      校验和见 `SHA256SUMS.txt`。
+
+                      > 只想装来用、不折腾构建链的话，1.x 原生 JS 版源码仍可从 [已归档仓库](https://github.com/lucky845/new-tab-chrome-extension) 获取。

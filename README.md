@@ -3,10 +3,9 @@
 一个纯本地的 Chrome / Edge 新标签页扩展：液态玻璃视觉、可自定义的快捷访问、壁纸、天气、待办、便签、番茄钟与小工具，全部数据只存在本机。
 
 > [!IMPORTANT]
-> **本仓库是 2.0 重写版（Vue 3 + TypeScript + WXT）。**
-> 1.x 原生 JS 版本继续维护于 [new-tab-chrome-extension](https://github.com/lucky845/new-tab-chrome-extension)：
-> 只想装来用、不折腾构建链的话，暂时仍装 1.x（Edge 加载项商店搜索 **New Tab Pro**，或克隆老仓库直接加载，无需 `npm install`）。
-> 2.0 目前处于本地测试阶段，尚未发布商店版本。
+> **1.x（原生 JS 版）已归档，本项目从 2.0 起在此仓库独立迭代。**
+> 旧仓库 [new-tab-chrome-extension](https://github.com/lucky845/new-tab-chrome-extension) 已设为只读存档，代码保持原样，仅历史可查。
+> 2.0 用 Vue 3 + TypeScript + WXT 全面重写，功能对齐 1.x 并继续开发；目前尚未发布商店版本，请从下方「快速开始」或 Release 附件获取。
 
 ## 版本对照
 
@@ -18,7 +17,7 @@
 | 快捷访问   | 每页 10 格，图标下带名称，文件夹 2×2 预览 + 数量角标                   | 图标方块 + 名称外置，文件夹九宫格分页、无角标             |
 | 拖拽       | SortableJS                                                             | 指针事件自研（换位补间 / 悬停合并 / 停留新建文件夹）      |
 | 面板与弹窗 | 各自实现                                                               | 统一磨砂材质 + 从点击处展开的进场动画                     |
-| 状态       | 功能冻结，只做必要维护                                                 | 活跃开发，本地测试中                                      |
+| 状态       | **已归档**，只读存档                                                   | 活跃开发                                                  |
 
 ## 特性
 
@@ -70,16 +69,19 @@ npm run build        # 产物输出到 .output/chrome-mv3
 
 ## 常用脚本
 
-| 命令                    | 说明                                    |
-| ----------------------- | --------------------------------------- |
-| `npm run dev`           | 开发模式（WXT）                         |
-| `npm run build`         | 构建 Chrome 版本到 `.output/chrome-mv3` |
-| `npm run build:firefox` | 构建 Firefox 版本                       |
-| `npm run zip`           | 打包产物，用于商店提交                  |
-| `npm run compile`       | `vue-tsc --noEmit` 类型检查             |
-| `npm run lint`          | ESLint（当前仅校验配置文件）+ 类型检查  |
-| `npm run lint:fix`      | ESLint 自动修复 + 类型检查              |
-| `npm run format`        | Prettier 格式化 `src/`                  |
+| 命令                           | 说明                                    |
+| ------------------------------ | --------------------------------------- |
+| `npm run dev`                  | 开发模式（WXT）                         |
+| `npm run build`                | 构建 Chrome 版本到 `.output/chrome-mv3` |
+| `npm run build:firefox`        | 构建 Firefox 版本                       |
+| `npm run zip`                  | 打包当前浏览器产物，用于商店提交        |
+| `npx wxt zip -b firefox --mv2` | 打 Firefox（Manifest V2）包             |
+
+三种浏览器的成品包由 CI 在打 tag 时自动构建，见下方「发布流程」。
+| `npm run compile` | `vue-tsc --noEmit` 类型检查 |
+| `npm run lint` | ESLint（当前仅校验配置文件）+ 类型检查 |
+| `npm run lint:fix` | ESLint 自动修复 + 类型检查 |
+| `npm run format` | Prettier 格式化 `src/` |
 
 ## 项目结构
 
@@ -114,6 +116,26 @@ WXT_VUE3_API_PROXY=1 npx wxt . -p 3100
 - 默认关闭，只在 `import.meta.env.DEV` 且非扩展源时生效；生产构建里该前缀恒为 `undefined`，请求原样直连。
 - 扩展正式运行时依赖 `host_permissions`，不经过反代。
 - `wxt` 必须带项目根目录参数（`npx wxt .`），否则它会把上级目录当成项目根，去 `./dev/entrypoints` 找入口并报错。
+
+## 发布流程
+
+打 tag 即出包，流水线见 [`.github/workflows/release.yml`](.github/workflows/release.yml)：
+
+```bash
+npm version patch        # 或 minor / major，自动改 package.json 并打 v 前缀 tag
+git push && git push --tags
+```
+
+推送 `v*` 标签后 CI 依次执行：`npm ci` → `npm run compile` 类型检查 → **校验 tag 版本与 `package.json` 一致**（不一致直接失败）→ 用 WXT 分别打包 Chrome / Edge / Firefox(MV2) → 汇总 `SHA256SUMS.txt` → 创建 GitHub Release 并附上全部产物。
+
+| Release 附件                      | 适用                         |
+| --------------------------------- | ---------------------------- |
+| `new-tab-pro-v<版本>-chrome.zip`  | Chrome 及同内核浏览器        |
+| `new-tab-pro-v<版本>-edge.zip`    | Microsoft Edge               |
+| `new-tab-pro-v<版本>-firefox.zip` | Firefox（Manifest V2）       |
+| `new-tab-pro-v<版本>-sources.zip` | Firefox 商店审核所需的源码包 |
+
+也可以在 Actions 页手动触发 `Release` 工作流：只构建并上传工作流产物，不创建 Release，用来发版前试包。
 
 ## 权限说明
 
