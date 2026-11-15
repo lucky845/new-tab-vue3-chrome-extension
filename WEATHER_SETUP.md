@@ -21,15 +21,15 @@ New Tab Pro 现在支持实时天气信息显示！天气组件会显示在页�
 
 ### 方法1：修改配置文件（推荐）
 
-1. 打开 `js/config/weather-config.js` 文件
-2. 找到 `API_KEY` 字段
-3. 将 `'your_amap_api_key_here'` 替换为您的实际API密钥
-4. 保存文件
+1. 打开 `src/config/weather.ts`（Vue 3 版本，TypeScript）
+2. 找到 `WEATHER_CONFIG` 的 `API_KEY` 字段
+3. 将 `''` 替换为您的实际 API 密钥，保存后重新构建扩展
+4. 留空 `API_KEY` 则走 Open-Meteo 免费天气，无需密钥（推荐）
 
-```javascript
-const WEATHER_CONFIG = {
-    API_KEY: 'your_amap_api_key_here', // 替换为您的密钥
-    // ... 其他配置
+```typescript
+export const WEATHER_CONFIG: WeatherConfig = {
+    API_KEY: '', // 填入高德 Web服务 Key；留空则使用 Open-Meteo
+    // ... 其他配置见该文件
 };
 ```
 
@@ -139,17 +139,19 @@ const WEATHER_CONFIG = {
 
 ## 🔧 高级配置
 
-如需自定义更多设置，可修改 `js/config/weather-config.js` 文件：
+如需自定义更多设置，可修改 `src/config/weather.ts`：
 
-```javascript
-const WEATHER_CONFIG = {
-    API_KEY: 'your_amap_api_key_here',
+```typescript
+export const WEATHER_CONFIG: WeatherConfig = {
+    API_KEY: '',
     BASE_URL: 'https://restapi.amap.com/v3',
     DEFAULT_UNIT: 'celsius', // 默认温度单位（仅前端展示）
     DEFAULT_LANG: 'zh_cn', // 兼容保留
     UPDATE_INTERVAL: 30 * 60 * 1000, // 更新间隔（毫秒）
-    GEOLOCATION_TIMEOUT: 30000, // 定位超时时间
+    GEOLOCATION_TIMEOUT: 5000, // 定位超时时间（毫秒）
     GEOLOCATION_MAX_AGE: 5 * 60 * 1000, // 位置缓存时间
+    WEATHER_CACHE_TTL: 20 * 60 * 1000,
+    WEATHER_CACHE_FALLBACK_MAX_AGE: 7 * 24 * 60 * 60 * 1000,
 };
 ```
 

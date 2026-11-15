@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh-CN">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>新标签页</title>
+        <meta name="manifest.chrome_url_overrides" content="newtab" />
+
+        <!-- 首屏预置：必须在任何 CSS 之前同步执行，否则会先画默认主题再翻转（白闪）。
+             theme-preboot.js 自包含（不依赖任何 window.* 全局构造器），只读 localStorage
+             镜像同步设 data-theme 并预填时钟；chrome.storage 真值由 Vue useTheme.ts 校正。 -->
+        <script src="/theme-preboot.js"></script>
+
+        <!-- 全部业务脚本已迁移为 Vue3 SFC + ESM composable；head 只保留同步主题引导。 -->
+
+
+        <!-- Vue 组件沿用既有全局样式表：壁纸、各面板、侧卡与天气的视觉 token 与外观规则。 -->
+        <link rel="stylesheet" href="/theme/app.css" />
+
+        <!-- 首屏外壳样式由 boot.ts 引入的 src/styles/shell.css 承担（打包进 newtab-*.css，后加载生效）；
+             此处原有一份 public/theme/shell.css 副本会导致令牌被旧值覆盖，已移除。 -->
+
+        <!-- SortableJS 由各 .vue 直接 import "sortablejs"，不再需要全局垫片。 -->
+
+        <!-- 应用入口。WXT 把 html 本身当入口，同名的 .ts 会被判成第二个入口而报重名，
+             所以挂载逻辑放在 src/boot.ts，由这里显式引用 —— Vite 会打包成 chunk。 -->
+        <script type="module" src="/src/boot.ts"></script>
+    </head>
+    <body>
+        <!-- 壁纸层：只承载背景图与亮度/模糊调整，玻璃层从场景纹理读取它 -->
+        <div class="wallpaper-container" id="wallpaper-container">
+            <div class="wallpaper-overlay"></div>
+        </div>
+
+        <!-- 面板层 DOM：Vue 各面板经 Teleport 挂到这里，保持与旧面板同一层级与样式选择器 -->
+        <div id="legacy-panels-root">
+                    <!-- 液态玻璃第 2 层：折射扭曲滤镜定义。
+             必须常驻 DOM 且尺寸为 0，供 CSS 的 backdrop-filter: url(#liquid-refract) 引用。
+             参数取自实测（.pw-tmp/refract2.js 的 r1 档）：
+               baseFrequency 0.008/0.012 → 涟漪尺度（0.005 太缓、0.015 太碎）
+               numOctaves 2              → 两层噪声，够自然又不费
+               seed 7                    → 固定种子，保证每块玻璃的扭曲形状稳定、不闪
+               stdDeviation 2            → 柔化噪声，避免位移出现硬台阶
+               scale 40                  → 位移幅度，>60 会"故意扭曲"的假
+             放在 body 首位：不参与布局，也不被任何 overflow 裁掉。 -->
+        <svg class="liquid-refract-defs" width="0" height="0" aria-hidden="true" focusable="false">
+            <filter id="liquid-refract" x="-20%" y="-20%" width="140%" height="140%">
+                <feTurbulence
+                    type="fractalNoise"
+                    baseFrequency="0.008 0.012"
+                    numOctaves="2"
+                    seed="7"
+                    result="noise"
+                />
+                <feGaussianBlur in="noise" stdDeviation="2" result="softNoise" />
+                <feDisplacementMap
+                    in="SourceGraphic"
+                    in2="softNoise"
+                    scale="40"
+                    xChannelSelector="R"
+                    yChannelSelector="G"
+                />
+            </filter>
+        </svg>
+
+        <div id="wallpaper" class="wallpaper-container"></div>
+
+        <!-- 天气信息组件（Vue3: WeatherCard.vue 挂载点） -->
+        <div id="weather-card-slot"></div>
+
+        <div class="top-right-controls">
+            <button id="todo-btn" class="control-btn" title="待办事项">
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <path d="M9 11l3 3L22 4"></path>
+                    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"></path>
+                </svg>
+            </button>
+            <button id="notes-btn" class="control-btn" title="备忘录">
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                    <polyline points="14 2 14 8 20 8"></polyline>
+                    <line x1="16" y1="13" x2="8" y2="13"></line>
+                    <line x1="16" y1="17" x2="8" y2="17"></line>
+                </svg>
+            </button>
+            <button id="pomodoro-btn" class="control-btn" title="番茄专注钟">
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <circle cx="12" cy="13" r="8"></circle>
+                    <path d="M12 9v4l2 2"></path>
+                    <path d="M9 2h6"></path>
+                    <path d="M12 2v3"></path>
+                </svg>
+            </button>
+            <button id="wallpaper-settings-btn" class="control-btn" title="壁纸设置">
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                    <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                    <polyline points="21 15 16 10 5 21"></polyline>
+                </svg>
+            </button>
+            <button id="settings-btn" class="control-btn" title="设置">
+                <svg
+                    viewBox="0 0 1024 1024"
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    fill="currentColor"
+                    aria-hidden="true"
+                >
+                    <path
+                        d="M637.461333 81.344a213.333333 213.333333 0 0 1 184.746667 106.666667L947.690667 405.333333a213.333333 213.333333 0 0 1 0 213.333334L822.186667 835.989333a213.333333 213.333333 0 0 1-184.746667 106.666667H386.56a213.333333 213.333333 0 0 1-184.746667-106.666667L76.309333 618.666667a213.333333 213.333333 0 0 1 0-213.333334L201.813333 188.010667a213.333333 213.333333 0 0 1 184.746667-106.666667z m0 85.333333H386.56a128 128 0 0 0-110.848 64L150.186667 448a128 128 0 0 0 0 128l125.482666 217.322667a128 128 0 0 0 110.848 64H637.44a128 128 0 0 0 110.848-64L873.813333 576a128 128 0 0 0 0-128l-125.482666-217.322667a128 128 0 0 0-110.848-64zM519.850667 362.666667c30.741333 0 53.888 4.992 75.285333 16.426666a120.192 120.192 0 0 1 49.749333 49.770667c11.456 21.397333 16.448 44.544 16.448 75.285333v15.701334c0 30.741333-4.992 53.888-16.426666 75.285333a120.192 120.192 0 0 1-49.770667 49.749333c-21.397333 11.456-44.544 16.448-75.285333 16.448h-15.701334c-30.741333 0-53.888-4.992-75.285333-16.426666a120.192 120.192 0 0 1-49.749333-49.770667c-11.456-21.397333-16.448-44.544-16.448-75.285333v-15.701334c0-30.741333 4.992-53.888 16.426666-75.285333a120.192 120.192 0 0 1 49.770667-49.749333c21.397333-11.456 44.544-16.448 75.285333-16.448z m0 85.333333h-15.701334c-17.514667 0-26.986667 2.048-35.029333 6.357333-6.485333 3.456-11.306667 8.277333-14.762667 14.762667-4.309333 8.042667-6.357333 17.493333-6.357333 35.029333v15.701334c0 17.514667 2.048 26.986667 6.357333 35.029333 3.456 6.485333 8.277333 11.306667 14.762667 14.762667 8.042667 4.309333 17.493333 6.357333 35.029333 6.357333h15.701334c17.514667 0 26.986667-2.048 35.029333-6.357333 6.485333-3.456 11.306667-8.277333 14.762667-14.762667 4.309333-8.042667 6.357333-17.493333 6.357333-35.029333v-15.701334c0-17.514667-2.048-26.986667-6.357333-35.029333a34.88 34.88 0 0 0-14.762667-14.762667c-8.042667-4.309333-17.493333-6.357333-35.029333-6.357333z"
+                    ></path>
+                </svg>
+            </button>
+        </div>
+
+
+
+
+        <!-- 主页常驻小组件：左翼（待办 / 番茄钟） -->
+        <aside id="side-widgets" class="side-widgets wing-left">
+            <!-- 待办迷你卡：已迁移为 Vue3 TodoCard.vue，由 App.vue Teleport 到 #todo-card-slot -->
+            <div id="todo-card-slot"></div>
+
+            <div id="pomodoro-card-slot"></div>
+        </aside>
+
+        <!-- 主页常驻小组件：右翼（便签） -->
+        <aside id="side-widgets-right" class="side-widgets wing-right">
+            <!-- 便签迷你卡：已迁移为 Vue3 NotesCard.vue，由 App.vue Teleport 到 #notes-card-slot -->
+            <div id="notes-card-slot"></div>
+
+            <!-- 小工具迷你卡：已迁移为 Vue3 ToolsCard.vue，由 App.vue Teleport 到 #tools-card-slot -->
+            <div id="tools-card-slot"></div>
+        </aside>
+
+        </div>
+
+        <!-- Vue 应用挂载点 -->
+        <div id="app"></div>
+    </body>
+</html>

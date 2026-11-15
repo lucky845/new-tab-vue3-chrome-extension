@@ -1,0 +1,103 @@
+/* 首屏外壳：Vue 侧的结构与布局，与旧 style.css 的 <main> 段等价 */
+
+:root {
+  --radius-glass: 24px;
+  /* --canvas 不在此覆盖：app.css 已按主题定义（浅 #eef1f4 / 深 #1b242c） */
+}
+
+/* 壁纸层 */
+.wallpaper-container {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--canvas);
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  transition: background-image 0.5s ease-in-out;
+}
+
+.wallpaper-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* 首屏没有壁纸时的兜底：用 app.css 的主题令牌（浅色浅灰 / 深色冷黑） */
+.wallpaper-container:not([style*='background-image']) {
+  background-image: var(--canvas-loading);
+}
+
+/* Vue 根容器 */
+#app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+#app > * {
+  pointer-events: auto;
+}
+
+.main-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 1400px;
+  padding: 0 48px;
+}
+
+.clock-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 40px;
+  /* 令牌翻面：浅色=近黑墨(--ink 15 21 26)，深色=白墨；托底光晕同样随主题翻 */
+  color: rgb(var(--ink) / var(--text-k));
+  text-align: center;
+  text-shadow:
+    0 1px 2px var(--on-photo-halo),
+    0 2px 12px var(--on-photo-halo);
+}
+
+.clock-time {
+  font-size: 96px;
+  font-weight: 200;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.clock-date {
+  margin-top: 12px;
+  font-size: 18px;
+  font-weight: 400;
+  /* 用墨色 alpha 分主次，不用 opacity：opacity 会连托底光晕一起溶进壁纸 */
+  color: rgb(var(--ink) / calc(0.96 * var(--text-k)));
+}
+
+.clock-greeting {
+  margin-top: 6px;
+  font-size: 15px;
+  color: rgb(var(--ink) / calc(0.9 * var(--text-k)));
+}
+
+.tagline {
+  min-height: 20px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: rgb(var(--ink) / calc(0.86 * var(--text-k)));
+  font-style: italic;
+}
+
+.content-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  width: 100%;
+  align-items: center;
+}

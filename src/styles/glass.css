@@ -1,0 +1,189 @@
+/**
+ * 液态玻璃的 CSS 层。
+ *
+ * 分工：
+ *   - @surdeddd/liquidglass 负责光学部分（折射、色散、bevel、specular、按压物理），
+ *     它会接管自己目标元素的 backdrop-filter / background / border-radius / box-shadow。
+ *   - 这个文件只负责「玻璃下面那层地」和「玻璃上面那层形」：
+ *     壁纸容器、圆角半径、图标底托（保证图标在亮壁纸上依然可读）。
+ *
+ * 为什么不再手写 WebGL：手写版为了做出「厚度」累积渲染了 12 帧，
+ * 靠 FBO 池化才把 414ms 压到 4ms；库的 css-svg 后端走的是浏览器原生的
+ * backdrop-filter + feDisplacementMap，一帧出图，代价是边缘位移带窄一些。
+ */
+
+:root {
+  --radius-glass: 24px;
+  /* --canvas 不在此覆盖：app.css 按主题定义（浅 #eef1f4 / 深 #1b242c） */
+  /* --glass-edge 由 app.css 的材质令牌承担（浅=墨线 0.1 / 深=白光 0.34），这里不再写死，
+     否则浅色主题会拿到白描边，白玻璃贴白壁纸等于没有边界 */
+}
+
+/* 壁纸层 */
+.wallpaper-container {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-color: var(--canvas);
+  background-position: center center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  transition: background-image 0.5s ease-in-out;
+}
+
+.wallpaper-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* 首屏没有壁纸时的兜底：用 app.css 的主题令牌（浅色浅灰 / 深色冷黑） */
+.wallpaper-container:not([style*='background-image']) {
+  background-image: var(--canvas-loading);
+}
+
+/* Vue 根容器：铺满视口，作为所有玻璃块定位的坐标系 */
+#app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 快捷访问方格：圆角由这里给，库会读 border-radius 作为玻璃形状。
+   卡片材质仍走库的液态玻璃，这里只补图标与名称的排布（模仿手机 App）。 */
+.quick-access-item {
+  position: relative;
+  border-radius: var(--radius-glass);
+  isolation: isolate;
+}
+
+.quick-access-item .icon-wrapper {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 26%;
+}
+
+.quick-access-item .name {
+  text-shadow: 0 1px 2px rgb(0 0 0 / 0.24);
+}
+
+/* --- 从手写 WebGL 玻璃迁到 @surdeddd/liquidglass ---
+   库的 attach() 会接管自己目标元素的 backdrop-filter / background / border-radius / box-shadow，
+   并且**不会**往宿主里塞 .liquid-glass-canvas（那是手写版的光学 canvas）。
+   所以旧样式表里所有「有 canvas 就让位」的规则在库后端下全部落空：
+   会出现「CSS 白膜 + 库的 tint」双层叠加 → 卡片变成实心奶油块（深色下是不透明黑板），
+   同时旧规则里的 ::after 断层面照旧绘制，与库自己的 bevel 打双重硬边。
+
+   下面这组规则按库的挂载标记收口：applyGlass() 会给宿主打 data-glass="lib"。 */
+
+/* 1. 让位：颜色、模糊、边框全部交给库，CSS 只保留尺寸与圆角 */
+[data-glass='lib'] {
+    background-color: transparent;
+    background-image: none;
+    backdrop-filter: none;
+    box-shadow: none;
+    border-color: transparent;
+}
+
+/* 2. 旧断层面 / 颗粒层在有库光学层时不再绘制（库自带 bevel + specular） */
+[data-glass='lib']::before,
+[data-glass='lib']::after {
+    content: none;
+    display: none;
+}
+
+/* 3. 内容层级：不要在这里统一给子元素加 position:relative —— 旧样式表里
+   搜索引擎选择器 / 清空按钮 / 提交按钮都是 position:absolute 定位在搜索框两端的，
+   一条子元素规则会把它们全部拉回文档流，输入框被挤窄 82px、引擎图标跑到盒子外。
+   css-svg 后端只在宿主上做 backdrop-filter 并插一个 .lg-bezel 边缘层，
+   不覆盖内容，本来就不需要抬 z-index。 */
+
+/* 4. 字段档（搜索框）：外壳 .search-bar 才是玻璃本体，里面的 <input> 只负责收字。
+   之前 <input> 自己也带一层 backdrop-filter + 1px 描边 + inset 阴影，
+   而它比外壳窄 82px、左偏 20px —— 两圈描边错位就成了截图里那条偏移的椭圆环。 */
+.search-bar[data-glass='lib'] .search-input,
+.search-bar[data-glass='lib'] .search-input:focus,
+.search-bar[data-glass='lib'] .search-input:hover {
+    background-color: transparent;
+    background-image: none;
+    border-color: transparent;
+    box-shadow: none;
+    backdrop-filter: none;
+    outline: none;
+}
+
+/* ============================================================
+   5. 引擎下拉 / 历史下拉
+   ------------------------------------------------------------
+   .search-bar 被库的 backdrop-filter 变成了层叠上下文，下拉的
+   z-index 被关在壳子里，会被后面的快捷访问网格盖住，所以壳子自己抬一层。
+   两下拉的材质走 app.css / 主题变量自己的卡片档玻璃（--glass-card-fill
+   + --glass-card-backdrop，与便签/待办侧卡同规格），这里不再特判实底。
+   ============================================================ */
+.search-bar[data-glass='lib'] {
+    z-index: 30;
+}
+
+.search-bar[data-glass='lib'] .search-engine-dropdown {
+    /* 引擎下拉旧规格（--glass-popover-fill 0.8 tint、无 blur）的前提是「输入框自带 blur」，
+       该前提已随外壳接管玻璃而失效。统一到卡片档玻璃（同历史下拉），背后的快捷块被
+       blur 压成色块后，0.42 tint 足够托住 14px 的引擎名。 */
+    /* 不写 -webkit- 前缀版：esbuild 压缩会把同值两条合并成前缀一条，Chrome 对 -webkit-backdrop-filter
+       的 computed 解析不生效，导致 blur 丢失。目标浏览器是 Chrome MV3，无前缀即可。 */
+    backdrop-filter: var(--glass-card-backdrop);
+}
+
+/* 下拉项：Vue 侧用的是 .engine-option / .history-item，旧样式表只写了
+   .search-engine-item —— 于是引擎行没有任何布局，内联 SVG 按自带的
+   width=200 铺开，一颗百度爪印糊满整个下拉框。 */
+.search-engine-dropdown .engine-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 10px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-primary, #e8edf6);
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.18s ease;
+}
+
+.search-engine-dropdown .engine-option:hover,
+.search-engine-dropdown .engine-option[aria-selected='true'] {
+    background-color: rgb(255 255 255 / 0.12);
+}
+
+.search-engine-dropdown .engine-option .engine-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    line-height: 0;
+}
+
+/* 图标节点现在挂在 .engine-icon-slot 里（内联 svg 或 logo 的 img），
+   wrapper 上的 .engine-icon 只是布局位，真正要定尺寸的是里面的节点 */
+.search-engine-dropdown .engine-option .engine-icon .engine-icon-slot svg,
+.search-engine-dropdown .engine-option .engine-icon .engine-icon-slot img {
+    width: 20px;
+    height: 20px;
+    display: block;
+}
+
+/* 选中态：当前引擎的图标区分不出来，靠行底色 + 左侧竖条 */
+.search-engine-dropdown .engine-option[aria-selected='true'] {
+    box-shadow: inset 2px 0 0 rgb(255 255 255 / 0.55);
+}
+
+.search-history-dropdown {
+    width: 100%;
+}

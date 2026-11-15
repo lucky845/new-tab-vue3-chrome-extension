@@ -1,0 +1,22 @@
+{
+  // 直接继承 WXT 生成的配置（.wxt/tsconfig.json 由 `wxt prepare` 产出，
+  // 内含 @/ 路径别名、浏览器 API 类型、entrypoint 全局变量）。
+  // 这里只覆盖少量编译选项（下列 noUnused* 为放宽项）；业务源码为 Vue3 SFC + ESM composable，
+  // public/ 下的 theme-preboot.js 是唯一保留的同步经典引导，不参与类型检查。
+  "extends": "./.wxt/tsconfig.json",
+  "compilerOptions": {
+    "jsx": "preserve",
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "noUncheckedIndexedAccess": false
+  },
+  "include": [
+    "entrypoints/**/*.ts",
+    "entrypoints/**/*.vue",
+    "src/**/*.ts",
+    "src/**/*.vue",
+    "*.config.ts",
+    ".wxt/wxt.d.ts"
+  ],
+  "exclude": ["node_modules", ".output", "public/**", "dist/**"]
+}

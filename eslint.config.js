@@ -1,9 +1,9 @@
-const globals = require('globals');
-const eslintPluginPrettierRecommended = require('eslint-plugin-prettier/recommended');
+import globals from 'globals';
+import eslintPluginPrettierRecommended from 'eslint-plugin-prettier/recommended';
 
-module.exports = [
+export default [
     {
-        ignores: ['icons/**', 'img/**', 'node_modules/**', 'js/components/sortable.min.js'],
+        ignores: ['icons/**', 'node_modules/**', '.output/**', '.wxt/**'],
     },
     {
         languageOptions: {
@@ -11,18 +11,8 @@ module.exports = [
             sourceType: 'module',
             globals: {
                 ...globals.browser,
-                // 扩展与项目内 window 全局
+                // 扩展运行时全局；经典脚本构造器已全部迁移为 Vue3 SFC + ESM composable
                 chrome: 'readonly',
-                Sortable: 'readonly',
-                NewTabApp: 'readonly',
-                AdvancedPagination: 'readonly',
-                SearchManager: 'readonly',
-                QuickAccessManager: 'readonly',
-                WallpaperManager: 'readonly',
-                SettingsManager: 'readonly',
-                WeatherManager: 'readonly',
-                SELECTORS: 'readonly',
-                BingWallpaper: 'readonly',
             },
         },
         rules: {

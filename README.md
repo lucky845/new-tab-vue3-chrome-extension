@@ -1,259 +1,147 @@
 # New Tab Pro
 
-> 一个纯本地、零后端的浏览器新标签页扩展：Picsum 精选壁纸、时钟、天气、待办、便签、番茄钟，左右两翼常驻，一个页面全都有。
+一个纯本地的 Chrome / Edge 新标签页扩展：液态玻璃视觉、可自定义的快捷访问、壁纸、天气、待办、便签、番茄钟与小工具，全部数据只存在本机。
 
-![preview](img/preview.png)
+> [!IMPORTANT]
+> **本仓库是 2.0 重写版（Vue 3 + TypeScript + WXT）。**
+> 1.x 原生 JS 版本继续维护于 [new-tab-chrome-extension](https://github.com/lucky845/new-tab-chrome-extension)：
+> 只想装来用、不折腾构建链的话，暂时仍装 1.x（Edge 加载项商店搜索 **New Tab Pro**，或克隆老仓库直接加载，无需 `npm install`）。
+> 2.0 目前处于本地测试阶段，尚未发布商店版本。
 
-**无需任何 API Key 即可完整使用。** 天气走 Open-Meteo、壁纸走 Picsum，全部免密钥；Pexels 与高德只是可选增强（入口在设置最下方）。所有数据保存在 `chrome.storage.local`，不联网上报、不收集任何信息。
+## 版本对照
 
----
+|            | 1.x · new-tab-chrome-extension                                         | 2.0 · 本仓库                                              |
+| ---------- | ---------------------------------------------------------------------- | --------------------------------------------------------- |
+| 运行方式   | 仓库即产物，加载目录即可                                               | 需构建（`npm install` + `npm run build`）                 |
+| 技术栈     | 原生 ES2020，无构建系统                                                | WXT + Vue 3.5 + TypeScript 5.7 + Vite                     |
+| 液态玻璃   | 自研 WebGL2 实时折射（`js/utils/liquid-glass.js`，无 WebGL2 回退 SVG） | `@surdeddd/liquidglass`（css-svg 后端，CSP 下主线程降级） |
+| 快捷访问   | 每页 10 格，图标下带名称，文件夹 2×2 预览 + 数量角标                   | 图标方块 + 名称外置，文件夹九宫格分页、无角标             |
+| 拖拽       | SortableJS                                                             | 指针事件自研（换位补间 / 悬停合并 / 停留新建文件夹）      |
+| 面板与弹窗 | 各自实现                                                               | 统一磨砂材质 + 从点击处展开的进场动画                     |
+| 状态       | 功能冻结，只做必要维护                                                 | 活跃开发，本地测试中                                      |
 
-## ✨ 功能
+## 特性
 
-<table>
-<tr><td width="50%" valign="top">
+- **🪟 液态玻璃界面**：面板、图标方块、顶栏按钮统一折射玻璃材质；弹窗从点击处展开，背景不做蒙版模糊。
+- **🔍 多引擎搜索**：内置百度 / Google / Bing / 搜狗 / DuckDuckGo，支持自定义引擎；搜索引擎图标可上传图片裁切、抓取站点 favicon 或落到名称首字。
+- **🧩 快捷访问**：自定义站点与文件夹（九宫格 + 分页），指针事件自研拖拽 —— 拖动换位带补间动画、悬停文件夹合并、两个图标停留即合并成新文件夹。
+- **🖼 壁纸**：Picsum / Wallhaven / Pexels（自带 Key 时），支持搜索关键词、亮度与模糊调节；图片字节本地缓存，二次打开不再请求图床。
+- **🌤 天气**：Open-Meteo 免费天气（可留空）、高德定位，30 分钟自动刷新，多级缓存与限流。
+- **✅ 待办 / 📝 便签 / 🍅 番茄钟**：左右两翼常驻卡片，展开为面板；输入即落盘。
+- **🧰 小工具**：时间戳、JSON、Base64、URL 编解码、SHA-256、进制转换、大小写、去重、字数统计、取色、密码、UUID —— 纯前端、零网络。
+- **🎨 主题**：亮色 / 暗色 / 跟随系统 / 日出日落四种模式，首屏由同步脚本预置，无白闪。
+- **💾 备份与恢复**：设置面板一键导出 JSON，导入时校验应用标识与 schema 版本，不合法整体拒绝。
+- **🔒 纯本地**：无后端、无账号、无埋点；设置、壁纸缓存、待办等全部存在 `chrome.storage.local`。
 
-**🖼️ 壁纸**
-- Picsum 免 Key 图库（Unsplash 精选）：按页浏览 + 翻页 + 随机换壁纸（默认）；**不支持分类/关键词筛选**（实测服务端忽略 `?q=`），分类需求自动改走 Wallhaven
-- Wallhaven 图源可选：设置中切换，**唯一支持分类/关键词真正筛选**的免 Key 图源，需能访问境外网络
-- Pexels（可选 Key）：填写后切换为 Pexels 图源
-- **切换即落盘，下次读本地**：选中壁纸后立刻 fetch -> blob -> readAsDataURL 存进 chrome.storage.local（与来源 URL 一起存，URL 对不上即视为失效），下次新建标签页直接读缓存，**不再请求图床**。实测二次打开图片请求 0 次、DCL 后 112ms 出图
-- 用 fetch 而不是 canvas 烤制：图床普遍 302 重定向到 CDN，canvas 链路上任一跳缺 CORS 头就会烤出雪花噪点；字节级读取才保真
-- 写入时机在「用户切换壁纸」那一刻，不在启动路径上——不新增首屏开销
-- 亮度 30%–100%、模糊 0–20px 实时调节
+玻璃与主题的量化验收（色度保留率、文字对比度、渲染耗时）沿用 1.x 的说明，见 [1.x README](https://github.com/lucky845/new-tab-chrome-extension#readme)。
 
-**🔍 搜索**
-- 内置 5 个引擎：百度 / Google / Bing / 搜狗 / DuckDuckGo
-- 支持自定义搜索引擎（`%s` 占位符）
-- 搜索历史：点击填充、单项删除、一键清空
+## 技术栈
 
-</td><td width="50%" valign="top">
+| 层       | 选型                                                                       |
+| -------- | -------------------------------------------------------------------------- |
+| 扩展框架 | [WXT](https://wxt.dev/) 0.21（Manifest V3，`chrome_url_overrides.newtab`） |
+| 视图     | Vue 3.5 `<script setup lang="ts">` + TypeScript 5.7                        |
+| 玻璃渲染 | @surdeddd/liquidglass（css-svg 后端，CSP 下自动降级到主线程位移贴图）      |
+| 样式     | 原生 CSS 主题令牌 + Tailwind CSS v3（shadcn-vue 约定，reka-ui）            |
+| 拖拽     | 指针事件自研（`src/composables/useIconDrag.ts`）；待办列表使用 SortableJS  |
 
-**🎯 快捷方式**
-- 每页 10 格，拖拽排序（同页内），右键编辑/删除
-- 文件夹分组：右键「新建文件夹…」把站点收纳成组，文件夹显示 2×2 图标预览与数量角标，点击展开、状态栏 ＋ 直接添加
-- 右键可将站点「移入文件夹」、重命名/解散文件夹；文件夹内站点可移回主面板
-- 默认 8 个常用站点，图标外置为独立配置
+## 快速开始
 
-**🌤️ 天气**
-- Open-Meteo 免 Key，自动定位或手动城市
-- 高德 Key 可选（设置最下方）：填写后切换为高德数据
-- 中文天气现象 + 内置 SVG 图标，20 分钟缓存
-
-**🎨 主题（v1.8.0）**
-- 四种模式：浅色 / 深色 / 跟随系统 / 日出日落
-- **浅色 = 壁纸原样**：不压暗壁纸、不改文字颜色；直接压在照片上的只有时钟区，靠一层径向托底（`--on-photo-scrim`）兜住字，其余文字一律坐在玻璃上
-- **深色 = 压暗壁纸**：壁纸蒙版定档 0.38（原来 0.55）。压得越黑，玻璃里就越没有色可提——实测蒙版 0.55 时玻璃色度保留率掉到 0.8；0.38 是「白字仍过 WCAG AA」与「玻璃还能透出壁纸颜色」的交点
-- 日出日落自动取当地日出/日落时刻切换；拿不到定位或网络时改用自定义时段，并在设置里如实标注当前用的是哪一种
-- 首屏零白闪：主题在 CSS 解析前同步预置（`js/theme-boot.js`），不会出现先浅后深的闪烁
-- **预览后保存**：设置面板内切换主题即时预览，点「保存」才写入；直接关闭/点遮罩会回滚到进入前的主题
-
-**🧊 液态玻璃材质（v1.8.0）**
-- 材质**按角色分三档**，这是这一版最大的改动。旧版给所有元素同一档（blur 34 / tint 0.34）：装饰件被 34px 糊成一团灰雾，文字件又不够实，两头不讨好。
-  | 档位 | 令牌 | blur | tint | saturate | 用在 |
-  | --- | --- | --- | --- | --- | --- |
-  | 装饰 | `--glass-*` | 14px | 0.22 | 150% | 快捷块、天气卡 |
-  | 字段 | `--glass-field-*` | 16px | 0.34 | 160% | 搜索框 |
-  | 卡片 | `--glass-card-*` | 20px | 0.40 | 220% | 侧翼小组件（11–14px 小字要亮度地板） |
-  | 面板 | `--glass-panel-fill` | — | 0.72 | — | 设置面板（工作面，可以厚） |
-- **低模糊是分水岭**：34px 时背后的结构全被糊掉，读起来是「磨砂塑料」；14–20px 才看得见壁纸的形状在玻璃后面，玻璃感才成立
-- **四层，缺一层就只是高级毛玻璃**：
-  1. 毛玻璃底 —— `--glass-backdrop` 把 blur / saturate / brightness / contrast 合成一条，各元素只引用不拼装
-  2. 折射扭曲 —— `#liquid-refract`（`feTurbulence` + `feDisplacementMap` scale 40）把背后的壁纸沿圆角拽进来，用 `@supports (backdrop-filter: url(#…))` 渐进增强；不支持的浏览器整条回退到纯模糊，绝不留半条 `url()` 让玻璃变全透明
-  3. **断面 + 砂面** —— 边缘用 `::after` 画一条 154° 渐变的 1.5px 环（双层 mask 取 xor，只剩 padding 那圈），左上受光、右下背光；表面用 `::before` 铺 5% 的 `feTurbulence` 噪点（overlay）。均匀 1px 描边只会读成「塑料倒角」，噪点则把「模糊色块」变成「有颗粒的材质」
-  4. 高光与投影 —— 顶部 sheen + 六段 `--glass-shadow`（轮廓光 / 断面内影 / 底部内阴影 / 发丝线 / 近影 / 远影）
-- **顺序有讲究**：`url(#liquid-refract)` 必须排在 `blur()` 之前。先模糊再位移，等于把要位移的细节先糊掉——实测差分 26.1% vs 15.0%
-- **圆角统一 24px**（`--radius-glass`）；「添加」空位从 2px 虚线改成 1px 实线 + 断面环（虚线圈在这个尺寸太吵，也压不住边缘光）
-- **量化验收**（不靠眼睛说像不像）：玻璃相对真实地面（壁纸 + 蒙版）的色度保留率 light 0.99–1.60 / dark 0.95–1.55；暗部亮度偏移收到 ±8 L\* 内
-- **文字对比度**：按字形扫——把文字渲染透明后差分出字形像素，再取该处的真实背景（矩形均值会把文字本身算进背景，细笔画和大字号全测歪）。主页 52 个节点 + 设置面板滚动 3 屏 44 个节点 + 壁纸/天气/工具/添加/引擎下拉/文件夹浮层，浅深两套主题全部 0 失败
-- **不用 `opacity` 压文字**：它会把字形连同托底光晕一起按比例溶进背景，越淡越糊；一律改显式色阶 `--text-primary/secondary` 与语义色 `--accent-ink` / `--on-accent`（深色主题的 accent 是亮档实色，必须配深字）
-- `prefers-reduced-transparency: reduce` 下三档一起降级为 `blur(20px) saturate(140%)`
-
-**🧪 液态玻璃的 WebGL 实现（v1.8.1）**
-
-上面的折射原来走 SVG 滤镜；v1.8.1 起主体换成 WebGL2 实时渲染（`js/utils/liquid-glass.js`，无 WebGL2 时整条回退 SVG）。这一版修掉了四个「玻璃看起来不对」的真根因：
-
-| 症状 | 真根因 | 修法 |
-| --- | --- | --- |
-| 深色主题下玻璃像蒙了一层白雾 | 采样纹理用「窗口坐标 ÷ 视口尺寸」当 uv，等于假设 `background-size: 100% 100%`；实际是 `cover`，1920×1080 塞进 1440×900 要横向裁 160px，采样点整体偏 192px | 新增 `uSceneOrigin`（绘制矩形相对视口的偏移）+ `uSceneRect.zw` 改存绘制尺寸，按 `scale = max(vw/iw, vh/ih)` 反算；窗口缩放时重算 |
-| 高饱和壁纸被压成灰 | 深色压暗走 `mix(色, 中性深灰, m)`，三通道一起被拉向灰（纯红 `[255,0,0]` → `[206,58,65]`，饱和度 1.0→0.718） | 深色档改走「保色相压暗」：直接乘系数不动色相 |
-| 白色/雪地壁纸下图标文字看不见 | 保色相压暗不再有压暗作用，浅色壁纸透上来直接顶到白 | 最终输出前按亮度封顶（线性 1.0 → 0.182 → sRGB 118），白字稳定过 AA；8 种壁纸实测 4.81–19.09:1 |
-| 缩放窗口后玻璃整片消失 | 共享 ping-pong FBO 尺寸切换时整套重建；池化后命中分支不重置累积、也不维护导出 canvas 尺寸，`drawImage` 从 1×1 缓冲取像素 | 按尺寸池化 + 导出 canvas 只增不减、按左下角取子矩形 |
-
-- **按尺寸池化 FBO**：21 块玻璃只有 8 种唯一尺寸，原来每次尺寸切换都要 `deleteTexture` + `deleteFramebuffer` 全套重建。池化后 12 帧 252 次 render 的 FBO 分配次数降到 **0**，耗时 **414.4ms → 4.1ms**
-- **默认帧缓冲只增不减**：给 `canvas.width` 赋值等于重新分配整个绘图缓冲，比建 FBO 更贵；固定取「见过的最大尺寸」，导出时按左下角取子矩形（WebGL 原点在左下）
-- **累积帧的意义**：多帧累积用来压噪声，所以「尺寸 / 场景 / 几何变了」必须把 `frame` 归零，否则旧位置的历史会混进新画面
-- **scene 加载的跨域要求**：扩展页 origin 是 `chrome-extension://`，图床跨域；`new Image()` 不设 `crossOrigin = 'anonymous'` 时 `onload` 照样触发，但 `texImage2D` 抛错 → 场景永久无效 → 整页玻璃不出墨
-
-**⏱️ 小组件与主页两翼（v1.3.0）**
-- 时钟 / 日期 / 时段问候
-- 待办：分类（工作/生活/普通）、截止日期与逾期高亮、拖拽排序、今日完成统计
-- 备忘录：多便签、置顶、搜索、自动保存
-- 番茄钟：可配置时长、长休息轮转、今日 🍅 统计、提示音、环形进度
-- 小工具：时间戳 / JSON / Base64 / URL 编解码 / SHA-256 / 进制 / 大小写 / 去重 / 字数 / 颜色 / 密码 / UUID，纯本地运行
-- 左右两翼常驻主页（可在设置中关闭），点 ⤢ 打开完整面板
-
-**💾 备份与恢复（v1.5.0）**
-- 设置面板一键导出为单个 JSON 文件（文件名自带时间戳）
-- 导入自动校验：应用标识 / schema 版本 / 字段类型，任一不合法整体拒绝，不做部分写入
-- 覆盖设置、自定义引擎、快捷方式、待办、便签、番茄钟与壁纸偏好
-- 不导出天气与地理缓存（本质是 TTL 缓存，恢复后自动重新获取），备份文件更小
-- 导入后自动刷新页面，让各模块重新加载新数据
-
-> **新增功能自动兼容。** 导出走「全量减缓存」而非硬编码白名单：新功能写入的 storage 键**无需改备份代码**就会自动进备份、自动还原。缓存键按精确前缀（`amap_adcode_` / `amap_weather_` / `om_geo_` / `om_weather_` / `om_last_location`）剔除，不用宽泛模式，避免误伤用户数据。
->
-> 三层版本兼容：① **旧备份**按迁移链逐级升级（`schemaVersion` 1→2→…），旧文件能被新版本正确解读；② **更新版本的备份**不整体拒绝，已识别的键照常导入；③ **未知键原样保留**写入，不会因当前版本不认识就丢弃未来功能的数据。
-
-**备份格式**
-
-```jsonc
-{
-  "app": "new-tab-pro",       // 应用标识，导入时校验
-  "schemaVersion": 2,          // 当前格式版本
-  "exportedAt": "2026-11-12T01:06:22.000Z",
-  "extensionVersion": "1.5.0",
-  "keys": { "todos": { "type": "array", "label": "待办", "since": 1 } },
-  "extras": ["某个未登记的新键"],   // 未登记但已导出的键，供排查
-  "skippedCache": ["om_weather_..."], // 被剔除的缓存键，供排查
-  "data": { "todos": [], "settings": {} }
-}
-```
-
-后续功能若要给某个键加上**类型校验**与**可读名**，调用 `backupManager.register(key, { type, label, since })` 即可；不登记也不会丢数据，只是缺少校验。新增格式版本时，在 `migrations` 末尾追加 `{ from: N, to: N+1, migrate }` 并递增 `SCHEMA_VERSION`。
-
-</td></tr>
-</table>
-
----
-
-## 📦 安装
-
-### 从商店
-
-Edge 加载项商店搜索 **New Tab Pro**。
-
-### 本地加载（推荐开发者）
+要求 Node.js 22.12+ 与 npm（WXT 0.21 要求 Node ≥ 22，Vite 8 要求 ≥ 22.12）。
 
 ```bash
-git clone https://github.com/lucky845/new-tab-chrome-extension.git
+git clone https://github.com/lucky845/new-tab-vue3-chrome-extension.git
+cd new-tab-vue3-chrome-extension
+npm install          # postinstall 会自动执行 wxt prepare
+npm run dev          # 开发模式：自动拉起浏览器并加载扩展
 ```
 
-1. 打开 `chrome://extensions` 或 `edge://extensions`
-2. 打开右上角「开发者模式」
-3. 点「加载已解压的扩展程序」，选择仓库目录
-4. 新开一个标签页
-
-无需构建、无需 `npm install`——仓库即产物。
-
----
-
-## ⚙️ 配置
-
-设置面板（右上角齿轮）里所有项都是**可选**的：
-
-| 配置 | 作用 | 不填会怎样 |
-| --- | --- | --- |
-| 壁纸图源 | Picsum（默认）/ Wallhaven 二选一 | 默认 Picsum 国内直连稳定但不支持分类筛选；要分类请选 Wallhaven |
-| Pexels API Key | 关键词搜索壁纸（Pexels 图源） | 使用所选免 Key 图源浏览 |
-| 高德 Web 服务 Key | 切换天气数据源为高德 | 使用 Open-Meteo 免费数据 |
-| 天气城市 | 固定城市 | 自动定位（失败回退上次城市） |
-| 首页标语 | 时钟下方一句话 | 不显示 |
-| 自定义搜索引擎 | 添加任意搜索站点 | 仅内置 5 个引擎 |
-
-### 权限说明
-
-| 权限 | 用途 |
-| --- | --- |
-| `storage` | 保存设置、壁纸缓存、待办、便签；导出备份时全量读取 |
-| `geolocation` | 天气自动定位（可拒绝，改用城市名） |
-| `host_permissions` | 仅 `picsum.photos`、`wallhaven.cc`（可选图源）、`pexels.com`、`amap.com`、`open-meteo.com`；图床 CDN（`images.picsum.photos` / `images.pexels.com` / `th.wallhaven.cc` / `w.wallhaven.cc`）用于壁纸落盘缓存时的字节读取 |
-
----
-
-## 🧱 架构
-
-无构建系统，纯 ES2020 + 浏览器全局，方便直接审查代码。
-
-```
-newtab.html                 单页结构
-├── main.js                 入口（bootstrap，20 行）
-└── js/
-    ├── app.js              NewTabApp：组合根 + 全部 UI 绑定
-    ├── modules/            业务数据层（8 个 manager）
-    │   ├── wallpaper-manager.js    壁纸：缓存链 / Picsum 免 Key / Pexels 可选
-    │   ├── search-manager.js       搜索：引擎合并 / 历史
-    │   ├── quick-access-manager.js 快捷方式：校验 / 分页数据
-    │   ├── settings-manager.js     设置：统一存储 + 旧键迁移
-    │   ├── weather-manager.js      天气：Open-Meteo / 高德双轨
-    │   ├── todo-manager.js         待办
-    │   ├── notes-manager.js        便签
-    │   ├── pomodoro-manager.js     番茄钟状态机
-    │   └── backup-manager.js       数据备份 / 校验 / 恢复
-    ├── components/         advanced-pagination / weather-icons / visibility-toggle
-    ├── config/             weather-config / default-sites / tools（小工具定义）
-    ├── constants/          selectors.js（window.SELECTORS 单一来源）
-    ├── utils/              request（超时/重试/退避）、toast、dsh-tip、dsh-dialog
-    │   ├── liquid-glass.js      液态玻璃：WebGL2 折射渲染（FBO 池化 / 累积降噪 / 场景采样）
-    │   ├── icon-safe.js         站点图标清洗与近白图标反相
-    │   └── url-safe.js          链接协议校验
-    └── theme-boot.js     主题同步预置（CSS 解析前执行，首屏零闪烁）
-```
-
-**设计原则**
-
-- **单向依赖**：`main.js → app.js → modules`，manager 不碰 DOM
-- **UI 与业务分离**：manager 只做数据与存储，渲染全部在 `app.js`
-- **选择器常量化**：所有 `getElementById` 走 `window.SELECTORS`，杜绝拼写错误导致的静默失败
-- **失败兜底**：壁纸 → Pexels(可选) → Picsum 随机 → 保留当前；天气 → Open-Meteo → 高德 → 缓存
-- **图源能力如实告知**：Picsum 是纯图库，实测服务端忽略 `?q=`（带不带返回同一批图），因此分类筛选会改走 Wallhaven（真支持 `q=` 检索）；Wallhaven 不可达时回落浏览模式并在侧栏明示「当前图源不支持按分类筛选」，绝不用哈希页码冒充分类结果
-- **交互一致**：确认/输入一律走 `dshDialog`（Promise 化，Esc 取消、Enter 确认、Tab 焦点囚禁、校验内联报错），不用会阻塞渲染且无法样式化的原生 `confirm`/`prompt`；危险操作传 `danger: true` 保留红色强调
-
----
-
-## 🛠️ 开发
+### 加载构建产物
 
 ```bash
-npm install        # 仅安装 lint/format 工具，运行扩展不需要
-npm run lint       # ESLint 9 flat config
-npm run lint:fix
-npm run format     # Prettier
+npm run build        # 产物输出到 .output/chrome-mv3
 ```
 
-改完代码在扩展管理页点「刷新」即可生效，无需构建。
+1. 打开 `chrome://extensions`，开启右上角「开发者模式」
+2. 点击「加载已解压的扩展程序」，选择 `.output/chrome-mv3`
+3. 新开标签页即可使用
 
----
+修改代码后回到扩展页点击刷新按钮；页面结构或 manifest 变更时建议重新加载扩展。
 
-## 🗺️ 路线图
+## 常用脚本
 
-- [x] 免 API Key 完整可用（v1.1.0）
-- [x] 双轨架构合并，main.js 收敛为 bootstrap（v1.1.0）
-- [x] 时钟 / 待办 / 便签 / 番茄钟 / 自定义引擎 / 壁纸调节（v1.2.0）
-- [x] 左右两翼布局、Picsum 免 Key 图源、Wallhaven 可选、移除 Bing（v1.3.0）
-- [x] 小工具面板（12 个纯本地工具）（v1.3.1）
-- [x] 快捷方式文件夹分组（v1.3.2）
-- [x] 数据导入导出（v1.5.0）
-- [x] 统一确认/输入对话框、备份与恢复前向兼容、壁纸分类筛选修复（v1.6.0）
-- [x] 主题切换：浅色（原样）/ 深色（压暗壁纸）/ 跟随系统 / 日出日落（v1.7.0）
-- [x] 液态玻璃三层材质（模糊 + SVG 折射 + 边缘光）、玻璃色度与文字对比度双量化验收（v1.7.1）
-- [x] 主题体系与液态玻璃重做、面板材质统一、弹窗进出场动效、链接协议与导入字段清洗（v1.8.0）
-- [x] 液态玻璃改 WebGL2 实时折射、壁纸切换即落盘缓存、天气退避与 FBO 池化（v1.8.1）
+| 命令                    | 说明                                    |
+| ----------------------- | --------------------------------------- |
+| `npm run dev`           | 开发模式（WXT）                         |
+| `npm run build`         | 构建 Chrome 版本到 `.output/chrome-mv3` |
+| `npm run build:firefox` | 构建 Firefox 版本                       |
+| `npm run zip`           | 打包产物，用于商店提交                  |
+| `npm run compile`       | `vue-tsc --noEmit` 类型检查             |
+| `npm run lint`          | ESLint（当前仅校验配置文件）+ 类型检查  |
+| `npm run lint:fix`      | ESLint 自动修复 + 类型检查              |
+| `npm run format`        | Prettier 格式化 `src/`                  |
 
-## 🗓️ 更新日志
+## 项目结构
 
-| 版本 | 主要内容 |
-| --- | --- |
-| **v1.8.1** | 液态玻璃改 WebGL2 实时折射并修掉采样错位 / 去饱和 / 缩放失效三个真根因、FBO 按尺寸池化（渲染耗时 414ms→4.1ms）、壁纸切换即落盘缓存（二次打开零图片请求）、天气请求退避（最坏 40s→单轮 2 次）、移除右下角换壁纸按钮 |
-| v1.8.0 | 液态玻璃按角色分档重做、主题体系与首屏零闪烁、六类面板材质统一、文件夹预览与角标重做、弹窗进出场动效、备份导入的链接协议与字段类型清洗、插件安全检查项修复 |
-| v1.7.1 | 液态玻璃三层材质（模糊 + SVG 折射 + 边缘光），玻璃色度与文字对比度双量化验收 |
-| v1.7.0 | 主题切换：浅色（壁纸原样）/ 深色（压暗壁纸）/ 跟随系统 / 日出日落 |
-| v1.6.0 | 统一确认/输入对话框、备份与恢复前向兼容、壁纸分类筛选修复 |
+```text
+entrypoints/
+  newtab.html            新标签页入口（同步主题引导 + Vue ESM 挂载）
+src/
+  boot.ts                createApp、注册 glass 指令、挂载
+  App.vue                页面骨架、面板与卡片的 Teleport 宿主
+  components/            Vue SFC（搜索、快捷访问、各面板与卡片、AppIcon 等）
+  composables/           业务 composable（useSearch / useQuickAccess / useWeather ...）
+  config/                默认站点、小工具定义、天气配置
+  core/glass-panels.ts   顶栏按钮、侧卡、天气卡的玻璃装饰
+  lib/                   玻璃桥接、存储、HTTP、备份、图标安全等工具层
+  styles/                shell / glass / tailwind 样式
+public/
+  theme-preboot.js       首屏同步主题引导（CSP 禁内联，保证无白闪）
+  theme/app.css          全局主题样式与视觉令牌
+  _locales/              扩展名称与描述的多语言文案
+  icons/                 扩展图标（16 / 48 / 128）
+```
 
----
+## 本地调试的接口反代
 
-## 🤝 贡献
+用静态服务器预览 `.output` 或直接以 `http://` 打开页面时，页面源是 `http://127.0.0.1:xxxx`，调用 Open-Meteo / Wallhaven 等接口会被 CORS 拦下。打开反代即可同源访问：
 
-Issue / PR 欢迎。提交前请确保 `npm run lint` 零警告，并遵循「manager 不碰 DOM」的边界。
+```bash
+WXT_VUE3_API_PROXY=1 npx wxt . -p 3100
+```
 
-## 📄 License
+- 页面侧请求 `/__api/<host>/<path>` 会被 Vite 转发到 `https://<host>/<path>`；改写逻辑见 `src/lib/http.ts` 的 `resolveFetchUrl()`，代理规则见 `wxt.config.ts` 的 `buildProxy()`。
+- 默认关闭，只在 `import.meta.env.DEV` 且非扩展源时生效；生产构建里该前缀恒为 `undefined`，请求原样直连。
+- 扩展正式运行时依赖 `host_permissions`，不经过反代。
+- `wxt` 必须带项目根目录参数（`npx wxt .`），否则它会把上级目录当成项目根，去 `./dev/entrypoints` 找入口并报错。
 
-[MIT](LICENSE) © lucky845
+## 权限说明
+
+| 权限               | 用途                                                          |
+| ------------------ | ------------------------------------------------------------- |
+| `storage`          | 保存设置、壁纸缓存、快捷访问、待办、便签等全部本地数据        |
+| `geolocation`      | 天气组件定位到所在城市（首次使用会请求授权）                  |
+| `host_permissions` | 跨域 `fetch` 壁纸原图、天气接口与站点 favicon；不注入任何脚本 |
+
+数据不上传；卸载扩展或在扩展详情里清除数据即彻底删除。
+
+## 配置
+
+- **天气**：`src/config/weather.ts`，默认留空 API Key 走 Open-Meteo 免费接口，接入高德的步骤见 [WEATHER_SETUP.md](WEATHER_SETUP.md)。
+- **默认快捷站点**：`src/config/defaultSites.ts`。
+- **小工具**：`src/config/tools.ts`，新增工具只需补一条 `QuickTool` 定义。
+- **主题令牌**：`public/theme/app.css` 顶部的 CSS 变量（亮 / 暗各一套）。
+
+## 贡献
+
+欢迎提 Issue 与 PR。提交前请确保 `npm run compile` 与 `npm run build` 通过；代码风格沿用仓库内的 ESLint / Prettier 配置。
+
+## 致谢
+
+- [WXT](https://wxt.dev/)、[Vue](https://vuejs.org/)、[Vite](https://vite.dev/)
+- [@surdeddd/liquidglass](https://www.npmjs.com/package/@surdeddd/liquidglass) 提供液态玻璃渲染
+- [Open-Meteo](https://open-meteo.com/)、[Wallhaven](https://wallhaven.cc/)、[Picsum](https://picsum.photos/) 提供公开数据服务
+
+## License
+
+[MIT](LICENSE) © 2025 lucky845

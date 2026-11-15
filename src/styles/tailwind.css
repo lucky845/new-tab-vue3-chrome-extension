@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/**
+ * shadcn-vue 的主题变量（HSL 三通道，供 Tailwind `bg-background` 这类工具类使用）。
+ *
+ * 这里的背景色刻意全部用「跟随壁纸」的半透明值：新标签页的底色永远是壁纸，
+ * 面板/弹窗只需要一层可读的玻璃，而不是不透明的白卡。
+ */
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 240 10% 12%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 12%;
+    --primary: 221 83% 53%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 5% 96%;
+    --secondary-foreground: 240 10% 12%;
+    --muted: 240 5% 96%;
+    --muted-foreground: 240 4% 46%;
+    /* 改名避开 app.css 的 --accent（RGB 三通道语义：13 127 132 = 品牌青）。
+       同名会让 rgb(var(--accent)) 吃到 HSL 三通道，算出 rgb(240,13,245) 这种洋红。
+       Tailwind 侧无 bg-accent 等工具类使用，改名零影响。 */
+    --tw-accent: 240 5% 96%;
+    --tw-accent-foreground: 240 10% 12%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 90%;
+    --input: 240 6% 90%;
+    --ring: 221 83% 53%;
+    --radius: 0.75rem;
+  }
+
+  /* 本项目的主题由 theme-manager 写 <html data-theme='dark|light'>，从不加 .dark class。
+     若只留 .dark，dark 下 --foreground 永远是浅色的近黑 rgb(28,28,34)，
+     所有靠继承 body 颜色的文字（搜索历史项等）在深色玻璃上变成黑字。 */
+  .dark,
+  html[data-theme='dark'] {
+    --foreground: 0 0% 96%;
+    --card: 240 10% 9%;
+    --card-foreground: 0 0% 96%;
+    --popover: 240 10% 9%;
+    --popover-foreground: 0 0% 96%;
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 96%;
+    --muted: 240 4% 16%;
+    --muted-foreground: 240 5% 65%;
+    --tw-accent: 240 4% 16%;
+    --tw-accent-foreground: 0 0% 96%;
+    --border: 240 4% 22%;
+    --input: 240 4% 22%;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  html,
+  body {
+    height: 100%;
+    margin: 0;
+  }
+
+  body {
+    font-family:
+      -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Microsoft YaHei',
+      system-ui, sans-serif;
+    color: hsl(var(--foreground));
+    background: transparent;
+    overflow: hidden;
+  }
+}

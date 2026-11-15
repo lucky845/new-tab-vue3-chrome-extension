@@ -41,7 +41,6 @@ node_modules/
 dist/
 build/
 coverage/
-package-lock.json
 yarn.lock
 
 # 日志文件
@@ -56,6 +55,10 @@ pnpm-debug.log*
 *.rar
 *.gz
 *.7z
+
+# WXT / Vite 构建与生成的类型目录
+.output/
+.wxt/
 
 # 本地工具产物（截图/渲染缓存）
 .dsh-vision-router/
