@@ -7,6 +7,10 @@
 > 旧仓库 [new-tab-chrome-extension](https://github.com/lucky845/new-tab-chrome-extension) 已设为只读存档，代码保持原样，仅历史可查。
 > 2.0 用 Vue 3 + TypeScript + WXT 全面重写，功能对齐 1.x 并继续开发；目前尚未发布商店版本，请从下方「快速开始」或 Release 附件获取。
 
+## 界面预览
+
+![New Tab Pro 界面预览](doc/preview.jpg)
+
 ## 版本对照
 
 |            | 1.x · new-tab-chrome-extension                                         | 2.0 · 本仓库                                              |
@@ -102,6 +106,9 @@ public/
   theme/app.css          全局主题样式与视觉令牌
   _locales/              扩展名称与描述的多语言文案
   icons/                 扩展图标（16 / 48 / 128）
+doc/
+  preview.jpg            README 顶部的界面截图
+  WEATHER_SETUP.md       天气（高德 Key）接入指南
 ```
 
 ## 本地调试的接口反代
@@ -177,7 +184,7 @@ git push && git push --tags
 
 ## 配置
 
-- **天气**：`src/config/weather.ts`，默认留空 API Key 走 Open-Meteo 免费接口，接入高德的步骤见 [WEATHER_SETUP.md](WEATHER_SETUP.md)。
+- **天气**：`src/config/weather.ts`，默认留空 API Key 走 Open-Meteo 免费接口，接入高德的步骤见 [doc/WEATHER_SETUP.md](doc/WEATHER_SETUP.md)。
 - **默认快捷站点**：`src/config/defaultSites.ts`。
 - **小工具**：`src/config/tools.ts`，新增工具只需补一条 `QuickTool` 定义。
 - **主题令牌**：`public/theme/app.css` 顶部的 CSS 变量（亮 / 暗各一套）。
