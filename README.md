@@ -117,6 +117,34 @@ WXT_VUE3_API_PROXY=1 npx wxt . -p 3100
 - 扩展正式运行时依赖 `host_permissions`，不经过反代。
 - `wxt` 必须带项目根目录参数（`npx wxt .`），否则它会把上级目录当成项目根，去 `./dev/entrypoints` 找入口并报错。
 
+## 分支与提交
+
+`master` 是受保护分支：**不能直接 push，也不能强推/删除**，所有改动都要走 Pull Request 合并。
+
+```bash
+git checkout master && git pull
+git checkout -b feat/your-change
+# ...修改...
+npm run compile && npm run build   # 提交前自检
+git commit -am "feat: ..."
+git push -u origin feat/your-change
+gh pr create --fill                 # 或在网页上开 PR
+```
+
+PR 合并后分支会保留在远端，可按需删除：`git push origin --delete feat/your-change`。
+
+保护规则（Settings → Rules 管理）：
+
+| 规则                            | 作用                                                                                 |
+| ------------------------------- | ------------------------------------------------------------------------------------ |
+| Require a pull request          | 只能通过 PR 合并；approve 数要求为 0（单人维护不阻塞），过期 review 在推送后自动失效 |
+| Require linear history          | 只允许 squash / merge，**不允许 rebase merge**，历史保持线性                         |
+| Block force pushes              | 禁止 `--force` 覆盖远端历史                                                          |
+| Restrict deletions              | 禁止删除 `master`                                                                    |
+| Require conversation resolution | PR 里未解决的 review 评论会阻止合并                                                  |
+
+紧急情况需要绕过时，用仓库 owner 权限在 Settings → Rules 里临时把规则设为 Disabled，处理完再打开。
+
 ## 发布流程
 
 打 tag 即出包，流水线见 [`.github/workflows/release.yml`](.github/workflows/release.yml)：
