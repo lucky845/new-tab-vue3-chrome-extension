@@ -116,6 +116,10 @@ interface WallpaperApi {
   fetchAndSetWallpaper(): Promise<void>;
   fetchRandomWallpaper(shouldSave?: boolean): Promise<void>;
   applyPexelsWallpaper(photo: WallpaperPhoto, shouldSave?: boolean): Promise<void>;
+  /** 上传本地图片为壁纸：压缩后走 savedWallpaperBlob 快路径。 */
+  setLocalWallpaper(file: File): Promise<{ ok: boolean; message: string }>;
+  /** 移除本地壁纸并回到随机图。 */
+  clearLocalWallpaper(): Promise<void>;
   searchPhotos(query: string, page?: number): Promise<WallpaperSearchResult>;
   // UI 状态（app.js 壁纸段对应物，全部响应式）
   photos: Ref<WallpaperPhoto[]>;
@@ -384,6 +388,11 @@ function createWallpaperApi(): WallpaperApi {
 
   /** 壁纸缓存写入（统一入口）：useStored ref 写入即持久化。 */
   async function cacheWallpaper(id: string, url: string, photographer: string, alt: string): Promise<void> {
+    // 换到网络壁纸时清掉旧本地烤图：dataURL 是 MB 级资产，URL 已对不上就永远读不到，纯占配额
+    if (savedWallpaperUrl.value && savedWallpaperUrl.value !== url && savedWallpaperBlob.value) {
+      savedWallpaperBlob.value = '';
+      savedWallpaperBlobUrl.value = '';
+    }
     savedWallpaperId.value = id;
     savedWallpaperUrl.value = url;
     savedWallpaperData.value = { id, url, photographer, alt };
@@ -391,10 +400,118 @@ function createWallpaperApi(): WallpaperApi {
 
   /** 移除三键（Pic 记录异常 / Pexels ID 恢复失败）。ref 重置后 useStored 可能回写 ''，与 remove 等价。 */
   function removeSavedWallpaperKeys(): void {
-    void chrome.storage.local.remove(['savedWallpaperId', 'savedWallpaperUrl', 'savedWallpaperData']);
+    void chrome.storage.local.remove([
+      'savedWallpaperId',
+      'savedWallpaperUrl',
+      'savedWallpaperData',
+      'savedWallpaperBlob',
+      'savedWallpaperBlobUrl',
+    ]);
     savedWallpaperId.value = '';
     savedWallpaperUrl.value = '';
     savedWallpaperData.value = null;
+  }
+
+  // ---------- 本地图片壁纸（v2.1.1）：Bitmap 解码 → canvas 压缩 → 复用 savedWallpaperBlob 快路径 ----------
+
+  /**
+   * 入库上限：dataURL 字符数（≈ 二进制 ×1.37）。chrome.storage.local 单域 10MB，
+   * 一张本地壁纸留一半预算；网络壁纸缓存（savedWallpaperData 元数据）很小，不受影响。
+   */
+  const LOCAL_WALLPAPER_MAX_CHARS = 5_000_000;
+  /** 压缩阶梯：外层缩边、内层降质，任一档达标（≤ 上限）即用，避免一张图把配额吃穿。 */
+  const LOCAL_MAX_SIDE_STEPS = [2560, 1600] as const;
+  const LOCAL_QUALITY_STEPS = [0.85, 0.75, 0.6] as const;
+
+  /** 解码用户文件：优先 createImageBitmap（不走 DOM 加载、自动释放），失败回退 Image + objectURL。 */
+  async function decodeLocalImage(file: File): Promise<ImageBitmap | HTMLImageElement> {
+    if (typeof createImageBitmap === 'function') {
+      try {
+        return await createImageBitmap(file);
+      } catch {
+        /* 大图或格式不支持时回退 */
+      }
+    }
+    const url = URL.createObjectURL(file);
+    try {
+      const img = new Image();
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error('图片解码失败'));
+        img.src = url;
+      });
+      return img;
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+
+  /** 按最大边缩放 + JPEG 编码；超限返回 null（让调用方降档重试）。 */
+  function bakeLocalWallpaper(
+    source: ImageBitmap | HTMLImageElement,
+    maxSide: number,
+    quality: number
+  ): string | null {
+    const scale = Math.min(1, maxSide / Math.max(source.width, source.height));
+    const w = Math.max(1, Math.round(source.width * scale));
+    const h = Math.max(1, Math.round(source.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = w;
+    canvas.height = h;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return null;
+    // 先铺白底：JPEG 没有透明通道，PNG/GIF 的透明像素不铺底会被编码成黑色
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, w, h);
+    ctx.drawImage(source, 0, 0, w, h);
+    const dataUrl = canvas.toDataURL('image/jpeg', quality);
+    return dataUrl.length <= LOCAL_WALLPAPER_MAX_CHARS ? dataUrl : null;
+  }
+
+  /** 释放解码产物（ImageBitmap 有关闭方法，img 交给 GC）。 */
+  function disposeLocalImage(source: ImageBitmap | HTMLImageElement): void {
+    if ('close' in source && typeof source.close === 'function') source.close();
+  }
+
+  /**
+   * 本地图片上壁纸：压缩烤成 dataURL 后写进与网络壁纸同一套缓存键
+   * （savedWallpaperBlob + BlobUrl 哨兵），重启走 fetchAndSetWallpaper 的 1a 快路径，零网络直出。
+   */
+  async function setLocalWallpaper(file: File): Promise<{ ok: boolean; message: string }> {
+    if (!file.type.startsWith('image/')) return { ok: false, message: '请选择图片文件' };
+    let source: ImageBitmap | HTMLImageElement | null = null;
+    try {
+      source = await decodeLocalImage(file);
+      let baked: string | null = null;
+      outer: for (const maxSide of LOCAL_MAX_SIDE_STEPS) {
+        for (const quality of LOCAL_QUALITY_STEPS) {
+          baked = bakeLocalWallpaper(source, maxSide, quality);
+          if (baked) break outer;
+        }
+      }
+      if (!baked) return { ok: false, message: '图片压缩后仍过大，请换一张较小的图片' };
+      const sentinel = 'local:' + Date.now();
+      savedWallpaperId.value = 'local';
+      savedWallpaperUrl.value = sentinel;
+      savedWallpaperData.value = { id: 'local', url: '', photographer: '本地图片', alt: file.name };
+      savedWallpaperBlob.value = baked;
+      savedWallpaperBlobUrl.value = sentinel;
+      setWallpaper(baked);
+      return { ok: true, message: '本地壁纸已生效' };
+    } catch (error) {
+      console.error('本地壁纸处理失败:', error);
+      return { ok: false, message: '图片处理失败，请换一张试试' };
+    } finally {
+      if (source) disposeLocalImage(source);
+    }
+  }
+
+  /** 撤掉本地壁纸并回随机图（其余键交给 fetchRandomWallpaper 覆写）。 */
+  async function clearLocalWallpaper(): Promise<void> {
+    savedWallpaperBlob.value = '';
+    savedWallpaperBlobUrl.value = '';
+    await chrome.storage.local.remove(['savedWallpaperBlob', 'savedWallpaperBlobUrl']);
+    await fetchRandomWallpaper(true);
   }
 
   // ---------- 壁纸亮度分档（决定蒙版厚度） ----------
@@ -881,6 +998,8 @@ function createWallpaperApi(): WallpaperApi {
   return {
     fetchAndSetWallpaper,
     fetchRandomWallpaper,
+    setLocalWallpaper,
+    clearLocalWallpaper,
     applyPexelsWallpaper,
     searchPhotos,
     photos,

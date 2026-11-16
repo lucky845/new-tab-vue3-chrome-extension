@@ -43,6 +43,8 @@ const {
   goToPage,
   handleJumpSubmit,
   applyPexelsWallpaper,
+  setLocalWallpaper,
+  clearLocalWallpaper,
   closeWallpaperPanel,
   setAuthErrorHandler,
 } = useWallpaper();
@@ -50,6 +52,42 @@ const {
 /** 跳页输入值（#jump-to-page-input，type=number，校验在 handleJumpSubmit）。 */
 const jumpInput = ref('');
 const jumpInputEl = ref<HTMLInputElement | null>(null);
+
+// ---------- 本地图片壁纸（v2.1.1） ----------
+/** 上传/压缩结果提示（几秒后自动消失，避免常驻占行）。 */
+const localMsg = ref('');
+const localBusy = ref(false);
+let localMsgTimer: ReturnType<typeof setTimeout> | null = null;
+
+function flashLocalMsg(text: string): void {
+  localMsg.value = text;
+  if (localMsgTimer) clearTimeout(localMsgTimer);
+  localMsgTimer = setTimeout(() => (localMsg.value = ''), 3500);
+}
+
+async function onLocalFile(event: Event): Promise<void> {
+  const input = event.target as HTMLInputElement;
+  const file = input.files && input.files[0];
+  // 同名同文件也要能重传：先清 value 再处理
+  input.value = '';
+  if (!file || localBusy.value) return;
+  localBusy.value = true;
+  flashLocalMsg('正在处理图片…');
+  const result = await setLocalWallpaper(file);
+  localBusy.value = false;
+  flashLocalMsg(result.message);
+}
+
+async function onClearLocal(): Promise<void> {
+  localBusy.value = true;
+  await clearLocalWallpaper();
+  localBusy.value = false;
+  flashLocalMsg('已移除本地壁纸');
+}
+
+onUnmounted(() => {
+  if (localMsgTimer) clearTimeout(localMsgTimer);
+});
 
 // legacy openWallpaperPanel：面板显示且网格为空时首次搜索 'Nature'。
 // 失败态也沿用 legacy：占位提示使 childElementCount>0 → 重开不自动重试。
@@ -122,16 +160,28 @@ async function onJumpEnter(): Promise<void> {
       </div>
       <div class="wallpaper-main">
         <div class="wallpaper-header">
-          <h2>壁纸库</h2>
-          <div class="wallpaper-search-box">
-            <input
-              type="text"
-              id="wallpaper-search-input"
-              v-model="wallpaperSearchQuery"
-              placeholder="搜索壁纸，例如 'Forest'"
-              @keydown.enter="handleSearch"
-            />
-            <button id="wallpaper-search-btn" @click="handleSearch">搜索</button>
+          <div class="wallpaper-header-row">
+            <h2>壁纸库</h2>
+            <div class="wallpaper-search-box">
+              <input
+                type="text"
+                id="wallpaper-search-input"
+                v-model="wallpaperSearchQuery"
+                placeholder="搜索壁纸，例如 'Forest'"
+                @keydown.enter="handleSearch"
+              />
+              <button id="wallpaper-search-btn" @click="handleSearch">搜索</button>
+            </div>
+          </div>
+          <div class="wallpaper-local-actions">
+            <label class="wallpaper-upload-btn" :class="{ 'u-disabled': localBusy }">
+              {{ localBusy ? '处理中…' : '上传本地图片' }}
+              <input type="file" accept="image/*" hidden @change="onLocalFile" />
+            </label>
+            <button class="wallpaper-upload-btn" type="button" :disabled="localBusy" @click="onClearLocal">
+              移除本地壁纸
+            </button>
+            <span v-if="localMsg" class="wallpaper-local-msg">{{ localMsg }}</span>
           </div>
         </div>
         <div id="wallpaper-grid" class="wallpaper-grid">
