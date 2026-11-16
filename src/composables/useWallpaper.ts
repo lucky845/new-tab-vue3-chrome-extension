@@ -21,6 +21,8 @@ import { toast as showToast } from '@/src/composables/useToast';
 export const WALLPAPERS_PER_PAGE = 18;
 /** 本地 blob 缓存上限 3.6MB：dataURL 比原图大约 33%，约等于 2.7MB 原图（storage.local 默认 10MB）。 */
 export const BLOB_MAX_BYTES = 3.6 * 1024 * 1024;
+/** 本地壁纸库容量（张）：面板据此显示上限与满库提示。 */
+export const LOCAL_LIBRARY_MAX_ENTRIES = 4;
 /** Picsum 免 Key 图库总页数（约 1080 张，60 页回绕）。 */
 const PICSUM_TOTAL_PAGES = 60;
 /** 随机壁纸查询词（legacy RANDOM_QUERIES 九项）。 */
@@ -525,15 +527,20 @@ function createWallpaperApi(): WallpaperApi {
         }
       }
       if (!baked) return { ok: false, message: '图片压缩后仍过大，请换一张较小的图片' };
-      const entryId = await addToLocalLibrary(baked, file.name);
-      const sentinel = entryId;
+      const added = await addToLocalLibrary(baked, file.name);
+      const sentinel = added.id;
       savedWallpaperId.value = sentinel;
       savedWallpaperUrl.value = sentinel;
       savedWallpaperData.value = { id: sentinel, url: '', photographer: '本地图片', alt: file.name };
       savedWallpaperBlob.value = baked;
       savedWallpaperBlobUrl.value = sentinel;
       setWallpaper(baked);
-      return { ok: true, message: '本地壁纸已生效' };
+      return {
+        ok: true,
+        message: added.inLibrary
+          ? '本地壁纸已生效'
+          : '本地壁纸已生效（图片较大，仅本次使用，未存入本地库）',
+      };
     } catch (error) {
       console.error('本地壁纸处理失败:', error);
       return { ok: false, message: '图片处理失败，请换一张试试' };
@@ -554,7 +561,6 @@ function createWallpaperApi(): WallpaperApi {
 
   const LOCAL_LIBRARY_KEY = 'localWallpapers';
   /** 库容量预算：单库 4 张、总量 6M 字符，保证 savedWallpaperBlob(≤5M) + 库 ≤ chrome.storage 10MB。 */
-  const LOCAL_LIBRARY_MAX_ENTRIES = 4;
   const LOCAL_LIBRARY_MAX_TOTAL_CHARS = 6_000_000;
   const LOCAL_LIBRARY_ENTRY_MAX_CHARS = 4_000_000;
 
@@ -599,17 +605,17 @@ function createWallpaperApi(): WallpaperApi {
   }
 
   /** 把一张压缩后的 dataUrl 收进库：超预算按加入时间淘汰最老的。 */
-  async function addToLocalLibrary(dataUrl: string, name: string): Promise<string> {
+  async function addToLocalLibrary(dataUrl: string, name: string): Promise<{ id: string; inLibrary: boolean }> {
     const list = await readLocalLibrary();
     const existing = list.find((item) => item.dataUrl === dataUrl);
-    if (existing) return existing.id; // 同一张图重复上传不重复入库
+    if (existing) return { id: existing.id, inLibrary: true }; // 同一张图重复上传不重复入库
     const entry: LocalWallpaperEntry = {
       id: 'local:' + Date.now(),
       dataUrl,
       name: name || '本地图片',
       addedAt: Date.now(),
     };
-    if (dataUrl.length > LOCAL_LIBRARY_ENTRY_MAX_CHARS) return entry.id; // 超限不入库，仅当当前壁纸
+    if (dataUrl.length > LOCAL_LIBRARY_ENTRY_MAX_CHARS) return { id: entry.id, inLibrary: false }; // 超限不入库，仅当当前壁纸
     list.push(entry);
     // 容量预算：先按张数、再按总字符，淘汰最老的（正在使用的哨兵不在库里也安全）
     while (list.length > LOCAL_LIBRARY_MAX_ENTRIES) list.shift();
@@ -619,7 +625,7 @@ function createWallpaperApi(): WallpaperApi {
       list.shift();
     }
     await writeLocalLibrary(list);
-    return entry.id;
+    return { id: entry.id, inLibrary: true };
   }
 
   /** 面板打开/启动时刷新库列表（ storage onChanged 不订阅，读时拉平）。 */
