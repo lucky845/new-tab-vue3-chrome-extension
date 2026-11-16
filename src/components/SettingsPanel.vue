@@ -311,7 +311,7 @@ const builtinEngines = computed(() => useSearch().engines.value.filter(e => !e.i
 
 /* ---------- 备份与恢复（legacy exportData / importData / setBackupStatus） ---------- */
 const DEFAULT_BACKUP_STATUS =
-    '导出为单个 JSON 文件，含设置、搜索引擎、快捷方式、待办、便签、番茄钟与壁纸偏好。天气与地理缓存不导出（恢复后会自动重新获取）。';
+    '导出为单个 JSON 文件，含设置、搜索引擎与图标、快捷方式、待办、便签、番茄钟、搜索历史、侧边卡片布局、主题偏好、壁纸（含本地壁纸库）。天气、地理与日出缓存不导出（恢复后自动重新获取）。';
 const backupStatus = ref(DEFAULT_BACKUP_STATUS);
 const backupKind = ref<'' | 'error' | 'success'>('');
 const exportDisabled = ref(false);

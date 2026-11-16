@@ -35,9 +35,15 @@ const registry: Record<string, RegistryEntry> = {
     pomodoroSettings: { type: 'object', label: '番茄钟设置', since: 1 },
     pomodoroStats: { type: 'object', label: '番茄钟统计', since: 1 },
     searchHistory: { type: 'array', label: '搜索历史', since: 1 },
+    engineIcons: { type: 'array', label: '搜索引擎图标缓存', since: 2 },
+    themeSettings: { type: 'object', label: '主题设置', since: 2 },
+    sideCardModes: { type: 'object', label: '侧边卡片显隐设置', since: 2 },
+    localWallpapers: { type: 'array', label: '本地壁纸库', since: 2 },
     savedWallpaperId: { type: 'string', label: '壁纸 ID', since: 1 },
     savedWallpaperUrl: { type: 'string', label: '壁纸地址', since: 1 },
     savedWallpaperData: { type: 'object', label: '壁纸元数据', since: 1 },
+    savedWallpaperBlob: { type: 'string', label: '壁纸本地缓存图', since: 2 },
+    savedWallpaperBlobUrl: { type: 'string', label: '壁纸缓存标记', since: 2 },
 };
 
 /** 只列确切前缀，不用宽泛模式，避免误丢用户数据键 */
@@ -47,6 +53,12 @@ const cachePrefixes = [
     'om_geo_',
     'om_weather_',
     'om_last_location',
+    // 天气失败冷却/最近成功时间：纯运行时状态，恢复后由天气链路自行重建
+    'weather_cooldown_',
+    'weather_fail_count',
+    'weather_last_ok',
+    // 主题日出日落缓存：按日期+经纬度生成，季节性数据不值得跨备份搬运
+    'ntce-sun-',
 ];
 
 export function isCacheKey(key: string): boolean {
@@ -305,8 +317,17 @@ function sanitizeLinks(accepted: Record<string, unknown>): number {
             return ok;
         });
     }
-    // 壁纸地址会进 background-image：非图片地址留着只会变成远程探测
-    if ('savedWallpaperUrl' in accepted && !isImageSource(accepted.savedWallpaperUrl as string)) {
+    // 壁纸地址会进 background-image：非图片地址留着只会变成远程探测。
+    // 例外：本地壁纸的哨兵 URL 形如 local:<entryId>（useWallpaper 的库 id），
+    // 它不是网址而是「从 localWallpapers 库按 id 恢复」的标记——删了它，
+    // savedWallpaperId 虽在、cache 标记却丢，恢复链路会多绕一圈甚至误判。
+    const wallpaperUrl = accepted.savedWallpaperUrl;
+    if (
+        'savedWallpaperUrl' in accepted &&
+        typeof wallpaperUrl === 'string' &&
+        !wallpaperUrl.startsWith('local:') &&
+        !isImageSource(wallpaperUrl)
+    ) {
         delete accepted.savedWallpaperUrl;
         dropped++;
     }
