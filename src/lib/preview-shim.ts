@@ -89,7 +89,10 @@ if (!existingChrome || !existingChrome.storage || !existingChrome.storage.local)
       const callback = splitCallback(keys, callbackIn);
       const result: Record<string, unknown> = {};
       if (typeof keys === 'function') keys = undefined;
-      if (typeof keys === 'string') {
+      if (keys == null) {
+        // 对齐真实 chrome.storage.local.get(null)：返回全部键（备份全量导出依赖此语义）
+        memory.forEach((v, k) => { result[k] = v; });
+      } else if (typeof keys === 'string') {
         result[keys] = memory.get(keys);
       } else if (Array.isArray(keys)) {
         keys.forEach((k) => {
