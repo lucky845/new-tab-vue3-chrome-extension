@@ -16,7 +16,7 @@
  * open('settings')、卸载时还原 null；legacy 还会回显 Key/天气输入，Vue 设置面板
  * 自持表单状态（回显降级）。
  */
-import { onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { panelOriginStyle, usePanels } from '@/src/composables/usePanels';
 import { resolveFetchUrl } from '@/src/lib/http';
 import {
@@ -44,7 +44,6 @@ const {
   handleJumpSubmit,
   applyPexelsWallpaper,
   setLocalWallpaper,
-  clearLocalWallpaper,
   savedWallpaperId,
   localLibrary,
   refreshLocalLibrary,
@@ -62,8 +61,8 @@ const jumpInputEl = ref<HTMLInputElement | null>(null);
 /** 上传/压缩结果提示（几秒后自动消失，避免常驻占行）。 */
 const localMsg = ref('');
 const localBusy = ref(false);
-/** 本地壁纸库展开态：默认收起以免挤压在线壁纸网格；上传成功后自动展开。 */
-const localLibraryExpanded = ref(false);
+/** 右侧内容视图：在线壁纸库 / 本地壁纸（由左侧分类栏切换）。 */
+const viewMode = ref<'online' | 'local'>('online');
 let localMsgTimer: ReturnType<typeof setTimeout> | null = null;
 
 const activeLocalId = computed(() => {
@@ -99,19 +98,20 @@ async function onLocalFile(event: Event): Promise<void> {
   localBusy.value = true;
   flashLocalMsg('正在处理图片…');
   const result = await setLocalWallpaper(file);
-  if (result.ok) {
-    await refreshLocalLibrary();
-    localLibraryExpanded.value = true;
-  }
+  if (result.ok) await refreshLocalLibrary();
   localBusy.value = false;
   flashLocalMsg(result.message);
 }
 
-async function onClearLocal(): Promise<void> {
-  localBusy.value = true;
-  await clearLocalWallpaper();
-  localBusy.value = false;
-  flashLocalMsg('已移除本地壁纸');
+/** 左侧「本地壁纸」入口：切到本地视图。 */
+function switchToLocal(): void {
+  viewMode.value = 'local';
+}
+
+/** 分类点击：先回到在线视图，再执行原有分类检索。 */
+function selectCategory(category: Parameters<typeof handleCategoryClick>[0]): void {
+  viewMode.value = 'online';
+  handleCategoryClick(category);
 }
 
 onUnmounted(() => {
@@ -180,11 +180,21 @@ async function onJumpEnter(): Promise<void> {
               :key="category.query"
               :data-category="category.query"
               :class="{ active: activeCategory === category.query }"
-              @click="handleCategoryClick(category)"
+              @click="selectCategory(category)"
             >
               {{ category.name }}
             </li>
           </ul>
+          <div class="wallpaper-sidebar-divider"></div>
+          <button
+            class="wallpaper-local-entry"
+            :class="{ active: viewMode === 'local' }"
+            type="button"
+            @click="switchToLocal"
+          >
+            本地壁纸
+            <span class="wallpaper-local-entry-count">{{ localLibrary.length }}</span>
+          </button>
         </div>
         <p v-if="categoryUnsupported" class="wallpaper-category-hint">
           提示：当前图源不支持按分类筛选，分类将改为浏览模式。到设置里切换为 Wallhaven 可按分类出图。
@@ -205,68 +215,65 @@ async function onJumpEnter(): Promise<void> {
               <button id="wallpaper-search-btn" @click="handleSearch">搜索</button>
             </div>
           </div>
-          <div class="wallpaper-local-actions">
-            <label class="wallpaper-upload-btn" :class="{ 'u-disabled': localBusy }">
-              {{ localBusy ? '处理中…' : '上传本地图片' }}
+          <div v-if="localMsg && viewMode === 'local'" class="wallpaper-local-msg">{{ localMsg }}</div>
+        </div>
+
+        <!-- 本地壁纸视图：主屏式网格 + + 占位上传，删除靠缩略图 hover 的 × -->
+        <div v-show="viewMode === 'local'" class="wallpaper-local-view">
+          <div class="wallpaper-local-grid">
+            <div
+              v-for="item in localLibrary"
+              :key="item.id"
+              class="wallpaper-local-tile"
+              :class="{ 'is-active': item.id === activeLocalId }"
+              :title="item.name"
+              @click="onApplyLocal(item.id)"
+            >
+              <img :src="item.dataUrl" :alt="item.name" />
+              <button
+                class="wallpaper-local-tile-remove"
+                type="button"
+                title="移除此壁纸"
+                @click.stop="onRemoveLocal(item.id)"
+              >
+                ×
+              </button>
+              <span v-if="item.id === activeLocalId" class="wallpaper-local-tile-badge">当前</span>
+            </div>
+            <label
+              v-if="localLibrary.length < 4"
+              class="wallpaper-local-tile wallpaper-local-add"
+              :class="{ 'u-disabled': localBusy }"
+              title="上传本地图片"
+            >
+              <span class="wallpaper-local-add-plus">+</span>
+              <span class="wallpaper-local-add-text">{{ localBusy ? '处理中…' : '上传' }}</span>
               <input type="file" accept="image/*" hidden @change="onLocalFile" />
             </label>
-            <button class="wallpaper-upload-btn" type="button" :disabled="localBusy" @click="onClearLocal">
-              移除本地壁纸
-            </button>
-            <span v-if="localMsg" class="wallpaper-local-msg">{{ localMsg }}</span>
           </div>
-          <div v-if="localLibrary.length > 0" class="wallpaper-local-library">
-            <button
-              class="wallpaper-local-library-toggle"
-              type="button"
-              :aria-expanded="localLibraryExpanded"
-              @click="localLibraryExpanded = !localLibraryExpanded"
-            >
-              本地壁纸（{{ localLibrary.length }}/4）
-              <span class="wallpaper-local-chevron">{{ localLibraryExpanded ? '▴' : '▾' }}</span>
-            </button>
-            <div v-show="localLibraryExpanded" class="wallpaper-local-thumbs">
-              <div
-                v-for="item in localLibrary"
-                :key="item.id"
-                class="wallpaper-local-thumb"
-                :class="{ 'is-active': item.id === activeLocalId }"
-                :title="item.name"
-                @click="onApplyLocal(item.id)"
-              >
-                <img :src="item.dataUrl" :alt="item.name" />
-                <button
-                  class="wallpaper-local-thumb-remove"
-                  type="button"
-                  title="从本地库移除"
-                  @click.stop="onRemoveLocal(item.id)"
-                >
-                  ×
-                </button>
-                <span v-if="item.id === activeLocalId" class="wallpaper-local-thumb-badge">当前</span>
-              </div>
+        </div>
+
+        <!-- 在线壁纸视图 -->
+        <div v-show="viewMode === 'online'" class="wallpaper-online-view">
+          <div id="wallpaper-grid" class="wallpaper-grid">
+            <div v-if="loadFailed" class="wallpaper-empty-hint">
+              图库加载失败，请检查网络连接后重试。<br />若使用代理，请确认代理节点可用。
             </div>
+            <img
+              v-for="photo in photos"
+              :key="photo.id"
+              loading="lazy"
+              decoding="async"
+              :src="thumbSrc(photo.src.medium)"
+              :alt="photo.alt"
+              @click="pick(photo)"
+            />
           </div>
-        </div>
-        <div id="wallpaper-grid" class="wallpaper-grid">
-          <div v-if="loadFailed" class="wallpaper-empty-hint">
-            图库加载失败，请检查网络连接后重试。<br />若使用代理，请确认代理节点可用。
+          <div id="wallpaper-loading" class="wallpaper-loading" :class="{ 'u-hidden': !isSearching }">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">正在加载壁纸...</div>
           </div>
-          <img
-            v-for="photo in photos"
-            :key="photo.id"
-            loading="lazy"
-            decoding="async"
-            :src="thumbSrc(photo.src.medium)"
-            :alt="photo.alt"
-            @click="pick(photo)"
-          />
-        </div>
-        <div id="wallpaper-loading" class="wallpaper-loading" :class="{ 'u-hidden': !isSearching }">
-          <div class="loading-spinner"></div>
-          <div class="loading-text">正在加载壁纸...</div>
-        </div>
-        <div id="wallpaper-pagination" class="wallpaper-pagination">
+          <div id="wallpaper-pagination" class="wallpaper-pagination">
           <div id="pagination-buttons" class="pagination-buttons">
             <button :disabled="currentPage === 1" @click="goToPage(currentPage - 1)">上一页</button>
             <template v-for="(item, index) in paginationItems" :key="'page-' + index">
@@ -296,6 +303,7 @@ async function onJumpEnter(): Promise<void> {
               />
               <span>页</span>
             </div>
+          </div>
           </div>
         </div>
       </div>
