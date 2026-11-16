@@ -33,6 +33,17 @@ const history = ref<string[]>([]);
 const engineOpen = ref(false);
 const historyOpen = ref(false);
 
+/**
+ * 历史内搜索：输入关键词时只显示包含关键词的记录（不区分大小写）。
+ * 行对象带原始 index —— 过滤后数组的下标不能直接喂给 removeFromHistory。
+ */
+const historyRows = computed(() => {
+    const kw = keyword.value.trim().toLowerCase();
+    const rows = history.value.map((entry, index) => ({ entry, index }));
+    if (!kw) return rows;
+    return rows.filter(row => row.entry.toLowerCase().includes(kw));
+});
+
 const barEl = ref<HTMLElement | null>(null);
 const inputEl = ref<HTMLInputElement | null>(null);
 
@@ -149,7 +160,8 @@ function clearHistory() {
 function removeHistory(index: number) {
     // 只走 manager 的单条删除：history 与 manager 共享同一数组引用，本地再 splice 会变成双删
     void searchManager.value.removeFromHistory(index).then(() => {
-        if (history.value.length === 0) historyOpen.value = false;
+        // 历史内搜索视角下删到没有匹配（或删光）就收起，别让「没有匹配」挂在屏上
+        if (historyRows.value.length === 0) historyOpen.value = false;
     });
 }
 
@@ -159,9 +171,9 @@ function onStorageChanged() {
     refreshHistory();
 }
 
-/** 一开始打字就该收起历史，否则它盖在搜索结果/快捷访问上面 */
+/** 打字时进入「历史内搜索」：有匹配的记录就继续显示，没有匹配才收起 */
 function onInput() {
-    if (keyword.value.length > 0) historyOpen.value = false;
+    historyOpen.value = historyRows.value.length > 0;
 }
 
 function onFocusInput() {
@@ -173,7 +185,7 @@ function onFocusInput() {
         suppressHistory = false;
         return;
     }
-    historyOpen.value = keyword.value.length === 0;
+    historyOpen.value = historyRows.value.length > 0;
     // 两个下拉叠在同一条竖线上，同时开着会互相盖住：谁最后出现谁独占
     if (historyOpen.value) engineOpen.value = false;
 }
@@ -341,18 +353,25 @@ watch(
                 :class="historyOpen ? '' : 'u-hidden'"
             >
                 <div id="history-items-container">
+                    <!-- 两种空态：真的没有记录 vs 历史内搜索没有匹配 -->
                     <div v-if="history.length === 0" class="history-item empty">暂无搜索记录</div>
                     <div
-                        v-for="(entry, index) in history"
-                        :key="entry + '-' + index"
+                        v-else-if="historyRows.length === 0"
+                        class="history-item empty"
+                    >
+                        没有匹配「{{ keyword.trim() }}」的记录
+                    </div>
+                    <div
+                        v-for="row in historyRows"
+                        :key="row.entry + '-' + row.index"
                         class="history-item"
                     >
-                        <span class="history-text" @click="submit(entry)">{{ entry }}</span>
+                        <span class="history-text" @click="submit(row.entry)">{{ row.entry }}</span>
                         <button
                             class="delete-history-btn"
                             type="button"
-                            :aria-label="'删除搜索记录 ' + entry"
-                            @click.stop="removeHistory(index)"
+                            :aria-label="'删除搜索记录 ' + row.entry"
+                            @click.stop="removeHistory(row.index)"
                         >
                             ×
                         </button>

@@ -22,17 +22,39 @@ import IconDragGhost from '@/src/components/IconDragGhost.vue';
  */
 
 const qa = useQuickAccess();
-// 分页容量与 CSS 网格列数联动：断点是 5/4/3 列，每页固定两行。
-// legacy 固定 10 项/页（5×2）；窄屏 CSS 降到 4/3 列后固定 10 会挤出第三行。
-const columnsForWidth = (width: number): number => {
-    if (width <= 700) return 3;
-    if (width <= 920) return 5; // 两翼隐藏，中间恢复 5 列
-    if (width <= 980) return 3;
-    if (width <= 1180) return 4;
-    return 5;
-};
-const viewportWidth = ref(typeof window !== 'undefined' ? window.innerWidth : 1440);
-const itemsPerPage = computed(() => columnsForWidth(viewportWidth.value) * 2);
+/**
+ * 每页条数 = 实测列数 × 2 行。
+ *
+ * 列数不再由 JS 里一套断点表猜（旧实现按 window.innerWidth 分 5/4/3 档，
+ * 与 CSS 的媒体查询各写一套，两边一漂移就会出现「CSS 4 列、JS 以为 5 列」，
+ * 每页塞进 10 项挤出第三行）。现在改成按实测可用宽度算列数、写进 CSS 变量
+ * --qa-cols，CSS 只负责给宽度 —— 单一事实源，且图标尺寸恒定、列数自适应，
+ * 不会因为视口差几像素就整体跳格。
+ */
+const ICON_GAP_FALLBACK = 20;
+const gridColumns = ref(5);
+const itemsPerPage = computed(() => gridColumns.value * 2);
+
+/**
+ * 按网格自身（不是外层 #quick-access-grid 挂载点）的可用宽度算列数。
+ * 要点：让位用的 max-width 挂在里层 .quick-access-grid 上，外层仍是 width:100%，
+ * 量外层会永远得到整行宽度、列数算成 5 —— 而真实网格可能只有 4 列宽。
+ */
+function measureColumns(): void {
+    const host = gridEl.value;
+    if (!host || typeof getComputedStyle === 'undefined') return;
+    const width = host.clientWidth;
+    if (!width) return;
+    const cs = getComputedStyle(host);
+    const icon = parseFloat(cs.getPropertyValue('--icon-square')) || 86;
+    const gap = parseFloat(cs.columnGap || cs.gap) || ICON_GAP_FALLBACK;
+    const fit = Math.floor((width + gap) / (icon + gap));
+    // 3 列是下限：再窄也比「图标缩成一团」好读；5 列是上限，与桌面布局一致
+    const columns = Math.min(5, Math.max(3, fit));
+    if (columns === gridColumns.value && host.style.getPropertyValue('--qa-cols')) return;
+    gridColumns.value = columns;
+    host.style.setProperty('--qa-cols', String(columns));
+}
 
 const rootEl = ref<HTMLElement | null>(null);
 const gridEl = ref<HTMLElement | null>(null);
@@ -365,7 +387,19 @@ watch(totalPages, max => {
 });
 
 function updatePageSize(): void {
-    viewportWidth.value = typeof window !== 'undefined' ? window.innerWidth : 1440;
+    measureColumns();
+}
+
+/**
+ * 盯住挂载容器自身的宽度：关掉侧卡（body[data-wings] 改 max-width）不会触发
+ * window resize，只听 window 的话列数会一直停在旧值。
+ */
+let columnObserver: ResizeObserver | null = null;
+function watchColumnWidth(): void {
+    if (typeof ResizeObserver === 'undefined' || !gridEl.value) return;
+    columnObserver?.disconnect();
+    columnObserver = new ResizeObserver(() => measureColumns());
+    columnObserver.observe(gridEl.value);
 }
 
 onMounted(async () => {
@@ -389,11 +423,13 @@ onMounted(async () => {
             .forEach(it => it.classList.add('drop-zone'));
     });
     window.addEventListener('pointerup', clearLiveMarks, true);
-    updatePageSize();
     window.addEventListener('resize', updatePageSize);
     await qa.init();
     ready.value = true;
     await nextTick();
+    // 网格是 ready 之后才有尺寸的（v-if），量宽度必须等这一拍，否则 clientWidth=0 直接跳过
+    updatePageSize();
+    watchColumnWidth();
     hydrateAll();
     setupObserver();
 });
@@ -403,6 +439,8 @@ onBeforeUnmount(() => {
     destroyIconDrag();
     setHover(null);
     window.removeEventListener('resize', updatePageSize);
+    columnObserver?.disconnect();
+    columnObserver = null;
     observer?.disconnect();
     observer = null;
     const bridge = getBridge();
@@ -420,6 +458,11 @@ onBeforeUnmount(() => {
     >
         <IconDragGhost />
         <div class="advanced-pagination" v-if="ready">
+            <!-- 首跑 / 清空后的空位文案：不弹窗，把「怎么开始」写在空出来的位置上 -->
+            <div v-if="list.length === 0" class="qa-empty" aria-live="polite">
+                <p class="qa-empty-title">这里还是空的</p>
+                <p class="qa-empty-sub">点下面的「添加」放常用网站；把两个图标拖到一起，可以收进同一个文件夹</p>
+            </div>
             <div class="current-page-container">
                 <div class="quick-access-grid" ref="gridEl">
                     <template v-for="(node, i) in pageItems" :key="cellKey(node)">
