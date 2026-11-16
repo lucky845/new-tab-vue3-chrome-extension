@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { log } from '@/src/lib/log';
 /**
  * 壁纸面板（Vue3 移植）——markup 逐字来自 entrypoints/newtab.html L398-438（#wallpaper-panel）。
  *
@@ -152,7 +153,7 @@ function thumbSrc(url: string): string {
 /** 缩略图点击（legacy renderWallpaperGrid 的 img onclick）：应用并保存，随后关面板。 */
 async function pick(photo: WallpaperPhoto): Promise<void> {
   await applyPexelsWallpaper(photo, true);
-  console.log('已保存并缓存壁纸 (ID: ' + photo.id + ')');
+  log.log('已保存并缓存壁纸 (ID: ' + photo.id + ')');
   closeWallpaperPanel();
 }
 

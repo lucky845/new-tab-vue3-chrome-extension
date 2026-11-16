@@ -1,3 +1,4 @@
+import { log } from '@/src/lib/log';
 /**
  * 预览环境 chrome.storage 内存兜底（仅非扩展上下文生效；扩展里 chrome 已存在，本模块零操作）。
  *
@@ -37,7 +38,7 @@ if (!existingChrome || !existingChrome.storage || !existingChrome.storage.local)
       // localStorage ~5MB 配额：壁纸烤图这类大值存不下就只留内存，功能照常
       if (!quotaWarned) {
         quotaWarned = true;
-        console.warn('[preview-shim] localStorage 配额不足，键 ' + k + ' 仅保留在内存（刷新即丢）');
+        log.warn('[preview-shim] localStorage 配额不足，键 ' + k + ' 仅保留在内存（刷新即丢）');
       }
     }
   };
@@ -168,7 +169,7 @@ if (!existingChrome || !existingChrome.storage || !existingChrome.storage.local)
   };
   (globalThis as Record<string, unknown>).chrome = chromeHost;
 
-  console.debug('[preview-shim] chrome.storage 内存兜底已注入（非扩展上下文）');
+  log.debug('[preview-shim] chrome.storage 内存兜底已注入（非扩展上下文）');
 }
 
 export {};

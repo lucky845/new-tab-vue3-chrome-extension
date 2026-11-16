@@ -1,11 +1,12 @@
 <script setup lang="ts">
+import { log } from '@/src/lib/log';
 /**
  * 天气设置面板 —— markup 逐字拷贝自 entrypoints/newtab.html:441-467（#weather-settings-panel）。
  *
  * legacy 行为映射（app.js bindWeatherEvents:600-663 + weather-manager.js setCity/useCurrentLocation/setTemperatureUnit）：
  * - 打开面板时回填当前城市/单位到表单 → watch(isOpen)
  * - 保存：city 有值走 setCity，留空走 useCurrentLocation，再 setTemperatureUnit（legacy 同序）
- * - 成功后关面板并 console.log('天气设置已保存')；失败 console.error 且面板保持打开（legacy 同款）
+ * - 成功后关面板并提示「天气设置已保存」；失败报错且面板保持打开（legacy 同款）
  * - 关闭按钮仅关面板，不做保存
  */
 import { ref, watch } from 'vue';
@@ -42,10 +43,10 @@ async function save(): Promise<void> {
     }
     await setTemperatureUnit(unitDraft.value === 'fahrenheit' ? 'fahrenheit' : 'celsius');
     close('weather-settings');
-    console.log('天气设置已保存');
+    log.log('天气设置已保存');
   } catch (error) {
     // 失败面板保持打开（legacy 同款）
-    console.error('保存天气设置失败:', error);
+    log.error('保存天气设置失败:', error);
   }
 }
 </script>

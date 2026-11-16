@@ -6,6 +6,7 @@
  * 相关逻辑；内置引擎清单（含 icon）、历史去重与 10 条上限、三条校验文案逐字保留。
  * 自定义引擎 URL 一律经 UrlSafe.isHttp 白名单（备份导入属于不可信输入）。
  */
+import { log } from '@/src/lib/log';
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import { UrlSafe } from '@/src/lib/urlSafe';
 
@@ -264,7 +265,7 @@ function createSearch(): SearchApi {
             const plain = JSON.parse(JSON.stringify(history.value ?? [])) as string[];
             await storageArea().set({ [STORAGE_KEYS.searchHistory]: plain });
         } catch (error) {
-            console.error('保存搜索历史失败:', error);
+            log.error('保存搜索历史失败:', error);
         }
     }
 
@@ -280,7 +281,7 @@ function createSearch(): SearchApi {
                 STORAGE_KEYS.engineIcons,
             ]);
         } catch (error) {
-            console.error('加载设置失败:', error);
+            log.error('加载设置失败:', error);
         }
         // 搜索历史（legacy loadHistory）
         try {
@@ -289,7 +290,7 @@ function createSearch(): SearchApi {
                 ? (stored as unknown[]).filter((x): x is string => typeof x === 'string')
                 : [];
         } catch (error) {
-            console.error('加载搜索历史失败:', error);
+            log.error('加载搜索历史失败:', error);
             history.value = [];
         }
         // 合并内置 + 自定义引擎，自定义 URL 先过白名单。
@@ -352,7 +353,7 @@ function createSearch(): SearchApi {
                 ? data[STORAGE_KEYS.customEngines]
                 : [];
         } catch (error) {
-            console.error('加载自定义引擎失败:', error);
+            log.error('加载自定义引擎失败:', error);
         }
         applyCustomEngines(raw);
         return customEngines.value;

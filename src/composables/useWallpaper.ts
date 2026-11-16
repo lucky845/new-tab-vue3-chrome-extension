@@ -9,6 +9,7 @@
  * 存储契约与 legacy 逐键兼容（见文末「存储契约」）；
  * 方法级差异与修正集中在文末「与 legacy 的差异」。
  */
+import { log } from '@/src/lib/log';
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import { usePanels, type PanelId } from '@/src/composables/usePanels';
 import { useStored } from '@/src/lib/storage';
@@ -225,7 +226,7 @@ function createWallpaperApi(): WallpaperApi {
       pexelsApiKey = (settings && settings.pexelsApiKey) || '';
       wallpaperSource = settings && settings.wallpaperSource === 'wallhaven' ? 'wallhaven' : 'picsum';
     } catch (error) {
-      console.error('同步壁纸密钥失败:', error);
+      log.error('同步壁纸密钥失败:', error);
     }
     apiKeySyncedAt = Date.now();
     return pexelsApiKey.length > 0;
@@ -260,7 +261,7 @@ function createWallpaperApi(): WallpaperApi {
     //     校验 savedWallpaperBlobUrl 与当前壁纸 URL 一致：不一致说明缓存是上一张的。
     if (result.savedWallpaperBlob && result.savedWallpaperBlobUrl === result.savedWallpaperUrl) {
       setWallpaper(result.savedWallpaperBlob);
-      console.log('[壁纸] 命中本地缓存，零请求');
+      log.log('[壁纸] 命中本地缓存，零请求');
       return;
     }
 
@@ -275,7 +276,7 @@ function createWallpaperApi(): WallpaperApi {
         savedWallpaperBlob.value = entry.dataUrl;
         savedWallpaperBlobUrl.value = entry.id;
         setWallpaper(entry.dataUrl);
-        console.log('[壁纸] 本地库恢复:', entry.name);
+        log.log('[壁纸] 本地库恢复:', entry.name);
         return;
       }
       await removeSavedWallpaperKeys(); // 库里没有这张了：清键走随机，别卡在死哨兵上
@@ -284,7 +285,7 @@ function createWallpaperApi(): WallpaperApi {
     // 1b. 有缓存 URL：直接用；Pexels 来源异步校验 ID，失效才换新。
     if (result.savedWallpaperUrl) {
       setWallpaper(result.savedWallpaperUrl);
-      console.log('使用缓存的壁纸URL');
+      log.log('使用缓存的壁纸URL');
 
       const savedId = String(result.savedWallpaperId || '');
       // Picsum/Wallhaven 图床链接长期有效无需验证；仅 Pexels 来源需要验证
@@ -295,7 +296,7 @@ function createWallpaperApi(): WallpaperApi {
           void (async () => {
             const isValid = await validateWallpaperById(savedId);
             if (!isValid) {
-              console.log('缓存的壁纸已失效，获取新壁纸');
+              log.log('缓存的壁纸已失效，获取新壁纸');
               await fetchRandomWallpaper(true);
             }
           })();
@@ -329,7 +330,7 @@ function createWallpaperApi(): WallpaperApi {
       });
       return response.ok;
     } catch (error) {
-      console.error('验证壁纸时网络错误:', error);
+      log.error('验证壁纸时网络错误:', error);
       return false;
     }
   }
@@ -341,16 +342,16 @@ function createWallpaperApi(): WallpaperApi {
         headers: { Authorization: pexelsApiKey },
       });
       if (!response.ok) {
-        console.error('获取已保存壁纸(ID: ' + id + ')失败，状态: ' + response.status + '。将移除该ID。');
+        log.error('获取已保存壁纸(ID: ' + id + ')失败，状态: ' + response.status + '。将移除该ID。');
         removeSavedWallpaperKeys();
         return false;
       }
       const photo = mapPexelsPhoto(await response.json());
       void applyPexelsWallpaper(photo, true);
-      console.log('成功加载并缓存壁纸 (ID: ' + id + ')');
+      log.log('成功加载并缓存壁纸 (ID: ' + id + ')');
       return true;
     } catch (error) {
-      console.error('获取已保存壁纸时网络错误:', error);
+      log.error('获取已保存壁纸时网络错误:', error);
       return false;
     }
   }
@@ -380,10 +381,10 @@ function createWallpaperApi(): WallpaperApi {
       } catch (error) {
         const status = (error as FetchJSONError).status;
         if (status === 401) {
-          console.error('Pexels API 密钥无效或已过期。');
+          log.error('Pexels API 密钥无效或已过期。');
           if (onAuthError) onAuthError();
         }
-        console.error('Pexels 随机壁纸失败，回落 Picsum:', (error as Error).message);
+        log.error('Pexels 随机壁纸失败，回落 Picsum:', (error as Error).message);
       }
     }
 
@@ -393,10 +394,10 @@ function createWallpaperApi(): WallpaperApi {
       if (result.photos && result.photos.length > 0) {
         const photo = result.photos[Math.floor(Math.random() * result.photos.length)];
         void applyPexelsWallpaper(photo, shouldSave);
-        console.log('已应用 Wallhaven 随机壁纸 (ID: ' + photo.id + ')');
+        log.log('已应用 Wallhaven 随机壁纸 (ID: ' + photo.id + ')');
         return;
       }
-      console.warn('Wallhaven 随机失败，回落 Picsum:', result.error || '无结果');
+      log.warn('Wallhaven 随机失败，回落 Picsum:', result.error || '无结果');
     }
 
     // 3) Picsum 随机（默认 / 回落）。legacy 的 HEAD 探测已删（纯负收益）。
@@ -407,9 +408,9 @@ function createWallpaperApi(): WallpaperApi {
       if (shouldSave) {
         await cacheWallpaper('pic_random_' + randomSeed, wallpaperUrl, 'Picsum', '随机精选摄影');
       }
-      console.log('已应用 Picsum 随机壁纸: ' + wallpaperUrl);
+      log.log('已应用 Picsum 随机壁纸: ' + wallpaperUrl);
     } catch (error) {
-      console.error('随机壁纸获取失败，保留当前壁纸:', (error as Error).message);
+      log.error('随机壁纸获取失败，保留当前壁纸:', (error as Error).message);
     }
   }
 
@@ -419,7 +420,7 @@ function createWallpaperApi(): WallpaperApi {
     setWallpaper(wallpaperUrl);
     if (shouldSave) {
       await cacheWallpaper(photo.id, wallpaperUrl, photo.photographer, photo.alt);
-      console.log('获取并已保存新的随机壁纸 (ID: ' + photo.id + ')');
+      log.log('获取并已保存新的随机壁纸 (ID: ' + photo.id + ')');
     }
   }
 
@@ -542,7 +543,7 @@ function createWallpaperApi(): WallpaperApi {
           : '本地壁纸已生效（图片较大，仅本次使用，未存入本地库）',
       };
     } catch (error) {
-      console.error('本地壁纸处理失败:', error);
+      log.error('本地壁纸处理失败:', error);
       return { ok: false, message: '图片处理失败，请换一张试试' };
     } finally {
       if (source) disposeLocalImage(source);
@@ -578,7 +579,7 @@ function createWallpaperApi(): WallpaperApi {
           typeof (item as LocalWallpaperEntry).dataUrl === 'string'
       );
     } catch (error) {
-      console.warn('[壁纸] 本地库读取失败:', (error as Error).message);
+      log.warn('[壁纸] 本地库读取失败:', (error as Error).message);
       return [];
     }
   }
@@ -589,7 +590,7 @@ function createWallpaperApi(): WallpaperApi {
       await chrome.storage.local.set({ [LOCAL_LIBRARY_KEY]: list });
     } catch (error) {
       // 超配额：库里最老的一张逐个放弃，直到写得进去；库瘦身不撤当前壁纸
-      console.warn('[壁纸] 本地库写入失败，尝试瘦身:', (error as Error).message);
+      log.warn('[壁纸] 本地库写入失败，尝试瘦身:', (error as Error).message);
       const trimmed = [...list];
       while (trimmed.length > 0) {
         trimmed.shift();
@@ -719,7 +720,7 @@ function createWallpaperApi(): WallpaperApi {
     // 壁纸地址可能来自备份导入：只接受 http(s) / data:image / 扩展内相对路径，
     // 否则不给 background-image 赋值（非法协议会变成远程探测或注入面）
     if (!isImageSource(imageUrl)) {
-      console.warn('[壁纸] 地址协议不受支持，已忽略:', imageUrl);
+      log.warn('[壁纸] 地址协议不受支持，已忽略:', imageUrl);
       return;
     }
     container.style.backgroundImage = "url('" + imageUrl + "')";
@@ -742,7 +743,7 @@ function createWallpaperApi(): WallpaperApi {
     probe.decoding = 'async';
     probe.crossOrigin = 'anonymous';
     probe.onload = () => void storeWallpaperBlob(imageUrl);
-    probe.onerror = () => console.warn('[壁纸] 图片加载失败:', imageUrl);
+    probe.onerror = () => log.warn('[壁纸] 图片加载失败:', imageUrl);
     probe.src = imageUrl;
   }
 
@@ -758,7 +759,7 @@ function createWallpaperApi(): WallpaperApi {
       if (!/^image\//i.test(contentType)) throw new Error('响应不是图片: ' + contentType);
       const blob = await response.blob();
       if (blob.size > BLOB_MAX_BYTES) {
-        console.log('[壁纸] 原图 ' + Math.round(blob.size / 1024) + 'KB 超过缓存上限，跳过');
+        log.log('[壁纸] 原图 ' + Math.round(blob.size / 1024) + 'KB 超过缓存上限，跳过');
         return;
       }
       const dataUrl = await new Promise<string>((resolve, reject) => {
@@ -770,10 +771,10 @@ function createWallpaperApi(): WallpaperApi {
       if (!dataUrl) return;
       savedWallpaperBlob.value = dataUrl;
       savedWallpaperBlobUrl.value = imageUrl; // 记录来源，用于判断缓存是否还对应当前壁纸
-      console.log('[壁纸] 已缓存到本地（' + Math.round(dataUrl.length / 1024) + 'KB，原样字节），下次零请求');
+      log.log('[壁纸] 已缓存到本地（' + Math.round(dataUrl.length / 1024) + 'KB，原样字节），下次零请求');
     } catch (error) {
       // 无 host_permissions / 网络失败 / 超配额 —— 放弃缓存，壁纸照常显示
-      console.warn('[壁纸] 本地缓存生成失败:', (error as Error).message);
+      log.warn('[壁纸] 本地缓存生成失败:', (error as Error).message);
     }
   }
 
@@ -839,10 +840,10 @@ function createWallpaperApi(): WallpaperApi {
     } catch (error) {
       const status = (error as FetchJSONError).status;
       if (status === 401 && onAuthError) {
-        console.error('Pexels API 密钥无效或已过期。');
+        log.error('Pexels API 密钥无效或已过期。');
         onAuthError();
       }
-      console.error('搜索壁纸失败:', (error as Error).message);
+      log.error('搜索壁纸失败:', (error as Error).message);
       // 与 legacy 一致：Pexels 失败返回不带 error 字段，UI toast 落默认文案
       return { photos: null, totalPages: 1, total: 0, unauthorized: false, source: 'pexels' };
     }
@@ -871,7 +872,7 @@ function createWallpaperApi(): WallpaperApi {
         source: 'picsum',
       };
     } catch (error) {
-      console.error('Picsum 图库加载失败:', error);
+      log.error('Picsum 图库加载失败:', error);
       return {
         photos: null,
         totalPages: 1,
@@ -919,7 +920,7 @@ function createWallpaperApi(): WallpaperApi {
       };
     } catch (error) {
       // 429 等具体原因对用户无操作价值，统一吞成同一条提示（与 legacy 一致）
-      console.error('Wallhaven 搜索失败:', error);
+      log.error('Wallhaven 搜索失败:', error);
       return {
         photos: null,
         totalPages: 1,

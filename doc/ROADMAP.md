@@ -132,30 +132,30 @@ C  有效人日 1–5        已含三浏览器回归与文档，单人负荷系
 
 - [x] **ESLint 全量化**（S=2.67，但阻断性）✅ PR #14
     - 已落地：flat config 全量接管 `src/**`（typescript-eslint recommended + eslint-plugin-vue flat/essential），脚本改 `eslint src && vue-tsc --noEmit`，源码 0 error 0 warning（5 处 any 已按真实类型修净）
-- [ ] **Vitest 关键路径**（S=3.0）
+- [x] **Vitest 关键路径**（S=3.0）✅ 44 用例覆盖 5 模块
     - 覆盖 `lib/storage.ts`、`lib/backup.ts`、`lib/urlSafe.ts`、`config/tools.ts` 纯函数、`useSearch` 历史增删
     - 不测渲染，只测纯函数与 composable 行为
-- [ ] **CI 接入 lint + test**（当前 `release.yml` 只有 `compile`）
+- [x] **CI 接入 lint + test** ✅ `release.yml` compile 后加 Lint + Unit tests 两步
 - [ ] 陈旧注释清理 49 处（指向已删除的 1.x 文件）
 - [ ] `console.*` 77 → 约 10 处（保留 error/warn，其余走分级 log）
 
 ### 4.5 发布里程碑（不计配额，前置门）
 
-- [ ] 商店素材：5 张 1280×800 真实截图 + 440×280 小型宣传图 + 128×128 合规图标（96×96 图形 + 16px padding）
-- [ ] 单一用途声明：「用自定义新标签页替换浏览器新标签页，提供快捷访问、壁纸、天气与本地小工具」
-- [ ] 权限逐条 justification 文案（Chrome/Edge 共用）
-- [ ] `BUILDING.md` — AMO 源码复现构建说明（`npm ci && npm run build`）
-- [ ] 三商店名称查重：搜索 "New Tab Pro" / "新标签页 Pro" 确认占用
+- [ ] 商店素材：5 张 1280×800 真实截图（**已用 Playwright 在预览页实拍落盘 `doc/store-screenshots/`，逐张视觉核验通过**；脚本 `scripts/capture-store-screenshots.mjs`）+ 440×280 小型宣传图 + 128×128 合规图标（96×96 图形 + 16px padding）—— 查重/素材说明见 `doc/STORE_ASSETS.md`；宣传图与图标 padding 仍需人工处理
+- [x] 单一用途声明：「用自定义新标签页替换浏览器新标签页，提供快捷访问、壁纸、天气与本地小工具」✅ README 顶部
+- [x] 权限逐条 justification 文案（Chrome/Edge 共用）✅ README 权限说明表新增 justfication 列
+- [x] `BUILDING.md` — AMO 源码复现构建说明（`npm ci && npm run build`）
+- [x] 三商店名称查重：搜索 "New Tab Pro" / "新标签页 Pro" 确认占用（结论见 `doc/STORE_ASSETS.md`：撞名风险高，建议独立品牌词）
 
 ### 4.6 准出标准
 
-- [ ] `npm run lint`（新脚本含 `eslint .`）与 `npm run compile` 本地全绿
-- [ ] `npm test` 可跑且覆盖上述五个模块
-- [ ] CI 把 lint + test 接进 `release.yml`
+- [x] `npm run lint`（`eslint src && vue-tsc`）与 `npm run compile` 本地全绿
+- [x] `npm test` 可跑且覆盖上述五个模块（44 用例）
+- [x] CI 把 lint + test 接进 `release.yml`
 - [ ] 三浏览器冒烟 6 条：新标签打开 / 设置改动后重启仍在 / 壁纸加载 / 搜索与历史 / 拖拽合并文件夹 / 备份导出→导入往返
-- [ ] 备份兼容：实测导入 v2.0.0 导出的文件仍成功
+- [x] 备份兼容：实测导入 v2.0.0 导出的文件仍成功（PR #24 往返测试，18 键全恢复）
 - [ ] 商店三项：无远程代码、权限最小化、隐私说明与「纯本地」一致
-- [ ] 版本号 = tag = CHANGELOG 首行
+- [x] 版本号 = tag = CHANGELOG 首行 ✅ package.json/wxt.config/lock/PRIVACY 均 2.1.0，CHANGELOG 首行 # 2.1.0
 
 ---
 

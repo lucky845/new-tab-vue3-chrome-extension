@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { log } from '@/src/lib/log';
 import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import { applyGlass, releaseGlass } from '@/src/lib/glass';
 import EngineIcon from '@/src/components/EngineIcon.vue';
@@ -122,7 +123,7 @@ function submit(text?: string) {
 
     const ok = UrlSafe.isHttp(url);
     if (!ok) {
-        console.warn('[搜索] 引擎地址协议不受支持，回落到默认引擎:', template);
+        log.warn('[搜索] 引擎地址协议不受支持，回落到默认引擎:', template);
         url = 'https://www.bing.com/search?q=' + encoded;
     }
 

@@ -9,6 +9,7 @@
  * 镜像 ref；预览态 preview()（只改内存不落盘）与持久化 save() 分离，语义与 app.js 的
  * previewThemeMode / previewThemeSunWindow / snapshotTheme / restoreThemeSnapshot 一致。
  */
+import { log } from '@/src/lib/log';
 import { ref, type Ref } from 'vue';
 
 export type ThemeMode = 'auto' | 'light' | 'dark' | 'sun';
@@ -239,7 +240,7 @@ export async function refreshSunTimes(): Promise<SunTimes | null> {
     return result;
   } catch (e) {
     // 取不到就用自定义兜底时间，绝不因此卡住主题
-    console.warn('获取日出日落失败，改用自定义时段:', (e as Error).message);
+    log.warn('获取日出日落失败，改用自定义时段:', (e as Error).message);
     sunTimes = null;
     publish();
     return null;
@@ -269,7 +270,7 @@ function createThemeApi(): ThemeApi {
         settings = { ...THEME_DEFAULTS, ...sanitizeTheme(saved) };
       }
     } catch (e) {
-      console.warn('读取主题设置失败，使用默认值:', e);
+      log.warn('读取主题设置失败，使用默认值:', e);
     }
     writeMirror();
     publish();
@@ -282,7 +283,7 @@ function createThemeApi(): ThemeApi {
     try {
       await chrome.storage.local.set({ [THEME_STORAGE_KEY]: settings });
     } catch (e) {
-      console.warn('保存主题设置失败:', e);
+      log.warn('保存主题设置失败:', e);
     }
     publish();
     if (settings.mode === 'sun') await refreshSunTimes();
