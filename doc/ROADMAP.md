@@ -130,9 +130,8 @@ C  有效人日 1–5        已含三浏览器回归与文档，单人负荷系
 
 ### 4.4 技术债（40%）
 
-- [ ] **ESLint 全量化**（S=2.67，但阻断性）
-    - 现状：`lint` 脚本只跑 `eslint eslint.config.js`（只 lint 配置文件本身）
-    - 补 `typescript-eslint` + `vue-eslint-parser` + `eslint-plugin-vue`；脚本改 `eslint . && vue-tsc --noEmit`
+- [x] **ESLint 全量化**（S=2.67，但阻断性）✅ PR #14
+    - 已落地：flat config 全量接管 `src/**`（typescript-eslint recommended + eslint-plugin-vue flat/essential），脚本改 `eslint src && vue-tsc --noEmit`，源码 0 error 0 warning（5 处 any 已按真实类型修净）
 - [ ] **Vitest 关键路径**（S=3.0）
     - 覆盖 `lib/storage.ts`、`lib/backup.ts`、`lib/urlSafe.ts`、`config/tools.ts` 纯函数、`useSearch` 历史增删
     - 不测渲染，只测纯函数与 composable 行为
