@@ -112,7 +112,7 @@ public/
   _locales/              扩展名称与描述的多语言文案
   icons/                 扩展图标（16 / 48 / 128）
 doc/
-  preview.jpg            README 顶部的界面截图
+  img/preview.jpg        README 顶部的界面截图
   WEATHER_SETUP.md       天气（高德 Key）接入指南
 ```
 
