@@ -397,6 +397,63 @@ function createWallpaperApi(): WallpaperApi {
     savedWallpaperData.value = null;
   }
 
+  // ---------- 壁纸亮度分档（决定蒙版厚度） ----------
+
+  /**
+   * 壁纸亮度分档写进 <html data-wallpaper-tone>，由 app.css 决定蒙版加多厚。
+   * 反向组合才需要加码：亮壁纸配深色主题（白字）、暗壁纸配浅色主题（墨字），
+   * 11px 的站点名会掉到 3:1 以下；同向组合默认值已经够。
+   */
+  type WallpaperTone = 'bright' | 'normal' | 'dark';
+
+  /** 0-255 的 Rec.601 感知亮度阈值，实测取值：白纸≈236、灰蓝天空≈150、森林≈70。 */
+  const TONE_BRIGHT_ABOVE = 150;
+  const TONE_DARK_BELOW = 80;
+
+  function applyWallpaperTone(tone: WallpaperTone | null): void {
+    const root = document.documentElement;
+    if (tone) root.dataset.wallpaperTone = tone;
+    else delete root.dataset.wallpaperTone;
+  }
+
+  /** 从已解码的源图缩到 16×16 采样平均亮度；跨域图污染画布时抛错，返回 null 表示量不出。 */
+  function sampleTone(source: CanvasImageSource): WallpaperTone | null {
+    const size = 16;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    if (!ctx) return null;
+    try {
+      ctx.drawImage(source, 0, 0, size, size);
+      const { data } = ctx.getImageData(0, 0, size, size);
+      let sum = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+      }
+      const avg = sum / (data.length / 4);
+      if (avg >= TONE_BRIGHT_ABOVE) return 'bright';
+      if (avg <= TONE_DARK_BELOW) return 'dark';
+      return 'normal';
+    } catch {
+      // SecurityError：图床没给 CORS 头，读不到像素。放弃分档，蒙版退回默认值。
+      return null;
+    }
+  }
+
+  /**
+   * 量一下当前壁纸有多亮。读不到像素就清掉标记走默认值 —— 不阻塞壁纸显示，
+   * 也不假装量过（跨域无 CORS 的图床在扩展里确实拿不到像素）。
+   */
+  function measureWallpaperTone(imageUrl: string): void {
+    if (!imageUrl || typeof Image === 'undefined') return;
+    const probe = new Image();
+    probe.crossOrigin = 'anonymous';
+    probe.onload = () => applyWallpaperTone(sampleTone(probe));
+    probe.onerror = () => applyWallpaperTone(null);
+    probe.src = imageUrl;
+  }
+
   /** 设置壁纸背景 + 玻璃场景同步 + 加载追踪。 */
   function setWallpaper(imageUrl: string): void {
     const container = document.getElementById('wallpaper');
@@ -412,6 +469,7 @@ function createWallpaperApi(): WallpaperApi {
     // Vue 侧不持有 liquidGlass 实例，直接走 lib/glass 的场景同步（不支持时静默）。
     if (imageUrl) syncGlassScene(imageUrl);
     trackImageLoad(imageUrl);
+    measureWallpaperTone(imageUrl);
   }
 
   /**
