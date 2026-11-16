@@ -14,7 +14,6 @@ import { useStored } from '@/src/lib/storage';
 import { useNotes } from '@/src/composables/useNotes';
 import { usePomodoro } from '@/src/composables/usePomodoro';
 import { useTodo } from '@/src/composables/useTodo';
-import { DEFAULT_SETTINGS } from '@/src/composables/useSettings';
 
 export type SideCardId = 'todo' | 'pomodoro' | 'notes' | 'tools';
 export type SideCardMode = 'auto' | 'always' | 'never';

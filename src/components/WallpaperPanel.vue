@@ -62,6 +62,8 @@ const jumpInputEl = ref<HTMLInputElement | null>(null);
 /** 上传/压缩结果提示（几秒后自动消失，避免常驻占行）。 */
 const localMsg = ref('');
 const localBusy = ref(false);
+/** 本地壁纸库展开态：默认收起以免挤压在线壁纸网格；上传成功后自动展开。 */
+const localLibraryExpanded = ref(false);
 let localMsgTimer: ReturnType<typeof setTimeout> | null = null;
 
 const activeLocalId = computed(() => {
@@ -97,7 +99,10 @@ async function onLocalFile(event: Event): Promise<void> {
   localBusy.value = true;
   flashLocalMsg('正在处理图片…');
   const result = await setLocalWallpaper(file);
-  if (result.ok) await refreshLocalLibrary();
+  if (result.ok) {
+    await refreshLocalLibrary();
+    localLibraryExpanded.value = true;
+  }
   localBusy.value = false;
   flashLocalMsg(result.message);
 }
@@ -167,18 +172,20 @@ async function onJumpEnter(): Promise<void> {
     <div class="wallpaper-content settings-content">
       <button id="close-wallpaper-btn" class="close-panel-btn" type="button" title="关闭" @click="close('wallpaper')">✕</button>
       <div id="wallpaper-categories-sidebar" class="wallpaper-categories-sidebar">
-        <h4>推荐分类</h4>
-        <ul>
-          <li
-            v-for="category in CATEGORIES"
-            :key="category.query"
-            :data-category="category.query"
-            :class="{ active: activeCategory === category.query }"
-            @click="handleCategoryClick(category)"
-          >
-            {{ category.name }}
-          </li>
-        </ul>
+        <div class="wallpaper-categories-scroll">
+          <h4>推荐分类</h4>
+          <ul>
+            <li
+              v-for="category in CATEGORIES"
+              :key="category.query"
+              :data-category="category.query"
+              :class="{ active: activeCategory === category.query }"
+              @click="handleCategoryClick(category)"
+            >
+              {{ category.name }}
+            </li>
+          </ul>
+        </div>
         <p v-if="categoryUnsupported" class="wallpaper-category-hint">
           提示：当前图源不支持按分类筛选，分类将改为浏览模式。到设置里切换为 Wallhaven 可按分类出图。
         </p>
@@ -209,8 +216,16 @@ async function onJumpEnter(): Promise<void> {
             <span v-if="localMsg" class="wallpaper-local-msg">{{ localMsg }}</span>
           </div>
           <div v-if="localLibrary.length > 0" class="wallpaper-local-library">
-            <div class="wallpaper-local-library-title">本地壁纸（{{ localLibrary.length }}/4）</div>
-            <div class="wallpaper-local-thumbs">
+            <button
+              class="wallpaper-local-library-toggle"
+              type="button"
+              :aria-expanded="localLibraryExpanded"
+              @click="localLibraryExpanded = !localLibraryExpanded"
+            >
+              本地壁纸（{{ localLibrary.length }}/4）
+              <span class="wallpaper-local-chevron">{{ localLibraryExpanded ? '▴' : '▾' }}</span>
+            </button>
+            <div v-show="localLibraryExpanded" class="wallpaper-local-thumbs">
               <div
                 v-for="item in localLibrary"
                 :key="item.id"
