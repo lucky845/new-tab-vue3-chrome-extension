@@ -5,30 +5,22 @@
  * legacy 映射（public/legacy-js/app.js）：
  * - renderNotesCard（1122-1132）：全量 getNotes() + 徽标 getNotes().length、空态 '还没有便签'
  * - renderNotesInto（1044-1120，覆盖 966-1042 的同名定义）：note-card 结构 + 500ms 防抖自动保存
- * - 展开按钮（1368）：panelBtn.click() → usePanels().toggle('notes')
+ * - 展开按钮：外壳 SideCard 记录 panelOrigin 后 toggle('notes')
  *
  * 与 NotesPanel 共享 useNotes 单例；便签列表从不挂 Sortable。
+ * 显隐 / 展开按钮 / 头部由 SideCard 外壳统一承载，本组件只管卡片主体。
  */
-import { setPanelOriginFromEvent, usePanels } from '@/src/composables/usePanels';
+import SideCard from '@/src/components/common/SideCard.vue';
 import { useNotes, formatNoteTime, type Note } from '@/src/composables/useNotes';
 import { toast } from '@/src/composables/useToast';
-import { useSideCards } from '@/src/composables/useSideCards';
+import { ICON_TRASH } from '@/src/lib/icons';
 
-const { visible } = useSideCards();
-
-const { toggle } = usePanels();
-
-/** 记录展开原点后开合：面板卡片从被点的这颗按钮长出来（见 app.css 的 --panel-origin）。 */
-function openPanel(id: Parameters<typeof toggle>[0], ev: MouseEvent): void {
-  setPanelOriginFromEvent(id, ev);
-  toggle(id);
-}
 const { sortedNotes, stats, updateNote, togglePin, removeNote } = useNotes();
 
-/** legacy AppIcons（public/legacy-js/app.js 第 6、8 行逐字拷贝，视觉零漂移） */
+/** legacy AppIcons —— pin 仅本卡用（留在本地），trash 抽到共享 */
 const ICONS = {
   pin: '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 17v5"></path><path d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"></path></svg>',
-  trash: '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>',
+  trash: ICON_TRASH,
 } as const;
 
 // —— textarea 模板 ref：对应 legacy 的 notesList.querySelector(li[data-id] textarea) ——
@@ -64,11 +56,7 @@ async function onDelete(id: string): Promise<void> {
 
 <!-- prettier-ignore -->
 <template>
-    <section v-show="visible('notes')" class="side-card" id="side-card-notes">
-        <header class="side-card-header">
-            <h3>便签<span id="notes-card-badge" class="side-badge">{{ stats.total }}</span></h3>
-            <button id="notes-card-expand" class="side-expand-btn" title="打开完整面板" @click="openPanel('notes', $event)">⤢</button>
-        </header>
+    <SideCard cardId="notes" elementId="side-card-notes" title="便签" :badge="stats.total" badgeId="notes-card-badge" expandId="notes-card-expand">
         <ul id="notes-card-list" class="side-notes-list notes-list">
             <li v-if="sortedNotes.length === 0" class="notes-empty">还没有便签</li>
             <template v-else>
@@ -101,5 +89,5 @@ async function onDelete(id: string): Promise<void> {
                 </li>
             </template>
         </ul>
-    </section>
+    </SideCard>
 </template>

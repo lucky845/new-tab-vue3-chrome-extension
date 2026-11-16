@@ -5,6 +5,7 @@ import { usePanels } from '@/src/composables/usePanels';
 import GlassPanel from '@/src/components/common/GlassPanel.vue';
 import { isTodoOverdue, useTodo, type Todo, type TodoCategory } from '@/src/composables/useTodo';
 import { toast as showToast } from '@/src/composables/useToast';
+import { ICON_TRASH, ICON_CAT_WORK, ICON_CAT_LIFE, ICON_CAT_NORMAL } from '@/src/lib/icons';
 
 /**
  * 待办事项面板。
@@ -36,10 +37,10 @@ const inputEl = ref<HTMLInputElement | null>(null);
 
 /** legacy AppIcons（public/legacy-js/app.js 第 6、10-12 行逐字拷贝，视觉零漂移） */
 const ICONS = {
-  trash: `<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>`,
-  catWork: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>`,
-  catLife: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path><path d="M10 21v-6h4v6"></path></svg>`,
-  catNormal: `<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8M8 17h5"></path></svg>`,
+  trash: ICON_TRASH,
+  catWork: ICON_CAT_WORK,
+  catLife: ICON_CAT_LIFE,
+  catNormal: ICON_CAT_NORMAL,
 } as const;
 
 // legacy：{ work: 'catWork', life: 'catLife', normal: 'catNormal' }[category] || 'catNormal'
