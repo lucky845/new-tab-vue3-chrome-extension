@@ -68,7 +68,7 @@ let folderDragSource: HTMLElement | null = null;
 let folderDragName: string | null = null;
 let menuCloseHandler: ((ev: MouseEvent) => void) | null = null;
 
-function manager(): any {
+function manager(): ReturnType<typeof useQuickAccess> {
   return useQuickAccess();
 }
 function dialog() {
@@ -95,7 +95,7 @@ async function handleItemMerge(draggedIndex: number, targetIndex: number): Promi
   let folderName: string | null = null;
   if (!target.isFolder) {
     const dragged = mgr.getNodeByIndex(draggedIndex);
-    const suggest = mgr.suggestFolderName([target, dragged].filter(Boolean));
+    const suggest = mgr.suggestFolderName([target, dragged].filter((n): n is QuickAccessNode => n != null));
     // 统一对话框替代原生 prompt：校验直接内联提示，不再弹 toast 打断
     const input = await dialog()?.prompt?.('新建文件夹', suggest, {
       confirmText: '创建',
@@ -159,7 +159,7 @@ async function dissolveQuickFolder(index: number) {
   const mgr = manager();
   const folder = mgr?.getSites?.()[index];
   if (!folder || !folder.isFolder) return;
-  const items = await mgr.dissolveFolder(index);
+  const items = (await mgr.dissolveFolder(index)) || [];
   renderAndNotify();
   closeFolder();
   toast(`已解散文件夹，${items.length} 个站点已回到主面板`, 'success', 2200);
@@ -345,6 +345,7 @@ function onFolderPointerUp(event: PointerEvent): void {
   const names = cells.map((el) => el.querySelector('.folder-site-name')?.textContent?.trim() || '');
   const [moved] = names.splice(from, 1);
   names.splice(to, 0, moved);
+  if (folderIndex.value == null) return;
   Promise.resolve(manager().reorderFolderItems(folderIndex.value, names))
     .then(() => renderAndNotify())
     .catch((error: unknown) => console.error('文件夹内排序保存失败:', error));
@@ -380,9 +381,10 @@ function initFolderSortable(grid: HTMLElement) {
 async function dropItemOutOfFolder(name: string) {
   const mgr = manager();
   const fIndex = folderIndex.value;
+  if (fIndex == null) return;
   const folder = mgr?.getNodeByIndex?.(fIndex);
   if (!folder || !folder.isFolder) return;
-  const itemIndex = (folder.items || []).findIndex((item: any) => item.name === name);
+  const itemIndex = (folder.items || []).findIndex((item: QuickAccessNode) => item.name === name);
   if (itemIndex === -1) return;
 
   await mgr.moveFromFolderToRoot(fIndex, itemIndex);
@@ -435,10 +437,10 @@ function showContextMenu(e: MouseEvent, item: HTMLElement) {
     const folders = mgr.getFolders();
     if (folders.length > 0) {
       addMenuRow('移入文件夹', () => {}, { disabled: true });
-      folders.forEach((folder: any) => {
+      folders.forEach((folder: QuickAccessNode, i: number) => {
         addMenuRow(
           '　' + folder.name + '（' + (folder.items || []).length + '）',
-          () => void moveQuickItemToFolder(index, folder.index),
+          () => void moveQuickItemToFolder(index, i),
           { small: true }
         );
       });
