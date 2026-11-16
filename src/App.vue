@@ -21,6 +21,7 @@ import { setPanelOriginFromEvent, usePanels, type PanelId } from '@/src/composab
 import { useWallpaper } from '@/src/composables/useWallpaper';
 import { useTheme } from '@/src/composables/useTheme';
 import { bindWingsAttribute } from '@/src/composables/useSideCards';
+import ToastHost from '@/src/components/common/ToastHost.vue';
 
 /**
  * 首屏外壳 + 已迁移面板挂载点。
@@ -116,4 +117,5 @@ onUnmounted(() => {
         <QuickAccessDialog />
         <FolderOverlay />
     </Teleport>
+    <ToastHost />
 </template>

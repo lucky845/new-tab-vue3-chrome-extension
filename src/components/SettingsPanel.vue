@@ -14,7 +14,8 @@
  *   - 主题预览语义：preview() 只改内存+apply，不落盘；自动保存或关闭面板时才 themeApi.save()。
  */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import { panelOriginStyle, usePanels } from '@/src/composables/usePanels';
+import { usePanels } from '@/src/composables/usePanels';
+import GlassPanel from '@/src/components/common/GlassPanel.vue';
 import { useTheme, type ThemeMode, type ThemeSettings } from '@/src/composables/useTheme';
 import {
     readSettings,
@@ -563,13 +564,13 @@ watch(
 </script>
 
 <template>
-    <div
-        id="settings-panel"
-        :style="panelOriginStyle('settings')"
-        class="settings-panel"
-        :class="{ 'u-hidden': !panels.isOpen('settings') }"
-        @click.self="closePanel"
-    >
+    <GlassPanel
+        panelId="settings"
+        :open="panels.isOpen('settings')"
+        variant="settings"
+        elementId="settings-panel"
+        @dismiss="closePanel"
+      >
         <div class="settings-content">
             <button
                 id="close-settings-btn"
@@ -1053,5 +1054,5 @@ watch(
                 </div>
             </div>
         </div>
-    </div>
+    </GlassPanel>
 </template>

@@ -416,7 +416,37 @@
     pointer-events: none;
 }
 
-/* 天气提示条与全局 Toast 已统一由 js/utils/dsh-tip.js 承载样式（内联注入），此处不再保留重复规则。 */
+/* ==========================================================================
+   Toast / Tip —— 样式真源（与面板玻璃同源，改这一处全站生效）
+   --------------------------------------------------------------------------
+   以前 .dsh-tip 的样式由 useTip.ts 在运行时 JS 字符串注入 <style>，用另一套
+   fallback 令牌（--glass-bg/--color-text），与面板（--panel-glass-fill/--ink）
+   不是一源 → 视觉上「Toast 长得跟面板不一样」。现在样式真源收口到本文件，
+   令牌全部复用面板/语义色那套；useTip.ts 只保留 DOM 构造与定位逻辑。
+   ========================================================================== */
+.dsh-tip{position:fixed;z-index:var(--z-confirm,10000);box-sizing:border-box;display:flex;align-items:center;gap:8px;max-width:min(320px,calc(100vw - 16px));padding:10px 13px;border:1px solid var(--glass-rim);border-radius:var(--radius-md);background-color:var(--panel-glass-fill);background-image:linear-gradient(180deg,rgb(var(--spec) / 0.18) 0%,rgb(var(--spec) / 0) 40%);box-shadow:var(--glass-shadow);backdrop-filter:var(--glass-card-backdrop);-webkit-backdrop-filter:var(--glass-card-backdrop);color:var(--text-primary);font-size:13px;line-height:1.5;opacity:0;transform:translateY(-6px);transition:opacity .2s ease,transform .2s ease;pointer-events:none;}
+.dsh-tip--visible{opacity:1;transform:translateY(0);pointer-events:auto;}
+.dsh-tip__icon{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;font-size:11px;font-weight:700;line-height:1;background:rgb(var(--ink) / 0.1);}
+.dsh-tip__text{flex:1 1 auto;min-width:0;word-break:break-word;}
+.dsh-tip__action{flex:0 0 auto;border:0;background:none;color:var(--text-primary);font:inherit;font-weight:600;cursor:pointer;padding:2px 4px;}
+.dsh-tip__action:hover{text-decoration:underline;}
+.dsh-tip__close{flex:0 0 auto;border:0;background:none;color:inherit;opacity:.6;font-size:16px;line-height:1;cursor:pointer;padding:0 2px;}
+.dsh-tip__close:hover{opacity:1;}
+.dsh-tip--success .dsh-tip__icon{background:rgb(var(--ok) / 0.2);color:rgb(var(--ok));}
+.dsh-tip--warning .dsh-tip__icon{background:rgb(var(--warn) / 0.2);color:rgb(var(--warn));}
+.dsh-tip--error .dsh-tip__icon{background:rgb(var(--danger) / 0.2);color:rgb(var(--danger));}
+.dsh-tip--info .dsh-tip__icon{background:rgb(var(--info) / 0.2);color:rgb(var(--info));}
+.dsh-tip--loading .dsh-tip__icon{animation:dsh-tip-spin 1s linear infinite;}
+@keyframes dsh-tip-spin{to{transform:rotate(360deg);}}
+.dsh-tip__arrow{position:absolute;width:12px;height:12px;transform:rotate(45deg);background:inherit;border:1px solid var(--glass-rim);}
+@media (prefers-reduced-motion:reduce){.dsh-tip{transition:none;}.dsh-tip--loading .dsh-tip__icon{animation:none;}}
+.dsh-tip-toasts{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:var(--z-confirm,10000);display:flex;flex-direction:column;align-items:center;gap:8px;min-width:280px;pointer-events:none;}
+.dsh-tip-toasts .dsh-tip{position:relative;top:auto;left:auto;transform:translateY(-6px);pointer-events:auto;}
+.dsh-tip-toasts .dsh-tip--visible{transform:translateY(0);}
+/* Toast 队列进出场：与面板 --panel-origin 同一族位移动效 */
+.toast-enter-active,.toast-leave-active{transition:opacity .22s ease,transform .22s ease;}
+.toast-enter-from,.toast-leave-to{opacity:0;transform:translateY(-10px) scale(.96);}
+.toast-move{transition:transform .22s ease;}
 
 body,
 html {

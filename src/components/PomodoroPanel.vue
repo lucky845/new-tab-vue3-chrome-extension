@@ -9,7 +9,8 @@
  * 定时器，故无 onUnmounted 清理需求。
  */
 import { computed, ref, watch } from 'vue';
-import { panelOriginStyle, usePanels } from '@/src/composables/usePanels';
+import { usePanels } from '@/src/composables/usePanels';
+import GlassPanel from '@/src/components/common/GlassPanel.vue';
 import { usePomodoro, formatPomodoroTime, showToast } from '@/src/composables/usePomodoro';
 
 const { isOpen, close } = usePanels();
@@ -77,13 +78,13 @@ async function applySettings(): Promise<void> {
 </script>
 
 <template>
-    <div
-        id="pomodoro-panel"
-        :style="panelOriginStyle('pomodoro')"
-        class="widget-panel"
-        :class="{ 'u-hidden': !isOpen('pomodoro') }"
-        @click.self="close('pomodoro')"
-    >
+    <GlassPanel
+        panelId="pomodoro"
+        :open="isOpen('pomodoro')"
+        variant="widget"
+        elementId="pomodoro-panel"
+        @dismiss="close('pomodoro')"
+      >
         <div class="widget-content">
             <div class="widget-header">
                 <h2>番茄专注钟</h2>
@@ -209,5 +210,5 @@ async function applySettings(): Promise<void> {
                 >
             </div>
         </div>
-    </div>
+    </GlassPanel>
 </template>

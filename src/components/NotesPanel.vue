@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref } from 'vue';
-import { panelOriginStyle, usePanels } from '@/src/composables/usePanels';
+import { usePanels } from '@/src/composables/usePanels';
+import GlassPanel from '@/src/components/common/GlassPanel.vue';
 import { useNotes, formatNoteTime, type Note } from '@/src/composables/useNotes';
 import { toast } from '@/src/composables/useToast';
 
@@ -82,12 +83,12 @@ async function onDelete(id: string): Promise<void> {
 
 <template>
   <!-- 备忘录面板 -->
-  <div
-    id="notes-panel"
-    :style="panelOriginStyle('notes')"
-    class="widget-panel"
-    :class="{ 'u-hidden': !isOpen('notes') }"
-    @click.self="close('notes')"
+  <GlassPanel
+    panelId="notes"
+    :open="isOpen('notes')"
+    variant="widget"
+    elementId="notes-panel"
+    @dismiss="close('notes')"
   >
     <div class="widget-content">
       <div class="widget-header">
@@ -147,5 +148,5 @@ async function onDelete(id: string): Promise<void> {
       </ul>
       <div class="notes-meta" id="notes-meta">{{ metaText }}</div>
     </div>
-  </div>
+  </GlassPanel>
 </template>

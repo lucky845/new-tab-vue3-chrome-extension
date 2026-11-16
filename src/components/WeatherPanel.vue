@@ -9,7 +9,8 @@
  * - 关闭按钮仅关面板，不做保存
  */
 import { ref, watch } from 'vue';
-import { panelOriginStyle, usePanels } from '@/src/composables/usePanels';
+import { usePanels } from '@/src/composables/usePanels';
+import GlassPanel from '@/src/components/common/GlassPanel.vue';
 import { useWeather } from '@/src/composables/useWeather';
 
 const { isOpen, close } = usePanels();
@@ -51,11 +52,12 @@ async function save(): Promise<void> {
 
 <template>
   <!-- 天气设置面板 (默认隐藏) markup 逐字拷贝自 entrypoints/newtab.html:441-467 -->
-  <div
-    id="weather-settings-panel"
-    :style="panelOriginStyle('weather-settings')"
-    class="settings-panel"
-    :class="{ 'u-hidden': !isOpen('weather-settings') }"
+  <GlassPanel
+    panelId="weather-settings"
+    :open="isOpen('weather-settings')"
+    variant="settings"
+    elementId="weather-settings-panel"
+    :dismissable="false"
   >
     <div class="settings-content">
       <button id="close-weather-settings-btn" class="close-panel-btn" type="button" title="关闭" @click="close('weather-settings')">✕</button>
@@ -81,5 +83,5 @@ async function save(): Promise<void> {
         <button id="save-weather-settings-btn" class="settings-btn" @click="save">保存</button>
       </div>
     </div>
-  </div>
+  </GlassPanel>
 </template>

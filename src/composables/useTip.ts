@@ -6,6 +6,8 @@
  *   .dsh-tip__action / .dsh-tip__close / .dsh-tip__arrow / .dsh-tip-toasts
  * - GAP=8 / MARGIN=8 / ARROW=6、above/below/auto 翻转、视口钳制、同 key 去重
  * - 经典 dshTip 全局挂载 → 纯 ESM export + DOM，零全局对象挂载
+ * - 样式真源已迁至 public/theme/app.css（.dsh-tip 同族），本文件只管 DOM 构造/定位/计时；
+ *   无锚点 Toast 走 useToast.ts 的 Vue 队列（<ToastHost>），不再在本文件生成。
  */
 
 export interface TipAction {
@@ -32,7 +34,6 @@ export interface TipHandle {
 const GAP = 8;
 const MARGIN = 8;
 const ARROW = 6;
-const STYLE_ID = 'dsh-tip-style';
 
 const ICONS: Record<string, string> = {
   success: '✓',
@@ -50,37 +51,6 @@ const DURATION: Record<string, number> = {
   loading: 0,
 };
 
-/** 与 public/theme/app.css 的玻璃令牌同口径；经典 dsh-tip.js 内联注入同一套规则。 */
-const TIP_CSS: string[] = [
-  '.dsh-tip{position:fixed;z-index:var(--z-confirm,10000);box-sizing:border-box;display:flex;align-items:center;gap:8px;max-width:min(320px,calc(100vw - 16px));padding:9px 12px;border:1px solid var(--glass-border,rgba(255,255,255,.14));border-radius:12px;background:var(--glass-bg,rgba(24,28,34,.9));box-shadow:0 12px 32px rgba(0,0,0,.35);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);color:var(--color-text,#e9edf3);font-size:13px;line-height:1.5;opacity:0;transform:translateY(-6px);transition:opacity .2s ease,transform .2s ease;pointer-events:none;}',
-  '.dsh-tip--visible{opacity:1;transform:translateY(0);pointer-events:auto;}',
-  '.dsh-tip__icon{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;font-size:11px;font-weight:700;line-height:1;background:rgba(255,255,255,.12);}',
-  '.dsh-tip__text{flex:1 1 auto;min-width:0;word-break:break-word;}',
-  '.dsh-tip__action{flex:0 0 auto;border:0;background:none;color:var(--color-accent,#7cb7ff);font:inherit;font-weight:600;cursor:pointer;padding:2px 4px;}',
-  '.dsh-tip__action:hover{text-decoration:underline;}',
-  '.dsh-tip__close{flex:0 0 auto;border:0;background:none;color:inherit;opacity:.6;font-size:16px;line-height:1;cursor:pointer;padding:0 2px;}',
-  '.dsh-tip__close:hover{opacity:1;}',
-  '.dsh-tip--success .dsh-tip__icon{background:rgba(76,195,138,.22);color:#7ee2a8;}',
-  '.dsh-tip--warning .dsh-tip__icon{background:rgba(240,180,64,.22);color:#f5c86a;}',
-  '.dsh-tip--error .dsh-tip__icon{background:rgba(235,90,90,.22);color:#f39a9a;}',
-  '.dsh-tip--info .dsh-tip__icon{background:rgba(120,180,255,.22);color:#9cc6ff;}',
-  '.dsh-tip--loading .dsh-tip__icon{animation:dsh-tip-spin 1s linear infinite;}',
-  '@keyframes dsh-tip-spin{to{transform:rotate(360deg);}}',
-  '.dsh-tip__arrow{position:absolute;width:12px;height:12px;transform:rotate(45deg);background:inherit;border:1px solid var(--glass-border,rgba(255,255,255,.14));}',
-  '@media (prefers-reduced-motion:reduce){.dsh-tip{transition:none;}.dsh-tip--loading .dsh-tip__icon{animation:none;}}',
-  '.dsh-tip-toasts{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:var(--z-confirm,10000);display:flex;flex-direction:column;align-items:center;gap:8px;pointer-events:none;}',
-  '.dsh-tip-toasts .dsh-tip{position:relative;top:auto;left:auto;transform:translateY(-6px);pointer-events:auto;}',
-  '.dsh-tip-toasts .dsh-tip--visible{transform:translateY(0);}',
-];
-
-function ensureStyle(): void {
-  if (typeof document === 'undefined') return;
-  if (document.getElementById(STYLE_ID)) return;
-  const style = document.createElement('style');
-  style.id = STYLE_ID;
-  style.textContent = TIP_CSS.join('');
-  (document.head || document.documentElement).appendChild(style);
-}
 
 interface TipPlacement {
   top: number;
@@ -159,7 +129,6 @@ class Tip {
   }
 
   constructor(options: Partial<TipConfig>) {
-    ensureStyle();
     const rawType = options.type || 'info';
     const type = Object.prototype.hasOwnProperty.call(ICONS, rawType) ? rawType : 'info';
     this.cfg = {
@@ -352,11 +321,6 @@ function toHandle(tip: Tip): TipHandle {
       return tip.closed;
     },
   };
-}
-
-/** 经典 dshTip.toast(message, type, duration)：无锚点的浮层 Toast。 */
-export function createToastTip(message: string, type: string = 'info', duration?: number): TipHandle {
-  return toHandle(new Tip({ type, message, duration: duration ?? null }));
 }
 
 /** 经典 dshTip.attach(anchor, options)：锚定元素，含定位/翻转/视口钳制/同 key 去重。 */
