@@ -14,8 +14,11 @@ import type { Directive } from 'vue';
 import { createIconNode } from '@/src/lib/iconSafe';
 import { useTools } from '@/src/composables/useTools';
 import { setPanelOriginFromEvent, usePanels } from '@/src/composables/usePanels';
+import { useSideCards } from '@/src/composables/useSideCards';
 
 // 侧卡自持点击逻辑，不再由 App.vue 在 #tools-card-grid 上做事件委托
+const { visible } = useSideCards();
+
 const { featuredTools, openPanel: openToolsPanel } = useTools();
 const { toggle } = usePanels();
 
@@ -51,7 +54,7 @@ const vToolIcon: Directive<HTMLElement, string> = {
 
 <!-- prettier-ignore -->
 <template>
-    <section class="side-card" id="side-card-tools">
+    <section v-show="visible('tools')" class="side-card" id="side-card-tools">
         <header class="side-card-header">
             <h3>小工具</h3>
             <button id="tools-card-expand" class="side-expand-btn" title="打开全部工具" @click="openPanel('tools', $event)">⤢</button>

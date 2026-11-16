@@ -20,6 +20,7 @@ import FolderOverlay from '@/src/components/FolderOverlay.vue';
 import { setPanelOriginFromEvent, usePanels, type PanelId } from '@/src/composables/usePanels';
 import { useWallpaper } from '@/src/composables/useWallpaper';
 import { useTheme } from '@/src/composables/useTheme';
+import { bindWingsAttribute } from '@/src/composables/useSideCards';
 
 /**
  * 首屏外壳 + 已迁移面板挂载点。
@@ -60,6 +61,10 @@ onMounted(() => {
   // 启动壁纸：blob 命中零请求 → URL 校验 → 随机链
   // （legacy wallpaper-manager 的启动路径由 Vue 域接管）
   void wallpaper.fetchAndSetWallpaper();
+
+  // 左右翼显隐 → <body data-wings>：四张侧卡都是 fixed 常驻占位，
+  // 全隐时 CSS 靠这个属性把让出去的宽度还回中间内容。
+  bindWingsAttribute();
 
   const disposers: Array<() => void> = [];
 
