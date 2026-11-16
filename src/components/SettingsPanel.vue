@@ -904,23 +904,23 @@ watch(
                 </div>
 
                 <div class="setting-item" v-show="activeTab === 'theme'">
-                    <label for="show-side-widgets-toggle">
-                        主页显示小组件 <span>待办 / 便签 / 番茄钟常驻两侧</span>
-                    </label>
-                    <input
-                        type="checkbox"
-                        id="show-side-widgets-toggle"
-                        v-model="showSideWidgets"
-                        @change="onShowSideWidgetsChange"
-                    />
-                    <p class="api-key-description">关闭后可随时点右上角按钮打开对应面板。</p>
-                </div>
-
-                <div class="setting-item" v-show="activeTab === 'theme'">
-                    <label>各卡片显示方式</label>
+                    <label>小组件显示</label>
                     <div class="side-card-modes">
-                        <!-- 用 div 而非 label：.setting-item label 的 display:block 与
-                             .setting-item label > span 的 float:right 会打乱这里的网格布局 -->
+                        <!-- 总开关与四张卡同一玻璃卡族；用 div 不用 label，避开
+                             .setting-item label 的 display:block 与 >span 的 float:right -->
+                        <div class="side-card-mode side-card-mode-master">
+                            <span class="side-card-mode-label">主页显示小组件</span>
+                            <input
+                                type="checkbox"
+                                id="show-side-widgets-toggle"
+                                aria-label="主页显示小组件"
+                                v-model="showSideWidgets"
+                                @change="onShowSideWidgetsChange"
+                            />
+                            <small class="side-card-mode-hint">
+                                待办 / 便签 / 番茄钟常驻两侧；关闭后可随时点右上角按钮打开对应面板
+                            </small>
+                        </div>
                         <div
                             v-for="card in SIDE_CARD_LABELS"
                             :key="card.id"

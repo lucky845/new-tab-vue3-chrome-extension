@@ -2895,6 +2895,9 @@ body.icon-dragging .quick-access-item * {
        margin-top 3vh，约 9vh + 232px（759px 视口实测 300px）。 */
     /* 矮视口时不超过可用高度（翼高约 340px，底部至少留 24px） */
     top: min(calc(9vh + 232px), calc(100vh - 364px));
+    /* 视口下边界：与 top 一起把翼高钉在可用区间，卡片总量超出时靠下面的收缩规则消化，
+       不再无限往下顶（便签一多就把小工具挤出屏幕 m10114）。底部留 20px 呼吸区。 */
+    bottom: 20px;
     width: 300px;
     display: flex;
     flex-direction: column;
@@ -2911,7 +2914,7 @@ body.icon-dragging .quick-access-item * {
 }
 
 .side-card {
-    flex-shrink: 0;
+    flex-shrink: 0; /* 固定卡（番茄钟/小工具）不压缩；可增长卡在下方按 id 覆盖 */
     padding: 12px 14px;
     border-radius: var(--radius-glass);
     /* 与天气组件 / 快捷方式同族玻璃，但用「文字承载级」tint：
@@ -3007,6 +3010,52 @@ body.icon-dragging .quick-access-item * {
 
 .side-todo-list .todo-due {
     display: none;
+}
+
+/* 卡片的直接父节点是静态 slot 容器（#todo-card-slot 等，Teleport 目标）。
+   真正参与翼 flex 布局的是 slot，不是里面的 section —— 所以收缩规则必须打在 slot 上，
+   否则 slot 的 min-height:auto 会顶住不收缩（m10114 二次定位）。 */
+#todo-card-slot,
+#notes-card-slot {
+    flex: 0 1 auto;
+    min-height: 96px;
+    display: flex;
+    overflow: hidden;
+}
+
+#pomodoro-card-slot,
+#tools-card-slot {
+    flex-shrink: 0; /* 固定卡所在的 slot 不压缩 */
+}
+
+#todo-card-slot > .side-card,
+#notes-card-slot > .side-card {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+/* 可增长的列表卡：翼高被视口钉住后，这两张卡收缩让位，内部列表滚动，
+   保证下方的番茄钟/小工具始终在屏幕内（m10114：两条便签就把小工具顶出去）。 */
+#side-card-todo,
+#side-card-notes {
+    flex-shrink: 1;
+    min-height: 96px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#side-card-todo .side-card-header,
+#side-card-notes .side-card-header {
+    flex-shrink: 0;
+}
+
+#side-card-todo .side-todo-list,
+#side-card-notes .side-notes-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .side-notes-list {
@@ -3244,13 +3293,13 @@ body:not([data-wings='none']) #quick-access-grid .quick-access-grid {
 }
 
 /* ---------- 设置面板：新控件（滑杆 / 自定义引擎） ---------- */
-/* 侧卡显示方式：每行一张玻璃小卡，左侧「名称 + 说明」、右侧三态下拉。
-   下拉复用 .setting-item select 的玻璃规格，这里只定尺寸与网格位置，
-   不再用纯白 background 覆盖（那样在深色玻璃面板上会突兀成一块白）。*/
+/* 侧卡显示方式：平铺行（左侧「名称 + 说明」、右侧三态下拉）。
+   原先每行一张玻璃卡并各挂 backdrop-filter，5 层毛玻璃叠在毛玻璃面板上
+   合成开销陡增导致卡顿（m10185）——去掉卡片框，只留一条淡分隔线。 */
 .side-card-modes {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 0;
     margin: 10px 0 6px;
 }
 
@@ -3259,13 +3308,12 @@ body:not([data-wings='none']) #quick-access-grid .quick-access-grid {
     grid-template-columns: 1fr 132px;
     align-items: center;
     gap: 2px 12px;
-    padding: 10px 12px;
-    border-radius: var(--radius-md, 12px);
-    background-color: var(--glass-card-fill, rgb(var(--ink) / calc(0.05 * var(--wash-k))));
-    background-image: var(--glass-sheen);
-    border: 1px solid var(--glass-edge, rgb(var(--ink) / calc(0.1 * var(--line-k))));
-    backdrop-filter: var(--glass-card-backdrop);
-    -webkit-backdrop-filter: var(--glass-card-backdrop);
+    padding: 9px 2px;
+    border-bottom: 1px solid rgb(var(--ink) / calc(0.08 * var(--line-k)));
+}
+
+.side-card-mode:last-child {
+    border-bottom: none;
 }
 
 .side-card-mode-label {
@@ -3290,6 +3338,15 @@ body:not([data-wings='none']) #quick-access-grid .quick-access-grid {
     grid-row: 1 / 3;
     width: 100%;
     height: 38px;
+}
+
+/* 总开关与下拉同处第 2 列，风格统一（特异性高于 .setting-item input[type=checkbox]） */
+.side-card-mode.side-card-mode-master input[type='checkbox'] {
+    grid-column: 2 / 3;
+    grid-row: 1 / 3;
+    justify-self: center;
+    width: 22px;
+    height: 22px;
 }
 
 .setting-item input[type='range'] {
