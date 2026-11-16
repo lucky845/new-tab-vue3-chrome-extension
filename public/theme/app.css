@@ -835,18 +835,17 @@ body {
 .settings-content,
 .folder-popover,
 .dsh-dialog__panel {
-    /* 磨砂玻璃：**高填充 + 强模糊**。
-       填充低了以后背景的排版（时钟数字、快捷访问图标、分页条）会整块透上来，
-       跟面板自己的文字重影 —— 那不是毛玻璃，是脏玻璃。
-       所以这里把底色提到 0.62：背景只剩「被压得很平的一层色」，细节全交给 blur(40px)，
-       再叠 brightness 提亮暗壁纸，字始终落在稳定的浅底上。 */
+    /* 高斯模糊面板（m10940：不要毛玻璃，要可读性 + 性能）。
+       只保留一层 backdrop blur —— 去掉 saturate/brightness、顶部高光渐变与 SVG 折射链，
+       背景只剩均匀糊开的色块，文字落在稳定的 fill 上：可读性靠实底，不靠色彩夸大。
+       blur 40 → 20：足够糊掉背后的排版，又不至于糊成一团雾；滤镜链从 3 段减到 1 段，
+       每帧少两次颜色矩阵运算，弱显卡上掉帧明显缓解。 */
     background-color: var(--panel-glass-fill);
-    background-image: linear-gradient(180deg, rgb(var(--spec) / 0.18) 0%, rgb(var(--spec) / 0) 40%);
     border: 1px solid var(--glass-rim);
     border-radius: var(--radius-md);
     box-shadow: var(--glass-shadow);
-    backdrop-filter: blur(40px) saturate(1.7) brightness(1.04);
-    -webkit-backdrop-filter: blur(40px) saturate(1.7) brightness(1.04);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     color: var(--text-primary);
     box-sizing: border-box;
 }
