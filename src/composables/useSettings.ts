@@ -1,3 +1,4 @@
+import { log } from '@/src/lib/log';
 /**
  * 设置域数据层（Vue3 版）——逐字移植 public/legacy-js/modules/settings-manager.js（250 行）。
  *
@@ -49,7 +50,7 @@ export async function migrateLegacySettings(): Promise<void> {
   if (changed) {
     await chrome.storage.local.set({ settings: cur });
     await chrome.storage.local.remove(legacyKeys);
-    console.log('已迁移并清理旧设置键:', legacyKeys);
+    log.log('已迁移并清理旧设置键:', legacyKeys);
   }
 }
 

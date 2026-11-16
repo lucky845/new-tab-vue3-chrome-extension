@@ -1,3 +1,4 @@
+import { log } from '@/src/lib/log';
 import '@/src/lib/preview-shim';
 import { createApp } from 'vue';
 import App from '@/src/App.vue';
@@ -20,14 +21,14 @@ import { useSearch } from '@/src/composables/useSearch';
  */
 
 void useSearch().init().catch((error: unknown) => {
-  console.error('[boot] 搜索数据层初始化失败:', error);
+  log.error('[boot] 搜索数据层初始化失败:', error);
 });
 
 function mount(): void {
   const app = createApp(App, { dataReady: true });
   app.directive('glass', vGlass);
   app.mount('#app');
-  console.debug('[boot] Vue 挂载完成');
+  log.debug('[boot] Vue 挂载完成');
   requestAnimationFrame(() => attachPanelGlass());
 }
 

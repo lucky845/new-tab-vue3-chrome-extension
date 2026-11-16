@@ -2,6 +2,9 @@
 
 一个纯本地的 Chrome / Edge 新标签页扩展：液态玻璃视觉、可自定义的快捷访问、壁纸、天气、待办、便签、番茄钟与小工具，全部数据只存在本机。
 
+> [!NOTE]
+> **单一用途声明**：本扩展的唯一用途是用自定义新标签页替换浏览器默认新标签页，提供快捷访问、壁纸、天气与本地小工具。不注入其他站点、不收集数据、不展示广告、不做云同步。
+
 > [!IMPORTANT]
 > **1.x（原生 JS 版）已归档，本项目从 2.0 起在此仓库独立迭代。**
 > 旧仓库 [new-tab-chrome-extension](https://github.com/lucky845/new-tab-chrome-extension) 已设为只读存档，代码保持原样，仅历史可查。
@@ -9,7 +12,7 @@
 
 ## 界面预览
 
-![New Tab Pro 界面预览](doc/preview.jpg)
+![New Tab Pro 界面预览](doc/img/preview.jpg)
 
 ## 版本对照
 
@@ -83,9 +86,11 @@ npm run build        # 产物输出到 .output/chrome-mv3
 
 三种浏览器的成品包由 CI 在打 tag 时自动构建，见下方「发布流程」。
 | `npm run compile` | `vue-tsc --noEmit` 类型检查 |
-| `npm run lint` | ESLint（当前仅校验配置文件）+ 类型检查 |
+| `npm run lint` | ESLint（src 全量）+ 类型检查 |
 | `npm run lint:fix` | ESLint 自动修复 + 类型检查 |
 | `npm run format` | Prettier 格式化 `src/` |
+| `npm test` | Vitest 单元测试（一次性，44 用例） |
+| `npm run test:watch` | Vitest 监听模式 |
 
 ## 项目结构
 
@@ -161,7 +166,7 @@ npm version patch        # 或 minor / major，自动改 package.json 并打 v �
 git push && git push --tags
 ```
 
-推送 `v*` 标签后 CI 依次执行：`npm ci` → `npm run compile` 类型检查 → **校验 tag 版本与 `package.json` 一致**（不一致直接失败）→ 用 WXT 分别打包 Chrome / Edge / Firefox(MV2) → 汇总 `SHA256SUMS.txt` → 创建 GitHub Release 并附上全部产物。
+推送 `v*` 标签后 CI 依次执行：`npm ci` → `npm run compile` 类型检查 → `npm run lint` 全量 lint → `npm test` 单元测试 → **校验 tag 版本与 `package.json` 一致**（不一致直接失败）→ 用 WXT 分别打包 Chrome / Edge / Firefox(MV2) → 汇总 `SHA256SUMS.txt` → 创建 GitHub Release 并附上全部产物。
 
 | Release 附件                      | 适用                         |
 | --------------------------------- | ---------------------------- |
@@ -174,11 +179,11 @@ git push && git push --tags
 
 ## 权限说明
 
-| 权限               | 用途                                                                                                      |
-| ------------------ | --------------------------------------------------------------------------------------------------------- |
-| `storage`          | 保存设置、壁纸缓存、快捷访问、待办、便签等全部本地数据                                                    |
-| `geolocation`      | 天气组件定位到所在城市（首次使用会请求授权）                                                              |
-| `host_permissions` | **仅 10 个自有接口/图床域名**（壁纸原图、天气接口）的跨域 `fetch`；不注入任何脚本，不申请任何站点的访问权 |
+| 权限               | 用途                                                                                                      | 为什么必需（justification）                                                   |
+| ------------------ | --------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `storage`          | 保存设置、壁纸缓存、快捷访问、待办、便签等全部本地数据                                                    | 新标签页全部功能都依赖本地持久化；无此权限则刷新即丢失，且无法做到零账号零云  |
+| `geolocation`      | 天气组件定位到所在城市（首次使用会请求授权）                                                              | 天气是核心功能之一；用户可手动输入城市，定位仅optional增强，不授权不影响其他功能 |
+| `host_permissions` | **仅 10 个自有接口/图床域名**（壁纸原图、天气接口）的跨域 `fetch`；不注入任何脚本，不申请任何站点的访问权 | 壁纸原图需 fetch 字节流做本地缓存（`<img>` 无法拿字节）；域名白名单已最小化    |
 
 站点图标（favicon）不占 `host_permissions`：图片经 CSP 的 `img-src` 白名单直接显示。
 完整的「存了什么、向谁发请求」见 [doc/PRIVACY.md](doc/PRIVACY.md)，商店审核用的网页版是
@@ -195,7 +200,7 @@ git push && git push --tags
 
 ## 贡献
 
-欢迎提 Issue 与 PR。提交前请确保 `npm run compile` 与 `npm run build` 通过；代码风格沿用仓库内的 ESLint / Prettier 配置。
+欢迎提 Issue 与 PR。提交前请确保 `npm run compile`、`npm run lint`、`npm test` 与 `npm run build` 全绿；代码风格沿用仓库内的 ESLint / Prettier 配置。
 
 ## 致谢
 

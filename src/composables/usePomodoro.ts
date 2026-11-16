@@ -12,6 +12,7 @@
  * - legacy 行为怪癖原样保留（详见交付报告）：start() 立即 tick 一秒；进入休息阶段后
  *   不自动倒计时（需 暂停→继续 才开始走）。
  */
+import { log } from '@/src/lib/log';
 import { computed, ref, watch } from 'vue';
 import type { ComputedRef, Ref } from 'vue';
 import { useStored } from '@/src/lib/storage';
@@ -211,7 +212,7 @@ function playChime(): void {
             osc.stop(t0 + 0.5);
         });
     } catch (error) {
-        console.warn('[pomodoro] 提示音播放失败:', (error as Error)?.message ?? error);
+        log.warn('[pomodoro] 提示音播放失败:', (error as Error)?.message ?? error);
     }
 }
 

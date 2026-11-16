@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { log } from '@/src/lib/log';
 /**
  * 设置面板（Vue3 移植）——markup 逐字来自 entrypoints/newtab.html:232-470。
  *
@@ -334,7 +335,7 @@ async function exportData(): Promise<void> {
         );
         showToast('备份已导出', 'success');
     } catch (error) {
-        console.error('导出备份失败:', error);
+        log.error('导出备份失败:', error);
         setBackupStatus('导出失败：' + ((error as Error).message || '未知错误'), 'error');
         showToast('导出备份失败', 'error');
     } finally {
@@ -384,7 +385,7 @@ async function importData(event: Event): Promise<void> {
         // 各模块内存里持有旧数据，直接改 storage 不会自动生效，刷新最稳妥
         setTimeout(() => window.location.reload(), 900);
     } catch (error) {
-        console.error('导入备份失败:', error);
+        log.error('导入备份失败:', error);
         const message = (error as Error).message || '未知错误';
         setBackupStatus('导入失败：' + message, 'error');
         showToast('导入失败：' + (message || '文件不合法'), 'error');
@@ -497,21 +498,21 @@ async function save(): Promise<void> {
         // 持久化（settings/theme/tagline）全部完成后再给 toast；天气/壁纸联动要走网络、
         // 可能超时重试，所以 fire-and-forget，网络结果回来后各 composable 自行更新状态。
         themePending.value = false;
-        console.log('设置已自动保存');
+        log.log('设置已自动保存');
         showToast('设置已自动保存', 'success', 1500);
         // 联动只跟着真正变化的字段走：没换城市/Key 就不重取天气，没换图源就不重拉壁纸
         if (city !== (current.weatherCity || '') || wKey !== (current.weatherApiKey || '')) {
             void Promise.resolve(onWeatherSettingsSaved(city, wKey)).catch(e =>
-                console.warn('天气设置联动失败:', e)
+                log.warn('天气设置联动失败:', e)
             );
         }
         if (sourceChanged) {
             void Promise.resolve(wallpaper.fetchAndSetWallpaper()).catch(e =>
-                console.warn('壁纸设置联动失败:', e)
+                log.warn('壁纸设置联动失败:', e)
             );
         }
     } catch (error) {
-        console.error('保存设置失败:', error);
+        log.error('保存设置失败:', error);
         showToast('保存设置失败，请重试', 'error');
     }
 }

@@ -16,6 +16,7 @@
  *   om_last_location / weather_last_ok，TTL 全部取 WeatherConfig
  * - 失败冷却：weather_fail_count 连续失败指数退避（3min×2^n 封顶 30min），weather_cooldown_until 截止时间戳
  */
+import { log } from '@/src/lib/log';
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import { WEATHER_CONFIG } from '@/src/config/weather';
 import { fetchJSON } from '@/src/lib/http';
@@ -469,7 +470,7 @@ function createWeatherApi(): WeatherApi {
         fresh: Date.now() - (entry.ts ?? 0) < getCacheTtl(),
       };
     } catch (e) {
-      console.warn('[weather] 读取天气缓存失败:', (e as Error)?.message || e);
+      log.warn('[weather] 读取天气缓存失败:', (e as Error)?.message || e);
       return null;
     }
   }
@@ -486,7 +487,7 @@ function createWeatherApi(): WeatherApi {
     try {
       await chrome.storage.local.set(payload);
     } catch (e) {
-      console.warn('[weather] 写入天气缓存失败:', (e as Error)?.message || e);
+      log.warn('[weather] 写入天气缓存失败:', (e as Error)?.message || e);
     }
   }
 
@@ -581,7 +582,7 @@ function createWeatherApi(): WeatherApi {
       // 都过期了，返回 false 走正常流程（上层会先贴旧值再后台更新）
       return false;
     } catch (e) {
-      console.warn('读取缓存天气失败，将走网络请求:', (e as Error)?.message || e);
+      log.warn('读取缓存天气失败，将走网络请求:', (e as Error)?.message || e);
       return false;
     }
   }
@@ -682,7 +683,7 @@ function createWeatherApi(): WeatherApi {
       weather_cooldown_reason: reason || '',
     });
     if (fails > 1) {
-      console.info(`[weather] 连续失败 ${fails} 次，冷却 ${Math.round(backoff / 60000)} 分钟`);
+      log.info(`[weather] 连续失败 ${fails} 次，冷却 ${Math.round(backoff / 60000)} 分钟`);
     }
   }
 
@@ -768,10 +769,10 @@ function createWeatherApi(): WeatherApi {
   async function getWeatherByLocationWithRetry(maxRetries = 1): Promise<WeatherData> {
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        console.log(`尝试获取位置天气 (第${attempt}次)...`);
+        log.log(`尝试获取位置天气 (第${attempt}次)...`);
         return await getWeatherByLocation();
       } catch (error) {
-        console.log(`第${attempt}次尝试失败:`, (error as Error).message);
+        log.log(`第${attempt}次尝试失败:`, (error as Error).message);
         if (attempt === maxRetries) {
           // 最后一次尝试失败，抛出错误
           throw error;
@@ -824,12 +825,12 @@ function createWeatherApi(): WeatherApi {
         try {
           await persistDetectedCity(detectedCityName);
         } catch (e) {
-          console.warn('保存定位城市失败:', (e as Error)?.message || e);
+          log.warn('保存定位城市失败:', (e as Error)?.message || e);
         }
       }
       return data;
     } catch (error) {
-      console.warn('基于浏览器定位失败，尝试使用IP定位作为回退...', (error as Error)?.message || error);
+      log.warn('基于浏览器定位失败，尝试使用IP定位作为回退...', (error as Error)?.message || error);
       // 回退：使用IP定位获取adcode
       try {
         const { adcode, cityName } = await getAdcodeByIP();
@@ -838,12 +839,12 @@ function createWeatherApi(): WeatherApi {
           try {
             await persistDetectedCity(cityName);
           } catch (e) {
-            console.warn('保存IP城市失败:', (e as Error)?.message || e);
+            log.warn('保存IP城市失败:', (e as Error)?.message || e);
           }
         }
         return data;
       } catch (ipErr) {
-        console.error('IP 定位回退也失败:', ipErr);
+        log.error('IP 定位回退也失败:', ipErr);
         // 配额/Key 问题必须以 IP 路径的错误为准，否则上层会当成普通定位失败、只冷却 3 分钟
         if ((ipErr as WeatherErrorLike)?.fatal) throw ipErr;
         throw error; // 其余情况抛原始错误，便于上层判断权限/超时
@@ -1057,7 +1058,7 @@ function createWeatherApi(): WeatherApi {
         try {
           return await getOpenMeteoByCity(fallbackCity);
         } catch (err) {
-          console.info('[weather] 默认城市查询失败，改走定位:', (err as Error)?.message);
+          log.info('[weather] 默认城市查询失败，改走定位:', (err as Error)?.message);
         }
       }
     }
@@ -1167,7 +1168,7 @@ function createWeatherApi(): WeatherApi {
     } catch (primaryErr) {
       // 降级：旧版 current_weather 接口字段少（无湿度/气压），但可用性更高，
       // 实测新接口偶发整段超时（HTTP 000）而它照常返回，所以留作兜底。
-      console.warn(
+      log.warn(
         '[weather] Open-Meteo current 接口失败，改用 current_weather 兜底:',
         (primaryErr as Error)?.message || primaryErr
       );
@@ -1295,7 +1296,7 @@ function createWeatherApi(): WeatherApi {
     }
     // 上一次失败的冷却期（配额类失败冷却 30 分钟，避免继续烧配额）
     if (!force && (await inCooldown())) {
-      console.info('[weather] 处于失败冷却期，跳过本次请求');
+      log.info('[weather] 处于失败冷却期，跳过本次请求');
       // 冷却期内至少把上次成功的数据显示出来，别让卡片停在「--°C」；
       // 这里必须放宽到兜底窗口，真机控制台「处于失败冷却期」正是这条路径。
       const cached = await readCachedData({ allowExpired: true }).catch(() => null);
@@ -1352,7 +1353,7 @@ function createWeatherApi(): WeatherApi {
           try {
             await persistDetectedCity(data.city);
           } catch (e) {
-            console.warn('自动保存定位城市失败:', (e as Error)?.message || e);
+            log.warn('自动保存定位城市失败:', (e as Error)?.message || e);
           }
         }
       }
@@ -1362,9 +1363,9 @@ function createWeatherApi(): WeatherApi {
       // 定位不可用/被拒绝是常见预期态（用户未授权），降级为 info，避免每次开标签页刷错误
       const expectedGeoIssue = /权限被拒绝|位置信息不可用|获取位置超时|不支持地理位置|未找到可用/.test(msg);
       if (expectedGeoIssue) {
-        console.info('[weather] 定位不可用，已跳过自动定位：', msg);
+        log.info('[weather] 定位不可用，已跳过自动定位：', msg);
       } else {
-        console.error('获取天气信息失败:', error);
+        log.error('获取天气信息失败:', error);
       }
       // 冷却：配额/Key 异常、以及「要用户改设置才会变」的定位权限问题都冷却 30 分钟；
       // 其余（网络抖动、空数据）3 分钟，给一次快速恢复的机会。
@@ -1410,7 +1411,7 @@ function createWeatherApi(): WeatherApi {
         await updateWeather();
       }
     } catch (error) {
-      console.error('天气管理器初始化失败:', error);
+      log.error('天气管理器初始化失败:', error);
       const fallback = await readCachedData({ allowExpired: true }).catch(() => null);
       if (fallback && fallback.data) displayFallbackCache(fallback.data, fallback.ts);
       else showError('天气服务初始化失败');
