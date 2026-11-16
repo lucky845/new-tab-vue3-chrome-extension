@@ -452,8 +452,8 @@ function showContextMenu(e: MouseEvent, item: HTMLElement) {
   const css = [
     'position: fixed',
     'background: var(--glass-popover-fill)',
-    '-webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))',
-    'backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate))',
+    '-webkit-backdrop-filter: blur(var(--glass-blur))',
+    'backdrop-filter: blur(var(--glass-blur))',
     'border: 1px solid var(--glass-rim)',
     'border-radius: 8px',
     'padding: 6px 0',
