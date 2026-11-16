@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { log } from '@/src/lib/log';
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
 import { safeOpen } from '@/src/lib/urlSafe';
 import { useQuickAccess } from '@/src/composables/useQuickAccess';
@@ -213,7 +214,7 @@ function renderFolderOverlay() {
 /** 打开站点：统一走 UrlSafe，只放行 http(s) + noopener。 */
 function openFolderSite(url: string | undefined) {
   if (!url || !safeOpen(url)) {
-    console.warn('[快捷访问] 已跳过不支持的地址协议:', url);
+    log.warn('[快捷访问] 已跳过不支持的地址协议:', url);
   }
 }
 
@@ -348,7 +349,7 @@ function onFolderPointerUp(event: PointerEvent): void {
   if (folderIndex.value == null) return;
   Promise.resolve(manager().reorderFolderItems(folderIndex.value, names))
     .then(() => renderAndNotify())
-    .catch((error: unknown) => console.error('文件夹内排序保存失败:', error));
+    .catch((error: unknown) => log.error('文件夹内排序保存失败:', error));
 }
 
 function onFolderPointerDown(event: PointerEvent): void {

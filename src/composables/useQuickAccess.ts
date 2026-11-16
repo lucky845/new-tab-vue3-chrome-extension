@@ -5,6 +5,7 @@
  * 默认站点改由 ESM 具名导出提供，不再挂全局对象；首装按界面语言选地区组（src/lib/region.ts）。
  * 用 ref 暴露 sites，供 Vue 侧响应式渲染。
  */
+import { log } from '@/src/lib/log';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
 import { defaultSitesFor } from '@/src/config/defaultSites';
@@ -72,7 +73,7 @@ async function loadSites(): Promise<void> {
         // 旧数据里的重复项必须落盘清除，否则下次启动又回到两行溢出。
         if (clean.length !== raw.length) await saveSites();
     } catch (error) {
-        console.error('加载快捷访问失败:', error);
+        log.error('加载快捷访问失败:', error);
         sites.value = [];
     }
 }
@@ -86,7 +87,7 @@ async function saveSites(): Promise<void> {
         const snapshot = JSON.parse(JSON.stringify(clean)) as QuickAccessNode[];
         await chrome.storage.local.set({ quickAccessSites: snapshot });
     } catch (error) {
-        console.error('保存快捷访问失败:', error);
+        log.error('保存快捷访问失败:', error);
     }
 }
 
@@ -125,7 +126,7 @@ async function init(): Promise<void> {
     try {
         await loadSites();
     } catch (error) {
-        console.error('[快捷访问] 读取失败，回退默认站点:', (error as Error)?.message || error);
+        log.error('[快捷访问] 读取失败，回退默认站点:', (error as Error)?.message || error);
         sites.value = [];
     }
 
@@ -136,7 +137,7 @@ async function init(): Promise<void> {
             sites.value = cloneDefaults();
             await saveSites();
         } catch (error) {
-            console.warn(
+            log.warn(
                 '[快捷访问] 默认站点保存失败（仍会显示）:',
                 (error as Error)?.message || error
             );
@@ -147,7 +148,7 @@ async function init(): Promise<void> {
         try {
             await normalizeFolders();
         } catch (error) {
-            console.warn('[快捷访问] 文件夹归一化失败:', (error as Error)?.message || error);
+            log.warn('[快捷访问] 文件夹归一化失败:', (error as Error)?.message || error);
         }
     }
     // 最后再兜一道：保证至少有一个可渲染的条目列表

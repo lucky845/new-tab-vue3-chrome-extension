@@ -1,3 +1,4 @@
+import { log } from '@/src/lib/log';
 import { attach, detach } from '@surdeddd/liquidglass';
 import type { LiquidGlassHandle } from '@surdeddd/liquidglass';
 
@@ -57,7 +58,7 @@ export function applyGlass(el: HTMLElement, options: GlassOptions = {}): LiquidG
     handles.set(el, handle);
     return handle;
   } catch (error) {
-    console.error('[glass] attach 失败，保留 CSS 玻璃外观:', error);
+    log.error('[glass] attach 失败，保留 CSS 玻璃外观:', error);
     return null;
   }
 }
@@ -67,7 +68,7 @@ export function releaseGlass(el: HTMLElement): void {
   try {
     detach(el);
   } catch (error) {
-    console.warn('[glass] detach 失败:', error);
+    log.warn('[glass] detach 失败:', error);
   }
   delete el.dataset.glass;
   handles.delete(el);
