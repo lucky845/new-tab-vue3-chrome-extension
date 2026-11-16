@@ -857,8 +857,15 @@ body {
     padding: 30px 40px;
     width: 100%;
     max-width: 500px;
-    max-height: 88vh; /* 内容超出视口时面板自身滚动，不裁切 */
-    overflow-y: auto;
+    /* 定高而非 max-height：各 tab 内容量不同，用 max-height 时面板会随内容收缩
+       （实测「主页」tab 493px、其余 668px，切换时整体上下跳 = 用户说的「闪一下」）。
+       定高后每个 tab 尺寸/居中位置恒定。
+       注意：滚动交给内层 .settings-scroll，头部(title+tabs)固定不滚；这里 overflow 必须 hidden，
+       否则 content 自己变滚动容器、内层 sticky/定高计算会双滚动。 */
+    height: 88vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
     color: var(--text-primary);
     box-sizing: border-box;
     margin: 0 auto;
@@ -867,13 +874,16 @@ body {
 .settings-scroll {
     /* 页脚已移除（关闭改为右上角 ✕），内容区不再需要绝对定位让位 */
     position: static;
-    overflow-y: visible;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
     overscroll-behavior: contain;
     /* 只滚内容层：与整屏遮罩/壁纸隔离，避免每帧触发全页重绘。 */
     contain: paint;
     will-change: scroll-position;
     transform: translateZ(0);
-    padding: 30px 40px 20px;
+    /* 上/左/右内边距由 .settings-content 统一给，头部与内容对齐；仅底部留白 */
+    padding: 0 0 20px;
     box-sizing: border-box;
 }
 
@@ -958,6 +968,9 @@ body {
 .settings-head h2 {
     margin-bottom: 0;
     text-align: left;
+    /* 与其他弹窗 .widget-header h2（18px/600）视觉统一；此处原 24px/500 是旧迁移遗留 */
+    font-size: 18px;
+    font-weight: 600;
 }
 
 /* .close-panel-btn 默认 top:14/right:14 相对 .settings-content；本面板内容区 padding 30px 40px，
@@ -2363,8 +2376,19 @@ body.icon-dragging .quick-access-item * {
     flex-shrink: 0;
 }
 
-.todo-category-select {
-    max-width: 96px;
+.todo-category-hint {
+    display: inline-flex;
+    align-items: center;
+    height: 34px;
+    padding: 0 10px;
+    border-radius: var(--radius-control);
+    background: rgb(var(--ink) / calc(0.1 * var(--wash-k)));
+    border: 1px solid rgb(var(--ink) / calc(0.25 * var(--line-k)));
+    color: var(--text-secondary, var(--text-primary));
+    font-size: 13px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    cursor: help;
 }
 
 .todo-due-date {

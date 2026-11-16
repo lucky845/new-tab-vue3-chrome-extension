@@ -27,7 +27,6 @@ const { filteredTodos, filter, stats, setFilter, addTodo, toggleTodo, removeTodo
 
 // —— 表单状态（legacy：todoInput / todoCategorySelect / todoDueDateInput / todoImportantActive）——
 const draft = ref('');
-const draftCategory = ref('normal');
 const draftDueDate = ref('');
 const importantActive = ref(false);
 
@@ -59,6 +58,17 @@ function categoryTitle(category: TodoCategory | undefined): string {
   return map[category ?? 'normal'] ?? '普通';
 }
 
+// 新待办的分类跟随当前筛选：选了「工作/生活」就落进该分类；
+// 「全部」下新增一律落「普通」。这里给出可见提示，让用户知道规则，而非静默猜测。
+const categoryHint = computed(() =>
+  filter.value === 'all' ? '分类：普通（全部）' : `分类：${categoryTitle(filter.value)}`,
+);
+const categoryHintTitle = computed(() =>
+  filter.value === 'all'
+    ? '在「全部」下添加的待办默认归为「普通」；想加到其他分类，先点上方对应分类再添加。'
+    : `当前在「${categoryTitle(filter.value)}」分类下，新待办会自动归为该分类。`,
+);
+
 // legacy：逾期时 '⚠️ {date} 已逾期'，否则 '📅 {date}'；无截止日期渲染空 span
 function dueText(t: Todo): string {
   if (!t.dueDate) return '';
@@ -82,7 +92,7 @@ async function add(): Promise<void> {
   }
   await addTodo(content, {
     important: importantActive.value,
-    category: draftCategory.value,
+    category: filter.value === 'all' ? 'normal' : filter.value,
     dueDate: draftDueDate.value || null,
   });
   draft.value = '';
@@ -170,11 +180,7 @@ onUnmounted(() => {
           </svg>
         </button>
         <input type="text" id="todo-input" ref="inputEl" v-model="draft" placeholder="添加一个待办…" maxlength="100" @keydown.enter="add" />
-        <select id="todo-category-select" class="todo-category-select" title="分类" v-model="draftCategory">
-          <option value="normal">普通</option>
-          <option value="work">工作</option>
-          <option value="life">生活</option>
-        </select>
+        <span id="todo-category-hint" class="todo-category-hint" :title="categoryHintTitle">{{ categoryHint }}</span>
         <input type="date" id="todo-due-date" class="todo-due-date" title="截止日期（可选）" v-model="draftDueDate" />
         <button id="todo-add-btn" class="settings-btn" @click="add">添加</button>
       </div>
