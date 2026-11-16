@@ -99,8 +99,11 @@ C  有效人日 1–5        已含三浏览器回归与文档，单人负荷系
     - 必须如实写：天气请求会向 Open-Meteo 传你的 IP 与大致坐标；壁纸请求从 picsum/wallhaven 拉图。其余数据仅在 `chrome.storage.local`
     - 成本：S（0.5 人日）
     - **已完成**：`doc/PRIVACY.md`（商店审核用）+ `doc/PRIVACY.html`（Pages 用同一份内容）+ `.github/workflows/pages.yml`。**待办：在仓库 Settings → Pages 把 Source 选成 GitHub Actions**，之后地址为 <https://lucky845.github.io/new-tab-vue3-chrome-extension/PRIVACY.html>
-- [ ] **Dependabot moderate 漏洞**
+- [x] **Dependabot moderate 漏洞**
     - 成本：S
+    - **已完成**：告警链是 `vue-tsc@2 → @vue/language-core@2 → minimatch@9`（moderate，range `>=7.0.0 <11.0.1`）。
+      devDependency 升 `vue-tsc ^2.2.0 → ^3.3.14`（其对等依赖只要求 typescript >=5.0，本仓 5.7.3 满足），
+      `npm audit` 从 3 moderate 归零，`vue-tsc --noEmit` 与 `wxt build` 均通过。
 
 ### 4.2 体验优化（35%）
 
