@@ -20,11 +20,11 @@ import { useSearch } from '@/src/composables/useSearch';
  */
 
 interface Engine {
-  name: string;
-  url: string;
-  icon?: string;
-  logo?: string;
-  isCustom?: boolean;
+    name: string;
+    url: string;
+    icon?: string;
+    logo?: string;
+    isCustom?: boolean;
 }
 
 const keyword = ref('');
@@ -52,7 +52,7 @@ const searchManager = computed(() => useSearch());
  */
 const currentName = ref('');
 const currentEngine = computed<Engine | null>(() => {
-  return engines.value.find((e) => e.name === currentName.value) ?? engines.value[0] ?? null;
+    return engines.value.find(e => e.name === currentName.value) ?? engines.value[0] ?? null;
 });
 
 /**
@@ -61,32 +61,32 @@ const currentEngine = computed<Engine | null>(() => {
  */
 let suppressHistory = false;
 function focusInputQuietly(): void {
-  suppressHistory = true;
-  inputEl.value?.focus({ preventScroll: true });
-  setTimeout(() => {
-    suppressHistory = false;
-  }, 0);
+    suppressHistory = true;
+    inputEl.value?.focus({ preventScroll: true });
+    setTimeout(() => {
+        suppressHistory = false;
+    }, 0);
 }
 
 function refreshEngines() {
-  const mgr = searchManager.value;
-  if (!mgr) return;
-  const list = mgr.getSearchEngines?.() ?? [];
-  engines.value = Array.isArray(list) ? list : [];
+    const mgr = searchManager.value;
+    if (!mgr) return;
+    const list = mgr.getSearchEngines?.() ?? [];
+    engines.value = Array.isArray(list) ? list : [];
 }
 
 /** 从 manager 拉一次真值（引擎列表 + 当前选中），storage 回填后必须重跑 */
 function syncFromManager() {
-  refreshEngines();
-  const current: Engine | undefined = searchManager.value?.getCurrentSearchEngine?.();
-  if (current?.name) currentName.value = current.name;
+    refreshEngines();
+    const current: Engine | undefined = searchManager.value?.getCurrentSearchEngine?.();
+    if (current?.name) currentName.value = current.name;
 }
 
 function refreshHistory() {
-  const mgr = searchManager.value;
-  if (!mgr) return;
-  const list = mgr.getSearchHistory?.() ?? [];
-  history.value = Array.isArray(list) ? list : [];
+    const mgr = searchManager.value;
+    if (!mgr) return;
+    const list = mgr.getSearchHistory?.() ?? [];
+    history.value = Array.isArray(list) ? list : [];
 }
 
 /**
@@ -98,131 +98,134 @@ function refreshHistory() {
  * 不校验就 window.open 等于把 javascript:/data: 交给浏览器执行。
  */
 function submit(text?: string) {
-  const value = (text ?? keyword.value).trim();
-  if (!value) return;
-  const mgr = searchManager.value;
-  if (!mgr) return;
+    const value = (text ?? keyword.value).trim();
+    if (!value) return;
+    const mgr = searchManager.value;
+    if (!mgr) return;
 
-  mgr.addToHistory?.(value);
+    mgr.addToHistory?.(value);
 
-  const encoded = encodeURIComponent(value);
-  const template: string = currentEngine.value?.url ?? 'https://www.bing.com/search?q=';
-  let url = template.includes('%s') ? template.replace('%s', encoded) : template + encoded;
+    const encoded = encodeURIComponent(value);
+    const template: string = currentEngine.value?.url ?? 'https://www.bing.com/search?q=';
+    let url = template.includes('%s') ? template.replace('%s', encoded) : template + encoded;
 
-  const ok = UrlSafe.isHttp(url);
-  if (!ok) {
-    console.warn('[搜索] 引擎地址协议不受支持，回落到默认引擎:', template);
-    url = 'https://www.bing.com/search?q=' + encoded;
-  }
+    const ok = UrlSafe.isHttp(url);
+    if (!ok) {
+        console.warn('[搜索] 引擎地址协议不受支持，回落到默认引擎:', template);
+        url = 'https://www.bing.com/search?q=' + encoded;
+    }
 
-  window.open(url, '_blank', 'noopener,noreferrer');
-  keyword.value = '';
+    window.open(url, '_blank', 'noopener,noreferrer');
+    keyword.value = '';
 }
 
 /** 引擎下拉的开合（两个下拉的互斥在 toggleEngine 与 onFocusInput 里各自收口） */
 function toggleEngineDropdown() {
-  engineOpen.value = !engineOpen.value;
+    engineOpen.value = !engineOpen.value;
 }
 
 function pickEngine(name: string) {
-  // 选引擎不是「要搜索」：历史下拉要么没开、要么立刻收起，别盖住刚展开的列表
-  historyOpen.value = false;
-  // setEngine 既改内存又写 chrome.storage：下次打开新标签页还是这个引擎
-  void searchManager.value.setEngine(name);
-  currentName.value = name;
-  engineOpen.value = false;
-  // 把焦点还给输入框，但别弹历史 —— 用户刚选完引擎，不是要搜索
-  focusInputQuietly();
+    // 选引擎不是「要搜索」：历史下拉要么没开、要么立刻收起，别盖住刚展开的列表
+    historyOpen.value = false;
+    // setEngine 既改内存又写 chrome.storage：下次打开新标签页还是这个引擎
+    void searchManager.value.setEngine(name);
+    currentName.value = name;
+    engineOpen.value = false;
+    // 把焦点还给输入框，但别弹历史 —— 用户刚选完引擎，不是要搜索
+    focusInputQuietly();
 }
 
 function clearInput() {
-  keyword.value = '';
-  focusInputQuietly();
+    keyword.value = '';
+    focusInputQuietly();
 }
 
 function clearHistory() {
-  searchManager.value?.clearHistory?.();
-  history.value = [];
-  historyOpen.value = false;
+    searchManager.value?.clearHistory?.();
+    history.value = [];
+    historyOpen.value = false;
 }
 
 function removeHistory(index: number) {
-  // 只走 manager 的单条删除：history 与 manager 共享同一数组引用，本地再 splice 会变成双删
-  void searchManager.value.removeFromHistory(index).then(() => {
-    if (history.value.length === 0) historyOpen.value = false;
-  });
+    // 只走 manager 的单条删除：history 与 manager 共享同一数组引用，本地再 splice 会变成双删
+    void searchManager.value.removeFromHistory(index).then(() => {
+        if (history.value.length === 0) historyOpen.value = false;
+    });
 }
 
 /** 任意 storage 变更都可能是设置/自定义引擎/历史变了，全部重读一遍最省心 */
 function onStorageChanged() {
-  syncFromManager();
-  refreshHistory();
+    syncFromManager();
+    refreshHistory();
 }
 
 /** 一开始打字就该收起历史，否则它盖在搜索结果/快捷访问上面 */
 function onInput() {
-  if (keyword.value.length > 0) historyOpen.value = false;
+    if (keyword.value.length > 0) historyOpen.value = false;
 }
 
 function onFocusInput() {
-  // 每次聚焦都重读一遍：搜索历史是异步从 chrome.storage 补载的，
-  // 首屏那次 refreshHistory() 很可能读到空数组（那时 init() 还没 await 回来）。
-  refreshHistory();
-  // 点了搜索按钮回来的那次聚焦不算「用户想搜索」，历史不该盖上去
-  if (suppressHistory) {
-    suppressHistory = false;
-    return;
-  }
-  historyOpen.value = keyword.value.length === 0;
-  // 两个下拉叠在同一条竖线上，同时开着会互相盖住：谁最后出现谁独占
-  if (historyOpen.value) engineOpen.value = false;
+    // 每次聚焦都重读一遍：搜索历史是异步从 chrome.storage 补载的，
+    // 首屏那次 refreshHistory() 很可能读到空数组（那时 init() 还没 await 回来）。
+    refreshHistory();
+    // 点了搜索按钮回来的那次聚焦不算「用户想搜索」，历史不该盖上去
+    if (suppressHistory) {
+        suppressHistory = false;
+        return;
+    }
+    historyOpen.value = keyword.value.length === 0;
+    // 两个下拉叠在同一条竖线上，同时开着会互相盖住：谁最后出现谁独占
+    if (historyOpen.value) engineOpen.value = false;
 }
 
-
 function onDocPointerDown(event: PointerEvent) {
-  if (!barEl.value) return;
-  const target = event.target as Node;
-  if (!barEl.value.contains(target)) {
-    engineOpen.value = false;
-    historyOpen.value = false;
-  }
+    if (!barEl.value) return;
+    const target = event.target as Node;
+    if (!barEl.value.contains(target)) {
+        engineOpen.value = false;
+        historyOpen.value = false;
+    }
 }
 
 onMounted(() => {
-  syncFromManager();
-  refreshHistory();
-  document.addEventListener('pointerdown', onDocPointerDown);
-  const el = barEl.value;
-  if (el) // dispersion 归零：圆角处红/蓝通道错位就是那圈彩虹边（同 AppIcon 的注释）
-  applyGlass(el, { refraction: 0.5, dispersion: 0, frost: 0 });
+    syncFromManager();
+    refreshHistory();
+    // 打开新标签页第一件事就是打字：首屏直接聚焦，不弹历史下拉（suppressHistory 会在下一个任务前复位）。
+    // 面板打开时由面板自己抢焦点，那时这里已经跑完了，不会互相抢。
+    focusInputQuietly();
+    document.addEventListener('pointerdown', onDocPointerDown);
+    const el = barEl.value;
+    if (el)
+        // dispersion 归零：圆角处红/蓝通道错位就是那圈彩虹边（同 AppIcon 的注释）
+        applyGlass(el, { refraction: 0.5, dispersion: 0, frost: 0 });
 
-  // boot.ts 已在模块加载时调用 useSearch().init()；异步回填由下面的响应式 watch 兜住，
-  // 不再用定时器猜时间。
-  try {
-    chrome.storage.onChanged.addListener(onStorageChanged);
-  } catch {
-    /* 非扩展环境（本地 http 预览）没有 chrome.storage，忽略 */
-  }
+    // boot.ts 已在模块加载时调用 useSearch().init()；异步回填由下面的响应式 watch 兜住，
+    // 不再用定时器猜时间。
+    try {
+        chrome.storage.onChanged.addListener(onStorageChanged);
+    } catch {
+        /* 非扩展环境（本地 http 预览）没有 chrome.storage，忽略 */
+    }
 });
 
 onBeforeUnmount(() => {
-  document.removeEventListener('pointerdown', onDocPointerDown);
-  try {
-    chrome.storage.onChanged.removeListener(onStorageChanged);
-  } catch {
-    /* 同上 */
-  }
-  if (barEl.value) releaseGlass(barEl.value);
+    document.removeEventListener('pointerdown', onDocPointerDown);
+    try {
+        chrome.storage.onChanged.removeListener(onStorageChanged);
+    } catch {
+        /* 同上 */
+    }
+    if (barEl.value) releaseGlass(barEl.value);
 });
 
 // init() 异步回填（以及设置面板改自定义引擎）都会改到单例的响应式 ref，
 // 这里直接 watch 真值源，首屏不等它们，到位了再更新一次即可。
 watch(
-  [searchManager.value.engines, searchManager.value.currentName, searchManager.value.history],
-  () => {
-    syncFromManager();
-    refreshHistory();
-  },
+    [searchManager.value.engines, searchManager.value.currentName, searchManager.value.history],
+    () => {
+        syncFromManager();
+        refreshHistory();
+    }
 );
 </script>
 
@@ -264,7 +267,12 @@ watch(
                         :aria-selected="engine.name === currentEngine?.name"
                         @click="pickEngine(engine.name)"
                     >
-                        <EngineIcon class="engine-icon" :icon="engine.icon" :logo="engine.logo" :name="engine.name" />
+                        <EngineIcon
+                            class="engine-icon"
+                            :icon="engine.icon"
+                            :logo="engine.logo"
+                            :name="engine.name"
+                        />
                         <span>{{ engine.name }}</span>
                     </button>
                 </div>

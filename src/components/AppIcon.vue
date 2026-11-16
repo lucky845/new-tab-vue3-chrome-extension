@@ -2,7 +2,6 @@
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue';
 import { createIconNode, firstCharOf, isDataImage, siteIconUrl } from '@/src/lib/iconSafe';
 import { applyGlass, releaseGlass } from '@/src/lib/glass';
-import { isExtensionOrigin, resolveFetchUrl } from '@/src/lib/http';
 
 /**
  * 图标方块：主页格子、文件夹预览格、文件夹展开面板共用同一个组件。
@@ -15,7 +14,7 @@ import { isExtensionOrigin, resolveFetchUrl } from '@/src/lib/http';
  * 渲染顺序与历史实现一致，不要调换：
  *   1. 内嵌 SVG（用户在「新增快捷访问」里粘贴的图标）→ 走 iconSafe 消毒后插 DOM
  *   2. 远程图片（http/https 的自定义图标）
- *   3. favicon 服务
+ *   3. 站点图标服务（faviconV2，只走 img-src 白名单，不申请 host 权限）
  *   4. 首字兜底
  */
 
@@ -29,7 +28,7 @@ const props = withDefaults(
         /** 首字兜底时是否大写（站点用大写，文件夹预览里用小写） */
         upper?: boolean;
     }>(),
-    { name: '', url: '', icon: null, glass: true, upper: true },
+    { name: '', url: '', icon: null, glass: true, upper: true }
 );
 
 const slotEl = ref<HTMLElement | null>(null);
@@ -99,7 +98,11 @@ const FULL_ICON_PCT = 64;
 const isRemoteImg = computed(() => !!imgSrc.value && !logoSrc.value && !isSvgIcon.value);
 const iconStyle = computed(() => {
     if (fullBleed.value) {
-        return { width: `${FULL_ICON_PCT}%`, height: `${FULL_ICON_PCT}%`, '--icon-mask': ICON_MASK };
+        return {
+            width: `${FULL_ICON_PCT}%`,
+            height: `${FULL_ICON_PCT}%`,
+            '--icon-mask': ICON_MASK,
+        };
     }
     return { width: `${BIG_ICON_PCT}%`, height: `${BIG_ICON_PCT}%` };
 });
@@ -133,7 +136,7 @@ function onImgLoad(event: Event): void {
     const img = event.target as HTMLImageElement;
     if (!isRemoteImg.value) return;
     measureFullBleed(img)
-        .then((bleed) => {
+        .then(bleed => {
             fullBleed.value = bleed;
         })
         .catch(() => {
@@ -142,63 +145,56 @@ function onImgLoad(event: Event): void {
 }
 
 async function measureFullBleed(img: HTMLImageElement): Promise<boolean> {
-    // 先试 CORS：拿得到就是干净像素；拿不到（没开 CORS 的服务）退回缓存里那张
-    // 带凭证的图（favicon 不走反代时是 <img> 自己加载的，缓存里可能已经有一份），
-    // 再不行就再用一个 cors 模式的请求兜底 —— 全程失败只返回 false，不抛给调用方。
-    let blob: Blob | null = null;
+    // 两条路，都不需要 host_permissions：
+    //   1. MIME：拿到响应头才能用。扩展页的 img-src 白名单让浏览器信任该 host 的图片，
+    //      于是内容协商直接返回 image/*；但没申请 host_permissions 时跨源 fetch 会因缺
+    //      Access-Control-Allow-Origin 而整个失败，这条路只在有 CORS 的服务上成立。
+    //   2. canvas：直接量像素。跨源图不带 crossorigin 属性就是 tainted（读 getImageData 抛
+    //      SecurityError），所以这条路在扩展里同样不可用 —— 它保住了普通网页源下的预览与测试。
+    // 读不出来只返回 false（按「有留白」处理，与历史行为一致），不抛、不刷控制台。
     const src = img.currentSrc || img.src;
-    // 开发预览时 dev 反代把同一张图映射成同源路径，不享受 CORS 的正是那条
+    if (await imageMimeIsImage(src)) return true;
     try {
-        const response = await fetch(resolveFetchUrl(src));
-        if (response.ok) blob = await response.blob();
-    } catch {
-        /* 拿不到就放弃 */
-    }
-    // 扩展里这条其实不会触发（host_permissions 已放行 www.google.com 与 *://*/*）；
-    // 留着是为了「预览页 + 没开反代」时仍然只是安静回落，不刷控制台错误。
-    if (!blob && isExtensionOrigin()) blob = await fetchViaDom(img);
-    if (!blob) return false;
-    const bitmap = await createImageBitmap(blob);
-    const canvas = document.createElement('canvas');
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return false;
-    ctx.drawImage(bitmap, 0, 0);
-    const { width, height } = canvas;
-    const { data } = ctx.getImageData(0, 0, width, height);
-    const band = 3;
-    let edgePx = 0;
-    let edgeOn = 0;
-    for (let y = 0; y < height; y++) {
-        for (let x = 0; x < width; x++) {
-            if (x >= band && x < width - band && y >= band && y < height - band) continue;
-            edgePx++;
-            if (data[(y * width + x) * 4 + 3] > 16) edgeOn++;
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        if (!ctx || !canvas.width || !canvas.height) return false;
+        ctx.drawImage(img, 0, 0);
+        const { width, height } = canvas;
+        const { data } = ctx.getImageData(0, 0, width, height);
+        const band = 3;
+        let edgePx = 0;
+        let edgeOn = 0;
+        for (let y = 0; y < height; y++) {
+            for (let x = 0; x < width; x++) {
+                if (x >= band && x < width - band && y >= band && y < height - band) continue;
+                edgePx++;
+                if (data[(y * width + x) * 4 + 3] > 16) edgeOn++;
+            }
         }
+        return edgePx > 0 && edgeOn / edgePx >= 0.9;
+    } catch {
+        // SecurityError = 图被判定 tainted；读不了就按「有留白」处理
+        return false;
     }
-    bitmap.close();
-    return edgePx > 0 && edgeOn / edgePx >= 0.9;
 }
 
 /**
- * 兜底取图：把图再走一遍浏览器缓存读成 data URL。
- * <img> 已经在页面上显示出来了，说明字节一定在缓存里，不重复发网络请求。
- * 没有缓存命中时读图会失败（受同一套 CORS 限制），这时返回 null，由调用方回落。
+ * 只问「这张 URL 内容协商出来的是不是图片」，不读字节、不解析像素。
+ * 这是扩展页里唯一不需要 host_permissions 的资源类型探测（见 measureFullBleed 的注释）。
+ * 读不到响应头就返回 false，交给 canvas 那条路。
  */
-function fetchViaDom(img: HTMLImageElement): Promise<Blob | null> {
-    return new Promise((resolve) => {
-        try {
-            const xhr = new XMLHttpRequest();
-            xhr.open('GET', img.currentSrc || img.src);
-            xhr.responseType = 'blob';
-            xhr.onload = () => resolve(xhr.status === 200 ? (xhr.response as Blob) : null);
-            xhr.onerror = () => resolve(null);
-            xhr.send();
-        } catch {
-            resolve(null);
-        }
-    });
+async function imageMimeIsImage(src: string): Promise<boolean> {
+    try {
+        const response = await fetch(src, { method: 'GET', cache: 'force-cache' });
+        if (!response.ok) return false;
+        // 立刻取消 body：只要类型，不要字节
+        void response.body?.cancel();
+        return /^image\//i.test(response.headers.get('content-type') || '');
+    } catch {
+        return false;
+    }
 }
 
 function attachGlassTo(el: HTMLElement): void {
@@ -236,6 +232,7 @@ onBeforeUnmount(() => {
             referrerpolicy="no-referrer"
             :src="imgSrc"
             :style="iconStyle"
+            :data-fullbleed="isRemoteImg ? String(fullBleed) : undefined"
             @load="onImgLoad"
             @error="failed = true"
         />
@@ -255,7 +252,11 @@ onBeforeUnmount(() => {
        不挂玻璃的预览格必须算出同一个值，否则同一个组件会有两种圆角 */
     border-radius: var(--icon-radius, 21%);
     background-color: rgb(var(--spec) / 0.24);
-    background-image: linear-gradient(160deg, rgb(var(--spec) / 0.4) 0%, rgb(var(--spec) / 0.06) 100%);
+    background-image: linear-gradient(
+        160deg,
+        rgb(var(--spec) / 0.4) 0%,
+        rgb(var(--spec) / 0.06) 100%
+    );
     box-shadow:
         inset 0 1px 0 var(--glass-rim),
         inset 0 -1px 0 var(--glass-shade);

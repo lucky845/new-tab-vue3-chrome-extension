@@ -87,33 +87,36 @@ C  有效人日 1–5        已含三浏览器回归与文档，单人负荷系
 
 ### 4.1 L0 硬性门槛（先做，不参与排序）
 
-- [ ] **砍掉 `*://*/*` host_permissions** — 上架唯一必须改的代码
+- [x] **砍掉 `*://*/*` host_permissions** — 上架唯一必须改的代码（已去掉 wildcard，也去掉了 `www.google.com`；残留的代价见下）
     - 现状：`wxt.config.ts` host_permissions 最后一项，构建产物如实带上
     - 影响：触发最小权限原则审核整改；即使过审也显示"读取你在所有网站的数据"
     - 方案：favicon 只留 `https://www.google.com/` + 首字兜底；用户上传图标走已有裁剪器。若确有自定义域名 favicon 需求，改 `optional_host_permissions` 在用户添加该站点时动态申请
     - 成本：S（0.5 人日，改 manifest + AppIcon 兜底链路验证）
-- [ ] **新建 `PRIVACY.md` 并发布到 GitHub Pages**
+    - **实际做法**：favicon 改走 `t0.gstatic.com/faviconV2` 直链（旧 `www.google.com/s2/favicons` 会 301 到 gstatic，而 301 是 `text/html` + `nosniff`，在无权限时两条探测路全废）。图标经 CSP 的 `img-src` 白名单显示，不再申请任何站点权限
+    - **未获批准的代价（已接受）**：没有 host_permissions 就读不到跨源响应头，也读不到像素 —— AppIcon 的「是否铺满」判定在扩展里恒为否，图标一律按 76% 显示；设置面板的「用站点图标」只能对返回 CORS 的服务生效。要恢复得走 `optional_host_permissions` 动态申请
+- [x] **新建 `PRIVACY.md` 并发布到 GitHub Pages**
     - Chrome 政策：处理任何用户数据必须提供隐私政策且填 dashboard 链接，**无政策必然审核不过**
     - 必须如实写：天气请求会向 Open-Meteo 传你的 IP 与大致坐标；壁纸请求从 picsum/wallhaven 拉图。其余数据仅在 `chrome.storage.local`
     - 成本：S（0.5 人日）
+    - **已完成**：`doc/PRIVACY.md`（商店审核用）+ `doc/PRIVACY.html`（Pages 用同一份内容）+ `.github/workflows/pages.yml`。**待办：在仓库 Settings → Pages 把 Source 选成 GitHub Actions**，之后地址为 <https://lucky845.github.io/new-tab-vue3-chrome-extension/PRIVACY.html>
 - [ ] **Dependabot moderate 漏洞**
     - 成本：S
 
 ### 4.2 体验优化（35%）
 
-| 项                 | 问题                                                                                                                     | 方案                                                                          | 成本 | 来源   |
-| ------------------ | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- | ---- | ------ |
-| 搜索框自动聚焦     | 新标签页最高频动作，却要先点一下（`SearchBlock.vue` 只有 `focusInputQuietly` 被 pickEngine/clearInput 调用，首屏无聚焦） | `onMounted` 调 `focusInputQuietly()`，复用已有 suppressHistory 语义避免弹历史 | S    | 反馈   |
-| 首都定位授权不打扰 | 首屏即弹系统定位框，拒绝后长期 `--°C`                                                                                    | 首次不自动 geolocation；卡片显示可点的「设置城市」；错误文案改成动作行        | S    | 反馈   |
-| 默认站点按地区分流 | 默认 8 站含 Google/YouTube/Reddit 国内不可达，首屏一半图标超时                                                           | 按 `chrome.i18n.getUILanguage()` 分流，zh-CN → 百度/知乎/B站/V2EX/GitHub      | S    | 反馈   |
-| 删掉「演示」文件夹 | `useQuickAccess.ts:98-134` 造出的演示文件夹含 GitHub+V2EX，与根层重复                                                    | 删 `seedDemoFolder()`，改为空状态提示「把两个图标拖到一起可以建文件夹」       | S    | 反馈   |
-| 图标 `⋯` 入口      | 编辑/删除只藏在右键菜单，触控板用户找不到                                                                                | hover/focus 显示 `⋯`，复用 `showContextMenu`                                  | M    | 反馈   |
-| 添加弹窗降门槛     | textarea placeholder「粘贴图片URL或SVG代码」吓退普通用户                                                                 | 默认只留 URL + 名称两栏，图标区折叠进「高级」，写清「留空自动抓网站图标」     | S    | 反馈   |
-| 单页隐藏分页条     | 只有一页也渲染 `‹ 1 ›`，暗示还有内容                                                                                     | `totalPages === 1` 时不渲染 `.pagination-controls`                            | S    | 反馈   |
-| 拖拽可发现性       | 需停 600ms 才合并，用户不知道要停                                                                                        | 拖拽态高亮所有文件夹格；停留阈值 600→400ms 加进度描边；分页箭头作落点         | M    | 反馈   |
-| 左右翼 4 卡常驻    | 永久占位挤占宽度，`columnsForWidth` 在 700–980px 反复 3/4/5 列跳变                                                       | 4 个独立开关，默认「有数据才显示」                                            | M    | 反馈   |
-| 壁纸对比度         | 亮壁纸下图标文字糊在一起                                                                                                 | 壁纸平均亮度 → 自动 scrim；新增「文字底板」开关                               | M    | 反馈   |
-| 空状态与引导       | 零 onboarding，用户装完和默认页差别不大                                                                                  | 首跑轻引导（不弹窗，用空位文案）+ 各面板空状态                                | M    | 优先级 |
+| 项                        | 问题                                                                                                                     | 方案                                                                          | 成本 | 来源   |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- | ---- | ------ |
+| ~~搜索框自动聚焦~~ ✅     | 新标签页最高频动作，却要先点一下（`SearchBlock.vue` 只有 `focusInputQuietly` 被 pickEngine/clearInput 调用，首屏无聚焦） | `onMounted` 调 `focusInputQuietly()`，复用已有 suppressHistory 语义避免弹历史 | S    | 反馈   |
+| 首都定位授权不打扰        | 首屏即弹系统定位框，拒绝后长期 `--°C`                                                                                    | 首次不自动 geolocation；卡片显示可点的「设置城市」；错误文案改成动作行        | S    | 反馈   |
+| 默认站点按地区分流        | 默认 8 站含 Google/YouTube/Reddit 国内不可达，首屏一半图标超时                                                           | 按 `chrome.i18n.getUILanguage()` 分流，zh-CN → 百度/知乎/B站/V2EX/GitHub      | S    | 反馈   |
+| ~~删掉「演示」文件夹~~ ✅ | `useQuickAccess.ts:98-134` 造出的演示文件夹含 GitHub+V2EX，与根层重复                                                    | 删 `seedDemoFolder()`，改为空状态提示「把两个图标拖到一起可以建文件夹」       | S    | 反馈   |
+| 图标 `⋯` 入口             | 编辑/删除只藏在右键菜单，触控板用户找不到                                                                                | hover/focus 显示 `⋯`，复用 `showContextMenu`                                  | M    | 反馈   |
+| ~~添加弹窗降门槛~~ ✅     | textarea placeholder「粘贴图片URL或SVG代码」吓退普通用户                                                                 | 默认只留 URL + 名称两栏，图标区折叠进「高级」，写清「留空自动抓网站图标」     | S    | 反馈   |
+| ~~单页隐藏分页条~~ ✅     | 只有一页也渲染 `‹ 1 ›`，暗示还有内容                                                                                     | `totalPages === 1` 时不渲染 `.pagination-controls`                            | S    | 反馈   |
+| 拖拽可发现性              | 需停 600ms 才合并，用户不知道要停                                                                                        | 拖拽态高亮所有文件夹格；停留阈值 600→400ms 加进度描边；分页箭头作落点         | M    | 反馈   |
+| 左右翼 4 卡常驻           | 永久占位挤占宽度，`columnsForWidth` 在 700–980px 反复 3/4/5 列跳变                                                       | 4 个独立开关，默认「有数据才显示」                                            | M    | 反馈   |
+| 壁纸对比度                | 亮壁纸下图标文字糊在一起                                                                                                 | 壁纸平均亮度 → 自动 scrim；新增「文字底板」开关                               | M    | 反馈   |
+| 空状态与引导              | 零 onboarding，用户装完和默认页差别不大                                                                                  | 首跑轻引导（不弹窗，用空位文案）+ 各面板空状态                                | M    | 优先级 |
 
 ### 4.3 新功能（25%）
 

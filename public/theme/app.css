@@ -1023,6 +1023,31 @@ body {
     color: var(--text-primary);
 }
 
+/* 高级选项折叠开关：多数人不需要自定义图标，默认收起，留空就自动抓站点图标 */
+.qa-advanced-toggle {
+    align-self: flex-start;
+    padding: 2px 0;
+    border: none;
+    background: none;
+    color: rgb(var(--ink) / 0.72);
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1.4;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+
+.qa-advanced-toggle:hover,
+.qa-advanced-toggle:focus-visible {
+    color: var(--text-primary);
+}
+
+.qa-advanced-toggle:focus-visible {
+    outline: 2px solid rgb(var(--ink) / calc(0.7 * var(--line-k)));
+    outline-offset: 2px;
+}
+
 .icon-input-wrapper {
     display: flex;
     align-items: flex-start;
