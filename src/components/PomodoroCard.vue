@@ -5,25 +5,16 @@
  * legacy 映射（app.js）：
  * - renderPomodoroCard（1325-1350）：time/state/today 文本 + ring 进度 → 响应式绑定
  * - bindSideWidgets 番茄钟段（1388+）：开始/暂停/继续 + 跳过 → @click
- * - pomodoro-card-expand → pomodoroBtn.click()（1377）→ panels.toggle('pomodoro')
+ * - 展开按钮：外壳 SideCard 记录 panelOrigin 后 toggle('pomodoro')
  *
  * 计时状态来自 usePomodoro 模块级单例（与 PomodoroPanel 共享；面板关了计时继续）。
  * ring 进度：legacy CIRC = 2π*34，strokeDashoffset = CIRC*(1-progress)；休息态加 .break。
+ * 显隐 / 展开按钮 / 头部由 SideCard 外壳统一承载，本组件只管卡片主体。
  */
 import { computed } from 'vue';
-import { setPanelOriginFromEvent, usePanels } from '@/src/composables/usePanels';
+import SideCard from '@/src/components/common/SideCard.vue';
 import { usePomodoro, formatPomodoroTime } from '@/src/composables/usePomodoro';
-import { useSideCards } from '@/src/composables/useSideCards';
 
-const { visible } = useSideCards();
-
-const { toggle } = usePanels();
-
-/** 记录展开原点后开合：面板卡片从被点的这颗按钮长出来（见 app.css 的 --panel-origin）。 */
-function openPanel(id: Parameters<typeof toggle>[0], ev: MouseEvent): void {
-  setPanelOriginFromEvent(id, ev);
-  toggle(id);
-}
 const { progress, stateLabel, startLabel, stats, toggleStart, skipPhase } = usePomodoro();
 
 // legacy renderPomodoroCard 的环形进度（CIRC = 2π*34）
@@ -36,11 +27,7 @@ const todayText = computed(() => '今日 🍅 × ' + (stats.value.completedToday
 
 <!-- prettier-ignore -->
 <template>
-    <section v-show="visible('pomodoro')" class="side-card" id="side-card-pomodoro">
-        <header class="side-card-header">
-            <h3>番茄钟</h3>
-            <button id="pomodoro-card-expand" class="side-expand-btn" title="打开完整面板" @click="openPanel('pomodoro', $event)">⤢</button>
-        </header>
+    <SideCard cardId="pomodoro" elementId="side-card-pomodoro" title="番茄钟" expandId="pomodoro-card-expand">
         <div class="pomodoro-mini">
             <div class="pomodoro-mini-ring">
                 <svg viewBox="0 0 80 80" aria-hidden="true">
@@ -66,5 +53,5 @@ const todayText = computed(() => '今日 🍅 × ' + (stats.value.completedToday
                 </div>
             </div>
         </div>
-    </section>
+    </SideCard>
 </template>
