@@ -581,12 +581,11 @@ watch(
             >
                 ✕
             </button>
-            <div class="settings-scroll" ref="scrollEl">
-                <div class="settings-head">
-                    <h2>设置</h2>
-                    <p class="settings-autosave" role="status">静置 3s 自动保存</p>
-                </div>
-                <div class="settings-tabs" role="tablist">
+            <div class="settings-head">
+                <h2>设置</h2>
+                <p class="settings-autosave" role="status">静置 3s 自动保存</p>
+            </div>
+            <div class="settings-tabs" role="tablist">
                     <button
                         v-for="tab in settingsTabs"
                         :key="tab.id"
@@ -599,8 +598,8 @@ watch(
                     >
                         {{ tab.label }}
                     </button>
-                </div>
-
+            </div>
+            <div class="settings-scroll" ref="scrollEl">
                 <!-- 搜索 -->
                 <div class="setting-item" v-show="activeTab === 'search'">
                     <label>自定义搜索引擎</label>
