@@ -4,7 +4,7 @@ import { createIconNode } from '@/src/lib/iconSafe';
 import { useQuickAccess } from '@/src/composables/useQuickAccess';
 import { quickAccessBridge } from '@/src/composables/useQuickAccessBridge';
 import { panelOriginStyle } from '@/src/composables/usePanels';
-import { useTip } from '@/src/composables/useTip';
+import { useTip, type TipHandle } from '@/src/composables/useTip';
 import { toast } from '@/src/composables/useToast';
 
 /**
@@ -55,9 +55,9 @@ const helpBtnEl = ref<HTMLButtonElement | null>(null);
 const helpTitle = ref('关于自定义图标');
 
 /** dsh-tip 实例不参与渲染，用普通变量即可 */
-let qaIconHelpTip: any = null;
+let qaIconHelpTip: TipHandle | null = null;
 
-function manager(): any {
+function manager(): ReturnType<typeof useQuickAccess> {
     return useQuickAccess();
 }
 
