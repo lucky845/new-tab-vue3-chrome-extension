@@ -4021,6 +4021,26 @@ html[data-theme='dark'] {
     --option-bg: #1d2530;
 }
 
+/* 壁纸亮度分档：只有「壁纸与主题反向」时才把蒙版加厚一档。
+
+   两层蒙版数值本来就是按「主题配色压住壁纸」定的：深色主题压暗、浅色主题罩白纱。
+   壁纸跟主题反向时这套比例不够 —— 亮壁纸配深色主题，白字落在 150+ 亮度的画面上
+   只有约 3:1；暗壁纸配浅色主题，墨字同样掉出 AA。此时把蒙版各加厚一档补回来，
+   同向组合保持原值（加厚只会把壁纸洗成灰板，白白丢掉壁纸本身）。
+
+   data-wallpaper-tone 由 src/composables/useWallpaper.ts 的 measureWallpaperTone()
+   采样 16×16 平均感知亮度写入；图床不给 CORS 头读不到像素时不写这个属性，
+   于是退回上面的默认值 —— 不做假的分档。 */
+html[data-theme='dark'][data-wallpaper-tone='bright'] {
+    --wallpaper-veil: rgb(var(--shadow) / 0.52);
+    --on-photo-halo: rgb(var(--shadow) / 0.8);
+}
+
+html[data-theme='light'][data-wallpaper-tone='dark'] {
+    --wallpaper-veil: rgb(var(--spec) / 0.42);
+    --on-photo-halo: rgb(var(--spec) / 0.9);
+}
+
 /* 玻璃折射滤镜的宿主 SVG：常驻但不占布局、不可交互 */
 .liquid-refract-defs {
     position: absolute;
