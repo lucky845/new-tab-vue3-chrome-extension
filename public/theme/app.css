@@ -3728,6 +3728,43 @@ body:not([data-wings='none']) #quick-access-grid .quick-access-grid {
     display: none;
 }
 
+.qa-empty {
+    margin: 4px auto 18px;
+    max-width: 480px;
+    text-align: center;
+    padding: 22px 24px;
+    /* 与侧卡同族玻璃 token：空态卡不是弹窗，不该另起一套磨砂 */
+    border-radius: var(--radius-glass);
+    background-color: var(--glass-card-fill);
+    background-image: var(--glass-sheen);
+    border: 1px solid var(--glass-edge);
+    backdrop-filter: var(--glass-card-backdrop);
+    -webkit-backdrop-filter: var(--glass-card-backdrop);
+    box-shadow: var(--glass-shadow);
+}
+
+.qa-empty-title {
+    margin: 0 0 6px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-primary, #1d1d1f);
+}
+
+.qa-empty-sub {
+    margin: 0;
+    font-size: 12.5px;
+    line-height: 1.6;
+    color: var(--text-secondary, rgba(29, 29, 31, 0.62));
+}
+
+.todo-empty {
+    padding: 18px 14px;
+    text-align: center;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-secondary, rgba(29, 29, 31, 0.62));
+}
+
 .folder-empty-hint {
     margin: 14px 0 2px;
     font-size: 13px;

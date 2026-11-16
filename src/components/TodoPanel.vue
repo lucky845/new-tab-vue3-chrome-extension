@@ -177,6 +177,10 @@ onUnmounted(() => {
         <button id="todo-add-btn" class="settings-btn" @click="add">添加</button>
       </div>
       <ul id="todo-list" class="todo-list" ref="listEl">
+        <!-- 空态与 NotesPanel 的 notes-empty 同一语义：有筛选 = 该分类无匹配；否则 = 首跑引导 -->
+        <li v-if="filteredTodos.length === 0" class="todo-empty">
+          {{ filter === 'all' ? '还没有待办，在上方输入并回车，第一条就会出现在这里' : '该分类下暂无待办' }}
+        </li>
         <li
           v-for="todo in filteredTodos"
           :key="todo.id"
