@@ -2,18 +2,20 @@
  * 快捷访问数据层（模块级单例）。
  * 逐字迁移自 public/legacy-js/modules/quick-access-manager.js：
  * 方法名、分支、文案、返回结构、存储键 quickAccessSites 全部保留；
- * DEFAULT_SITES 改由 ESM 具名导出提供，不再挂全局对象。
+ * 默认站点改由 ESM 具名导出提供，不再挂全局对象；首装按界面语言选地区组（src/lib/region.ts）。
  * 用 ref 暴露 sites，供 Vue 侧响应式渲染。
  */
 import { ref } from 'vue';
 import type { Ref } from 'vue';
-import { DEFAULT_SITES } from '@/src/config/defaultSites';
+import { defaultSitesFor } from '@/src/config/defaultSites';
 import type { QuickAccessNode } from '@/src/lib/defaultSites';
+import { defaultSiteRegion } from '@/src/lib/region';
 
 export type { QuickAccessNode } from '@/src/lib/defaultSites';
 
+/** 首装兜底站点：按浏览器界面语言挑一组（中文界面不放 Google/YouTube/Reddit） */
 const cloneDefaults = (): QuickAccessNode[] =>
-    JSON.parse(JSON.stringify(DEFAULT_SITES)) as QuickAccessNode[];
+    defaultSitesFor(defaultSiteRegion()) as unknown as QuickAccessNode[];
 
 /** 规范化 URL：去首尾空白与末尾斜杠，忽略大小写，用于同站点判定。 */
 function normalizeSiteUrl(url: string | undefined): string {

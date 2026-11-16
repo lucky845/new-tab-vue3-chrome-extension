@@ -38,6 +38,8 @@ const svgNode = shallowRef<SVGSVGElement | null>(null);
 /** 图片本身的自然宽度；0 = 还没解析完或加载失败 */
 /** 这张远程图是否「铺满画布」（四边 3px 都有不透明像素）——实测判据，不靠尺寸猜 */
 const fullBleed = ref(false);
+/** 远程图是否已经画出来：远程图标首帧是空的，加载完再淡入，避免先闪一个灰块 */
+const imgReady = ref(false);
 
 const iconText = computed(() => (props.icon || '').trim());
 /** 用户裁剪好的 logo 优先：它是「已经确认过的成品」，不该再被 favicon 服务覆盖 */
@@ -132,8 +134,14 @@ function rebuildSvg(): void {
  * 跨域图会污染 canvas，所以先 fetch 成 blob 再从同源 blob: URL 画进去；
  * 服务不支持 CORS 时 fetch 直接失败，就保持默认的「有留白」处理，不抛错。
  */
+// 换站点（编辑 URL）要重新走一次淡入，否则新图会在旧图的「已就绪」状态里直接硬切
+watch(imgSrc, () => {
+    imgReady.value = false;
+});
+
 function onImgLoad(event: Event): void {
     const img = event.target as HTMLImageElement;
+    imgReady.value = true;
     if (!isRemoteImg.value) return;
     measureFullBleed(img)
         .then(bleed => {
@@ -233,6 +241,7 @@ onBeforeUnmount(() => {
             :src="imgSrc"
             :style="iconStyle"
             :data-fullbleed="isRemoteImg ? String(fullBleed) : undefined"
+            :class="{ 'is-ready': !isRemoteImg || imgReady }"
             @load="onImgLoad"
             @error="failed = true"
         />
@@ -271,6 +280,23 @@ onBeforeUnmount(() => {
     width: 62%;
     height: 62%;
     object-fit: contain;
+}
+
+/* 内嵌 SVG 首帧就有，远程图要等一次网络。等的那段时间不留灰底占位，
+   加载完成再淡入 —— 一批图标陆续亮起来，比同时闪一圈灰块舒服。 */
+.icon-square img.icon:not(.is-ready) {
+    opacity: 0;
+}
+
+.icon-square img.icon.is-ready {
+    opacity: 1;
+    transition: opacity 180ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .icon-square img.icon.is-ready {
+        transition: none;
+    }
 }
 
 /* 长宽比统一：站点 favicon 什么形状都有 —— 透明底图形（Google/YouTube）只占画面 67%，

@@ -161,6 +161,12 @@ export function isDataImage(value: string): boolean {
     return /^data:image\/(png|jpeg|webp);base64,/i.test((value || '').trim());
 }
 
+/**
+ * 远程图标（faviconV2 拉取）的形状：快捷访问里用 `icon: ''` 表示「没有内嵌 SVG」。
+ * 首帧就发起图片请求，比内嵌 SVG 的站点更晚出图，用它标记出来逐级淡入。
+ */
+export const REMOTE_ICON = '' as const;
+
 /** 站点图标服务的域名：只放行这几个，扩展不申请任何站点的 host 权限 */
 export const FAVICON_HOSTS = ['www.google.com', 't0.gstatic.com', 't1.gstatic.com', 't2.gstatic.com', 't3.gstatic.com'] as const;
 

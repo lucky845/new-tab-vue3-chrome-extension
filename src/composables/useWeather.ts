@@ -869,6 +869,44 @@ function createWeatherApi(): WeatherApi {
   }
 
   /**
+   * 界面语言对应的兜底城市。只在「没设城市 + 没定位授权」时用一次；
+   * 位置不对，用户点一下「使用当前位置」就纠正，比首屏一片 --°C 强。
+   */
+  function defaultCityForUi(): string {
+    const lang =
+      typeof chrome !== 'undefined' && chrome.i18n?.getUILanguage
+        ? chrome.i18n.getUILanguage()
+        : typeof navigator === 'undefined'
+          ? ''
+          : navigator.language;
+    return /^zh\b/i.test(String(lang || '')) ? '北京' : '';
+  }
+
+  /**
+   * 定位权限当前是否已授予（只查状态，不触发权限弹窗）。
+   * Permissions API 不可用或查询失败时按「未授权」处理 —— 宁可少弹一次，
+   * 也不要每次开标签页都甩一个定位请求。
+   */
+  async function geolocationGranted(): Promise<boolean> {
+    try {
+      if (!navigator.permissions?.query) return false;
+      const status = await navigator.permissions.query({ name: 'geolocation' });
+      return status.state === 'granted';
+    } catch {
+      return false;
+    }
+  }
+
+  /** 未授权时的兜底：高德 IP 定位（不需要任何权限）拿城市，再按城市查天气 */
+  async function getIpLocatedWeather(): Promise<WeatherData> {
+    const { adcode, cityName } = await getAdcodeByIP();
+    const data = await getWeatherByAdcode(adcode);
+    // 按城市查回来的数据里 city 可能为空，用 IP 定位拿到的城市名补上
+    if (!data.city && cityName) return { ...data, city: cityName };
+    return data;
+  }
+
+  /**
    * 获取当前位置：先尝试高精度，失败或超时则自动回退到低精度，延长超时；
    * 前置 permissions 查询直接给出「权限被拒绝」的明确错误。
    */
@@ -1010,6 +1048,18 @@ function createWeatherApi(): WeatherApi {
     lastResolvedCacheKey = null;
     if (currentCity.value) {
       return getOpenMeteoByCity(currentCity.value);
+    }
+    // 没设城市、也还没拿到定位授权：先按界面语言给一个本国城市，首屏就有真实温度。
+    // 用户点「使用当前位置」后写入的真实城市会把它覆盖（persistDetectedCity 只写一次）。
+    if (!(await geolocationGranted())) {
+      const fallbackCity = defaultCityForUi();
+      if (fallbackCity) {
+        try {
+          return await getOpenMeteoByCity(fallbackCity);
+        } catch (err) {
+          console.info('[weather] 默认城市查询失败，改走定位:', (err as Error)?.message);
+        }
+      }
     }
     return getOpenMeteoByLocation();
   }
@@ -1276,9 +1326,14 @@ function createWeatherApi(): WeatherApi {
         // 使用指定城市 => 先换为adcode（带缓存）
         const adcode = await getAdcodeByCity(currentCity.value);
         data = await getWeatherByAdcode(adcode);
-      } else {
+      } else if (await geolocationGranted()) {
         // 使用当前位置，带重试机制
         data = await getWeatherByLocationWithRetry();
+      } else {
+        // 还没拿到定位授权：不主动弹权限框（开个新标签页就求定位太冒犯了）。
+        // 有高德 Key 就按 IP 定位拿城市级天气（无需授权）；用户去天气设置
+        // 点「使用当前位置」再走精确定位。
+        data = await getIpLocatedWeather();
       }
 
       if (data && Number.isFinite(data.temperature)) {
