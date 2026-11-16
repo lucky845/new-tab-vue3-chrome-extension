@@ -1273,12 +1273,22 @@ body {
 
 .wallpaper-header {
     display: flex;
-    justify-content: space-between;
-    align-items: center;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
     margin-bottom: 20px;
     /* 右侧留出关闭按钮(32px)的位置，避免绝对定位的 X 压住搜索框 */
     padding: 0 48px 20px 0;
     border-bottom: 1px solid var(--surface-border);
+}
+
+/* 第一行：标题左、搜索右；第二行留给本地上传按钮组 */
+.wallpaper-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
 }
 
 /* 壁纸页是左右分栏工作台，标题跟栏位左对齐，不套用 .settings-content h2 的居中 */
@@ -1286,6 +1296,7 @@ body {
     margin: 0;
     font-size: 20px;
     text-align: left;
+    flex-shrink: 0;
 }
 
 .wallpaper-local-actions {
@@ -1300,7 +1311,9 @@ body {
   align-items: center;
   cursor: pointer;
   font-size: 12px;
-  padding: 6px 12px;
+  height: 30px;
+  padding: 0 12px;
+  white-space: nowrap;
   border-radius: 8px;
   border: 1px solid var(--glass-edge, rgba(255, 255, 255, 0.25));
   background: var(--glass-card-fill, rgba(255, 255, 255, 0.12));
@@ -1328,26 +1341,53 @@ body {
 
 .wallpaper-search-box {
     display: flex;
-    gap: 10px;
+    gap: 8px;
+    flex-shrink: 1;
+    min-width: 0;
 }
 
+/* 输入与按钮同高（36px）：搜索单字不再竖着折行，整排对齐侧栏玻璃按钮 */
 .wallpaper-search-box input {
     width: 300px;
-    padding: 10px 15px;
+    max-width: 42vw;
+    height: 36px;
+    padding: 0 14px;
+    box-sizing: border-box;
     border-radius: var(--radius-control);
-    border: 1px solid rgb(var(--ink) / calc(0.3 * var(--line-k)));
-    background: rgb(var(--ink) / calc(0.1 * var(--wash-k)));
+    border: 1px solid var(--glass-edge, rgb(var(--ink) / calc(0.3 * var(--line-k))));
+    background: var(--glass-card-fill, rgb(var(--ink) / calc(0.1 * var(--wash-k))));
     color: var(--text-primary);
-    font-size: 14px;
+    font-size: 13px;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.wallpaper-search-box input::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.wallpaper-search-box input:focus {
+    outline: none;
+    background: var(--glass-sheen, rgb(var(--ink) / calc(0.16 * var(--wash-k))));
+    border-color: rgb(var(--ink) / calc(0.45 * var(--line-k)));
 }
 
 .wallpaper-search-box button {
-    padding: 10px 20px;
+    height: 36px;
+    padding: 0 18px;
     border-radius: var(--radius-control);
-    border: none;
-    background: rgb(var(--ink) / calc(0.2 * var(--wash-k)));
+    border: 1px solid var(--glass-edge, rgb(var(--ink) / calc(0.3 * var(--line-k))));
+    background: var(--glass-card-fill, rgb(var(--ink) / calc(0.2 * var(--wash-k))));
     color: var(--text-primary);
     cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.wallpaper-search-box button:hover {
+    background: var(--glass-sheen, rgb(var(--ink) / calc(0.28 * var(--wash-k))));
 }
 
 .wallpaper-grid {
@@ -1396,7 +1436,8 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 20px;
+    flex-wrap: wrap;
+    gap: 10px 20px;
 }
 
 .pagination-buttons {
@@ -1407,16 +1448,22 @@ body {
 
 .pagination-buttons button,
 .pagination-buttons span {
-    background: transparent;
-    border: 1px solid rgb(var(--ink) / calc(0.2 * var(--line-k)));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 34px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    background: var(--glass-card-fill, transparent);
+    border: 1px solid var(--glass-edge, rgb(var(--ink) / calc(0.2 * var(--line-k))));
     color: var(--text-secondary);
     border-radius: var(--radius-control);
-    padding: 8px 12px;
     font-size: 14px;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease;
     min-width: 40px;
     text-align: center;
+    white-space: nowrap;
 }
 
 .pagination-buttons span {
@@ -1425,7 +1472,7 @@ body {
 }
 
 .pagination-buttons button:hover {
-    background: rgb(var(--ink) / calc(0.1 * var(--wash-k)));
+    background: var(--glass-sheen, rgb(var(--ink) / calc(0.1 * var(--wash-k))));
     border-color: rgb(var(--ink) / calc(0.3 * var(--line-k)));
 }
 
@@ -1446,6 +1493,8 @@ body {
     display: flex;
     align-items: center;
     gap: 15px;
+    white-space: nowrap;
+    flex-wrap: wrap;
     font-size: 14px;
     /* tertiary(0.6) 在浅色壁纸面板上只有 2.9:1，secondary(0.78) 也只到 4.03:1；
        「跳至 N 页」是操作提示，14px 要用满墨。 */
@@ -1459,12 +1508,14 @@ body {
 }
 
 #jump-to-page-input {
-    background: rgb(var(--recess-deep) / 0.9);
-    border: 1px solid rgb(var(--ink) / calc(0.2 * var(--line-k)));
+    background: var(--glass-card-fill, rgb(var(--recess-deep) / 0.9));
+    border: 1px solid var(--glass-edge, rgb(var(--ink) / calc(0.2 * var(--line-k))));
     color: var(--text-primary);
-    border-radius: var(--radius-xs);
+    border-radius: var(--radius-control);
     width: 50px;
-    padding: 6px 8px;
+    height: 34px;
+    padding: 0 8px;
+    box-sizing: border-box;
     text-align: center;
     font-size: 14px;
 }

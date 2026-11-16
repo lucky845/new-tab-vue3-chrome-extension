@@ -160,7 +160,19 @@ async function onJumpEnter(): Promise<void> {
       </div>
       <div class="wallpaper-main">
         <div class="wallpaper-header">
-          <h2>壁纸库</h2>
+          <div class="wallpaper-header-row">
+            <h2>壁纸库</h2>
+            <div class="wallpaper-search-box">
+              <input
+                type="text"
+                id="wallpaper-search-input"
+                v-model="wallpaperSearchQuery"
+                placeholder="搜索壁纸，例如 'Forest'"
+                @keydown.enter="handleSearch"
+              />
+              <button id="wallpaper-search-btn" @click="handleSearch">搜索</button>
+            </div>
+          </div>
           <div class="wallpaper-local-actions">
             <label class="wallpaper-upload-btn" :class="{ 'u-disabled': localBusy }">
               {{ localBusy ? '处理中…' : '上传本地图片' }}
@@ -170,16 +182,6 @@ async function onJumpEnter(): Promise<void> {
               移除本地壁纸
             </button>
             <span v-if="localMsg" class="wallpaper-local-msg">{{ localMsg }}</span>
-          </div>
-          <div class="wallpaper-search-box">
-            <input
-              type="text"
-              id="wallpaper-search-input"
-              v-model="wallpaperSearchQuery"
-              placeholder="搜索壁纸，例如 'Forest'"
-              @keydown.enter="handleSearch"
-            />
-            <button id="wallpaper-search-btn" @click="handleSearch">搜索</button>
           </div>
         </div>
         <div id="wallpaper-grid" class="wallpaper-grid">
