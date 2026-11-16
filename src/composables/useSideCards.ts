@@ -4,7 +4,8 @@
  *
  * 问题：四张卡是 fixed 定位的「常驻占位」，中间内容为了让出翼宽，在 700–980px
  * 被媒体查询压到 3 列、1180px 压到 4 列 —— 用户什么都没做，列数却在跳。
- * 解法：每张卡一个三态开关，默认 auto（有数据才出现），全隐时整翼退场，
+ * 解法：每张卡一个三态开关，默认 always（默认展示，选择权交给用户），
+ * 可切到 auto（有数据才出现）或 never（隐藏）；全隐时整翼退场，
  * 中间内容收回被让出的宽度（见 app.css 的 body[data-wings] 规则）。
  *
  * 存储键 'sideCardModes' 是本版新增，不覆盖任何 legacy 键。
@@ -22,22 +23,23 @@ export type SideCardModes = Record<SideCardId, SideCardMode>;
 export const SIDE_CARD_STORAGE_KEY = 'sideCardModes';
 
 export const SIDE_CARD_LABELS: Array<{ id: SideCardId; label: string; hint: string }> = [
-    { id: 'todo', label: '待办', hint: '有未完成待办时出现' },
-    { id: 'pomodoro', label: '番茄钟', hint: '今天有专注记录或正在计时时出现' },
-    { id: 'notes', label: '便签', hint: '有便签时出现' },
+    { id: 'todo', label: '待办', hint: '默认展示；可改为仅在有未完成待办时出现' },
+    { id: 'pomodoro', label: '番茄钟', hint: '默认展示；可改为仅在专注时或今天有记录时出现' },
+    { id: 'notes', label: '便签', hint: '默认展示；可改为仅在有便签时出现' },
     { id: 'tools', label: '小工具', hint: '小工具是固定内容，默认常驻' },
 ];
 
+// 默认全部展示：把「要不要出现」的选择权交给用户，而不是默认藏起来让人找。
 const DEFAULT_MODES: SideCardModes = {
-    todo: 'auto',
-    pomodoro: 'auto',
-    notes: 'auto',
+    todo: 'always',
+    pomodoro: 'always',
+    notes: 'always',
     tools: 'always',
 };
 
 const MODE_VALUES: SideCardMode[] = ['auto', 'always', 'never'];
 
-/** 只接受三态白名单值；存储里出现脏值（旧版本、手改、备份）一律退回 auto。 */
+/** 只接受三态白名单值；存储里出现脏值（旧版本、手改、备份）一律退回默认 always。 */
 function sanitize(raw: unknown): SideCardModes {
     const source = (raw && typeof raw === 'object' ? raw : {}) as Partial<Record<SideCardId, unknown>>;
     const next = { ...DEFAULT_MODES };

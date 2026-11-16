@@ -178,15 +178,15 @@ function applySideWidgetsVisibility(show = showSideWidgets.value): void {
 
 const sideCards = useSideCards();
 
-/** 三态下拉的选项文案。'auto' 是默认值，语义写在这里而不是散在模板里。 */
+/** 三态下拉的选项文案。'always' 是默认值，放首位。 */
 const SIDE_CARD_MODE_OPTIONS: Array<{ value: SideCardMode; label: string }> = [
-    { value: 'auto', label: '有内容时出现' },
     { value: 'always', label: '总是显示' },
+    { value: 'auto', label: '有内容时出现' },
     { value: 'never', label: '隐藏' },
 ];
 
 function sideCardMode(id: SideCardId): SideCardMode {
-    return sideCards.modes.value[id] ?? 'auto';
+    return sideCards.modes.value[id] ?? 'always';
 }
 
 function onSideCardModeChange(id: SideCardId, event: Event): void {
@@ -919,15 +919,17 @@ watch(
                 <div class="setting-item" v-show="activeTab === 'theme'">
                     <label>各卡片显示方式</label>
                     <div class="side-card-modes">
-                        <label
+                        <!-- 用 div 而非 label：.setting-item label 的 display:block 与
+                             .setting-item label > span 的 float:right 会打乱这里的网格布局 -->
+                        <div
                             v-for="card in SIDE_CARD_LABELS"
                             :key="card.id"
                             class="side-card-mode"
-                            :for="`side-card-mode-${card.id}`"
                         >
                             <span class="side-card-mode-label">{{ card.label }}</span>
                             <select
                                 :id="`side-card-mode-${card.id}`"
+                                :aria-label="card.label"
                                 :value="sideCardMode(card.id)"
                                 @change="onSideCardModeChange(card.id, $event)"
                             >
@@ -940,10 +942,10 @@ watch(
                                 </option>
                             </select>
                             <small class="side-card-mode-hint">{{ card.hint }}</small>
-                        </label>
+                        </div>
                     </div>
                     <p class="api-key-description">
-                        两侧卡片是常驻占位，关掉后中间内容会自动收回被让出的宽度。默认只在有内容时出现，不会凭空占位。
+                        四张卡片默认展示，可按需改为「有内容时出现」或「隐藏」；关掉后中间内容会自动收回让出的宽度。
                     </p>
                 </div>
 
