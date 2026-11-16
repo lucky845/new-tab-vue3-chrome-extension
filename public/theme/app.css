@@ -1365,6 +1365,18 @@ body {
 }
 
 /* 本地壁纸网格：沿用在线网格列宽与间距；+ 占位与主屏同尺寸 */
+.wallpaper-local-capacity {
+  flex-shrink: 0;
+  margin: 0 0 12px;
+  padding: 7px 12px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  border: 1px solid var(--glass-edge, var(--surface-border));
+  border-radius: var(--radius-control);
+  background: var(--glass-card-fill, rgb(var(--ink) / calc(0.06 * var(--wash-k))));
+}
+
 .wallpaper-local-grid {
   flex: 1 1 auto;
   min-height: 0;
@@ -1458,6 +1470,15 @@ body {
 .wallpaper-local-add.u-disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.wallpaper-local-add.is-full {
+  border-color: rgb(var(--ink) / calc(0.5 * var(--line-k)));
+}
+
+.wallpaper-local-add.is-full .wallpaper-local-add-plus {
+  font-size: 26px;
+  opacity: 0.85;
 }
 
 .wallpaper-local-add-plus {

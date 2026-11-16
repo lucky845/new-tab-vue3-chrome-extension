@@ -21,6 +21,7 @@ import { panelOriginStyle, usePanels } from '@/src/composables/usePanels';
 import { resolveFetchUrl } from '@/src/lib/http';
 import {
   CATEGORIES,
+  LOCAL_LIBRARY_MAX_ENTRIES,
   useWallpaper,
   type WallpaperPhoto,
 } from '@/src/composables/useWallpaper';
@@ -69,6 +70,8 @@ const activeLocalId = computed(() => {
   const id = savedWallpaperId.value;
   return typeof id === 'string' && id.startsWith('local:') ? id : '';
 });
+/** 本地库是否已满：影响上传占位文案与容量提示。 */
+const localFull = computed(() => localLibrary.value.length >= LOCAL_LIBRARY_MAX_ENTRIES);
 
 /** 库缩略图整块点击：应用该本地壁纸（写五键哨兵直出）。 */
 async function onApplyLocal(entryId: string): Promise<void> {
@@ -193,7 +196,7 @@ async function onJumpEnter(): Promise<void> {
             @click="switchToLocal"
           >
             本地壁纸
-            <span class="wallpaper-local-entry-count">{{ localLibrary.length }}</span>
+            <span class="wallpaper-local-entry-count">{{ localLibrary.length }}/{{ LOCAL_LIBRARY_MAX_ENTRIES }}</span>
           </button>
         </div>
         <p v-if="categoryUnsupported" class="wallpaper-category-hint">
@@ -220,6 +223,11 @@ async function onJumpEnter(): Promise<void> {
 
         <!-- 本地壁纸视图：主屏式网格 + + 占位上传，删除靠缩略图 hover 的 × -->
         <div v-show="viewMode === 'local'" class="wallpaper-local-view">
+          <p class="wallpaper-local-capacity">
+            本地最多保存 {{ LOCAL_LIBRARY_MAX_ENTRIES }} 张壁纸
+            <template v-if="localFull"> · 已满，上传将自动替换最早的一张</template>
+            <template v-else> · 当前 {{ localLibrary.length }} 张</template>
+          </p>
           <div class="wallpaper-local-grid">
             <div
               v-for="item in localLibrary"
@@ -241,13 +249,12 @@ async function onJumpEnter(): Promise<void> {
               <span v-if="item.id === activeLocalId" class="wallpaper-local-tile-badge">当前</span>
             </div>
             <label
-              v-if="localLibrary.length < 4"
               class="wallpaper-local-tile wallpaper-local-add"
-              :class="{ 'u-disabled': localBusy }"
-              title="上传本地图片"
+              :class="{ 'u-disabled': localBusy, 'is-full': localFull }"
+              :title="localFull ? '库已满，上传将替换最早的一张' : '上传本地图片'"
             >
               <span class="wallpaper-local-add-plus">+</span>
-              <span class="wallpaper-local-add-text">{{ localBusy ? '处理中…' : '上传' }}</span>
+              <span class="wallpaper-local-add-text">{{ localBusy ? '处理中…' : (localFull ? '替换最早' : '上传') }}</span>
               <input type="file" accept="image/*" hidden @change="onLocalFile" />
             </label>
           </div>
