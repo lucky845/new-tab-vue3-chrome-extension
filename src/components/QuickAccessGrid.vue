@@ -458,6 +458,11 @@ onBeforeUnmount(() => {
     >
         <IconDragGhost />
         <div class="advanced-pagination" v-if="ready">
+            <!-- 首跑 / 清空后的空位文案：不弹窗，把「怎么开始」写在空出来的位置上 -->
+            <div v-if="list.length === 0" class="qa-empty" aria-live="polite">
+                <p class="qa-empty-title">这里还是空的</p>
+                <p class="qa-empty-sub">点下面的「添加」放常用网站；把两个图标拖到一起，可以收进同一个文件夹</p>
+            </div>
             <div class="current-page-container">
                 <div class="quick-access-grid" ref="gridEl">
                     <template v-for="(node, i) in pageItems" :key="cellKey(node)">
