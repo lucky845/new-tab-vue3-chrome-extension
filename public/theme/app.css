@@ -1607,6 +1607,59 @@ body {
     transform: translateY(-2px);
 }
 
+/* `⋯` 更多操作：右键菜单的可见入口。
+   平时藏起来（格子本身要干净），指针悬停 / 键盘聚焦时才浮出来；
+   放在图标方块右上角的负偏移位置，不挤压名称行。 */
+.qa-more {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    z-index: 2;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border: none;
+    border-radius: 50%;
+    background-color: rgb(var(--spec) / 0.86);
+    box-shadow: 0 1px 3px rgb(var(--ink) / 0.28);
+    color: var(--text-secondary);
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transform: scale(0.86);
+    transition:
+        opacity 140ms ease-out,
+        transform 140ms ease-out;
+}
+
+.quick-access-item:hover .qa-more,
+.quick-access-item:focus-within .qa-more,
+.qa-more:focus-visible {
+    opacity: 1;
+    transform: scale(1);
+}
+
+.qa-more:hover {
+    color: var(--text-primary);
+}
+
+/* 触屏没有 hover：直接常驻，否则等于没做这个入口 */
+@media (hover: none) {
+    .qa-more {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .qa-more {
+        transition: none;
+    }
+}
+
 /* 图标方块由 AppIcon.vue 渲染（几何与材质在组件内，尺寸走 --icon-square）：
    主页格子、文件夹预览格、文件夹展开面板三处共用同一份定义。 */
 .quick-access-item {
@@ -1753,6 +1806,30 @@ body.icon-dragging .quick-access-item * {
 /* 落点：只高亮图标方块本身。格子是透明的，给格子描边会把名称一起圈进来。
    .merge-target 是「指针停在它上面」，.merge-ready 是「停够了、松手就合并」——
    两段视觉分开，用户能预判松手会发生什么。 */
+/* 拖拽开始：所有可落点一起亮，告诉用户「这些地方都能放」。
+   用极淡的虚线，避免 8 个格子同时描边抢戏；指针落上来的那一格改成 merge-target 的实心虚线。 */
+/* 拖拽开始：所有可落点一起亮，告诉用户「这些地方都能放」。
+   实测 1px/35% 在壁纸上等于没画（视觉复核直接判「无描边」），所以给到 2px 实线 +
+   方块外一圈柔光：不抢戏，但一眼能看出「这些格子在等人放」。 */
+.quick-access-item.drop-zone .icon-square,
+.quick-access-item.drop-zone .folder-preview,
+.quick-access-item.drop-zone .icon-wrapper {
+    outline: 2px dashed rgb(var(--accent) / 0.85);
+    outline-offset: 4px;
+}
+
+.quick-access-item.drop-zone .icon-square,
+.quick-access-item.drop-zone .folder-preview {
+    box-shadow:
+        0 0 0 6px rgb(var(--accent) / 0.14),
+        inset 0 1px 0 var(--glass-rim),
+        inset 0 -1px 0 var(--glass-shade);
+}
+
+.quick-access-item.drop-zone .icon-wrapper {
+    box-shadow: 0 0 0 6px rgb(var(--accent) / 0.14);
+}
+
 .quick-access-item.merge-target .icon-square,
 .quick-access-item.merge-target .folder-preview,
 .quick-access-item.merge-target .icon-wrapper {

@@ -121,6 +121,24 @@ function onGridClick(e: MouseEvent): void {
         getBridge().openFolder?.(parseInt(folder.dataset.index || '', 10));
     }
 }
+/**
+ * `⋯` 入口：右键菜单是唯一能编辑/删除的地方，但触控板和触屏用户基本按不出右键。
+ * 这里把同一个菜单挂到一个按钮上 —— 菜单本身不重写，只借它的签名
+ * （MouseEvent + 承载 data-index 的格子），避免出现第二套菜单行为。
+ */
+function openMenuFor(node: QuickAccessNode, event: MouseEvent): void {
+    const index = qa.getSites().indexOf(node);
+    if (index < 0) return;
+    const cell = [
+        ...(gridEl.value?.querySelectorAll<HTMLElement>('.quick-access-item') || []),
+    ].find(el => parseInt(el.dataset.nodeIndex || '', 10) === index);
+    const host = (event.currentTarget as HTMLElement | null)?.closest<HTMLElement>(
+        '.quick-access-item'
+    );
+    if (!cell && !host) return;
+    getBridge().showContextMenu?.(event, cell || (host as HTMLElement));
+}
+
 function onGridContextMenu(e: MouseEvent): void {
     const target = e.target as Element | null;
     const item = target?.closest<HTMLElement>('.quick-access-item');
@@ -168,9 +186,10 @@ function clearLiveMarks(): void {
     grid.querySelectorAll('.merge-ready').forEach(el => el.classList.remove('merge-ready'));
     grid.querySelectorAll('.merge-target').forEach(el => el.classList.remove('merge-target'));
     grid.querySelectorAll('.is-source').forEach(el => el.classList.remove('is-source'));
+    grid.querySelectorAll('.drop-zone').forEach(el => el.classList.remove('drop-zone'));
 }
 /** 悬停在另一个站点上多久才认为「要合并」（文件夹立刻认，站点要停住） */
-const MERGE_DWELL_MS = 600;
+const MERGE_DWELL_MS = 400;
 let hoverSince = 0;
 
 function setHover(cell: HTMLElement | null): void {
@@ -364,6 +383,10 @@ onMounted(async () => {
             ...(gridEl.value?.querySelectorAll<HTMLElement>('.quick-access-item') || []),
         ].find(it => it.querySelector('.name')?.textContent === node.name);
         cell?.classList.add('is-source');
+        // 所有可落点都亮一下：不然用户不知道「能拖到哪」，只能一个个试
+        gridEl.value
+            ?.querySelectorAll<HTMLElement>('.quick-access-item')
+            .forEach(it => it.classList.add('drop-zone'));
     });
     window.addEventListener('pointerup', clearLiveMarks, true);
     updatePageSize();
@@ -424,6 +447,15 @@ onBeforeUnmount(() => {
                                     :upper="false"
                                 />
                             </div>
+                            <button
+                                type="button"
+                                class="qa-more"
+                                :aria-label="`${node.name} 的更多操作`"
+                                @click.stop.prevent="openMenuFor(node, $event)"
+                                @pointerdown.stop
+                            >
+                                ⋯
+                            </button>
                             <span class="name">{{ node.name }}</span>
                         </div>
                         <a
@@ -441,6 +473,15 @@ onBeforeUnmount(() => {
                             @pointerdown="onItemPointerDown(node, $event)"
                         >
                             <AppIcon :name="node.name" :url="node.url" :icon="node.icon" />
+                            <button
+                                type="button"
+                                class="qa-more"
+                                :aria-label="`${node.name} 的更多操作`"
+                                @click.stop.prevent="openMenuFor(node, $event)"
+                                @pointerdown.stop
+                            >
+                                ⋯
+                            </button>
                             <span class="name">{{ node.name }}</span>
                         </a>
                     </template>
