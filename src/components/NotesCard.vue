@@ -12,6 +12,9 @@
 import { setPanelOriginFromEvent, usePanels } from '@/src/composables/usePanels';
 import { useNotes, formatNoteTime, type Note } from '@/src/composables/useNotes';
 import { toast } from '@/src/composables/useToast';
+import { useSideCards } from '@/src/composables/useSideCards';
+
+const { visible } = useSideCards();
 
 const { toggle } = usePanels();
 
@@ -61,7 +64,7 @@ async function onDelete(id: string): Promise<void> {
 
 <!-- prettier-ignore -->
 <template>
-    <section class="side-card" id="side-card-notes">
+    <section v-show="visible('notes')" class="side-card" id="side-card-notes">
         <header class="side-card-header">
             <h3>便签<span id="notes-card-badge" class="side-badge">{{ stats.total }}</span></h3>
             <button id="notes-card-expand" class="side-expand-btn" title="打开完整面板" @click="openPanel('notes', $event)">⤢</button>

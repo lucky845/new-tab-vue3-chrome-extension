@@ -14,6 +14,9 @@ import { ref } from 'vue';
 import { setPanelOriginFromEvent, usePanels } from '@/src/composables/usePanels';
 import { useTodo, isTodoOverdue, type Todo, type TodoCategory } from '@/src/composables/useTodo';
 import { toast as showToast } from '@/src/composables/useToast';
+import { useSideCards } from '@/src/composables/useSideCards';
+
+const { visible } = useSideCards();
 
 const { toggle } = usePanels();
 
@@ -74,7 +77,7 @@ async function quickAdd(): Promise<void> {
 
 <!-- prettier-ignore -->
 <template>
-    <section class="side-card" id="side-card-todo">
+    <section v-show="visible('todo')" class="side-card" id="side-card-todo">
         <header class="side-card-header">
             <h3>待办<span id="todo-card-badge" class="side-badge">{{ stats.active }}</span></h3>
             <button id="todo-card-expand" class="side-expand-btn" title="打开完整面板" @click="openPanel('todo', $event)">⤢</button>

@@ -33,6 +33,7 @@ import EngineLogoPicker from '@/src/components/EngineLogoPicker.vue';
 import { useWallpaper } from '@/src/composables/useWallpaper';
 import { onWeatherSettingsSaved } from '@/src/composables/useWeather';
 import { useSearch } from '@/src/composables/useSearch';
+import { SIDE_CARD_LABELS, useSideCards, type SideCardId, type SideCardMode } from '@/src/composables/useSideCards';
 import { toast as showToast } from '@/src/composables/useToast';
 
 const panels = usePanels();
@@ -173,6 +174,24 @@ function applySideWidgetsVisibility(show = showSideWidgets.value): void {
     ['side-widgets', 'side-widgets-right'].forEach(id => {
         document.getElementById(id)?.classList.toggle('u-hidden', !show);
     });
+}
+
+const sideCards = useSideCards();
+
+/** 三态下拉的选项文案。'auto' 是默认值，语义写在这里而不是散在模板里。 */
+const SIDE_CARD_MODE_OPTIONS: Array<{ value: SideCardMode; label: string }> = [
+    { value: 'auto', label: '有内容时出现' },
+    { value: 'always', label: '总是显示' },
+    { value: 'never', label: '隐藏' },
+];
+
+function sideCardMode(id: SideCardId): SideCardMode {
+    return sideCards.modes.value[id] ?? 'auto';
+}
+
+function onSideCardModeChange(id: SideCardId, event: Event): void {
+    const value = (event.target as HTMLSelectElement).value as SideCardMode;
+    sideCards.setMode(id, value);
 }
 
 async function onShowSideWidgetsChange(): Promise<void> {
@@ -895,6 +914,37 @@ watch(
                         @change="onShowSideWidgetsChange"
                     />
                     <p class="api-key-description">关闭后可随时点右上角按钮打开对应面板。</p>
+                </div>
+
+                <div class="setting-item" v-show="activeTab === 'theme'">
+                    <label>各卡片显示方式</label>
+                    <div class="side-card-modes">
+                        <label
+                            v-for="card in SIDE_CARD_LABELS"
+                            :key="card.id"
+                            class="side-card-mode"
+                            :for="`side-card-mode-${card.id}`"
+                        >
+                            <span class="side-card-mode-label">{{ card.label }}</span>
+                            <select
+                                :id="`side-card-mode-${card.id}`"
+                                :value="sideCardMode(card.id)"
+                                @change="onSideCardModeChange(card.id, $event)"
+                            >
+                                <option
+                                    v-for="opt in SIDE_CARD_MODE_OPTIONS"
+                                    :key="opt.value"
+                                    :value="opt.value"
+                                >
+                                    {{ opt.label }}
+                                </option>
+                            </select>
+                            <small class="side-card-mode-hint">{{ card.hint }}</small>
+                        </label>
+                    </div>
+                    <p class="api-key-description">
+                        两侧卡片是常驻占位，关掉后中间内容会自动收回被让出的宽度。默认只在有内容时出现，不会凭空占位。
+                    </p>
                 </div>
 
                 <!-- 可选增强（高级）：以下两项均无需配置，扩展开箱即用 -->

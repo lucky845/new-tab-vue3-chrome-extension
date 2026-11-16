@@ -13,6 +13,9 @@
 import { computed } from 'vue';
 import { setPanelOriginFromEvent, usePanels } from '@/src/composables/usePanels';
 import { usePomodoro, formatPomodoroTime } from '@/src/composables/usePomodoro';
+import { useSideCards } from '@/src/composables/useSideCards';
+
+const { visible } = useSideCards();
 
 const { toggle } = usePanels();
 
@@ -33,7 +36,7 @@ const todayText = computed(() => '今日 🍅 × ' + (stats.value.completedToday
 
 <!-- prettier-ignore -->
 <template>
-    <section class="side-card" id="side-card-pomodoro">
+    <section v-show="visible('pomodoro')" class="side-card" id="side-card-pomodoro">
         <header class="side-card-header">
             <h3>番茄钟</h3>
             <button id="pomodoro-card-expand" class="side-expand-btn" title="打开完整面板" @click="openPanel('pomodoro', $event)">⤢</button>
