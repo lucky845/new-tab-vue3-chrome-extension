@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>New Tab Pro · 隐私说明</title>
+    <style>
+      :root { color-scheme: light dark; }
+      body { max-width: 860px; margin: 40px auto; padding: 0 20px; font: 16px/1.75 -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; }
+      h1 { font-size: 28px; margin-bottom: 8px; }
+      h2 { font-size: 20px; margin-top: 32px; border-bottom: 1px solid currentColor; padding-bottom: 6px; }
+      h3 { font-size: 17px; margin-top: 24px; }
+      table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; }
+      th, td { border: 1px solid rgba(128,128,128,.4); padding: 8px 10px; text-align: left; vertical-align: top; }
+      code { background: rgba(128,128,128,.16); padding: 1px 5px; border-radius: 4px; font-size: 13px; overflow-wrap: anywhere; }
+      pre code { display: block; padding: 12px; overflow-x: auto; }
+      blockquote { border-left: 3px solid rgba(128,128,128,.5); margin: 16px 0; padding: 4px 16px; opacity: .85; }
+      ul { padding-left: 22px; }
+      a { color: #0b6cf0; }
+      hr { border: none; border-top: 1px solid rgba(128,128,128,.4); margin: 32px 0; }
+    </style>
+  </head>
+  <body>
+<h1>隐私说明</h1>
+<p>New Tab Pro（下称"本扩展"）是一个<strong>纯本地</strong>的新标签页扩展：没有账号、没有服务器、没有遥测。</p>
+<p>这一页如实说明它在你浏览器里存了什么、什么时候会联网、向谁发请求。</p>
+<p>最后更新：2026-11-16 · 对应版本：2.0.0</p>
+<hr>
+<h2>一句话</h2>
+<p><strong>你的数据不会离开这台设备。</strong> 唯一的外发是你自己会看到的那几次取数请求（天气、壁纸、站点图标），</p>
+<p>它们的目的地和内容都在下面列清楚了。</p>
+<h2>本扩展不做什么</h2>
+<ul><li>❌ 不收集、不上传任何个人数据，没有任何自建服务端</li><li>❌ 不注入内容脚本，不读取、不修改你在其他网站的页面</li><li>❌ 不接入任何统计、埋点、崩溃上报、广告 SDK</li><li>❌ 不读取浏览历史、书签、Cookie、密码</li><li>❌ 没有远程代码：所有脚本都打包在扩展内（MV3 CSP <code>script-src 'self'</code>）</li></ul>
+<h2>申请了哪些权限</h2>
+<table>
+<thead><tr><th>权限</th><th>为什么需要</th></tr></thead>
+<tbody><tr><td><code>storage</code></td><td>保存设置、壁纸缓存、快捷访问、待办、便签、番茄钟等全部本地数据</td></tr><tr><td><code>geolocation</code></td><td>天气组件定位到所在城市。<strong>只有你点"允许定位"才会取坐标</strong>，拒绝也不影响其他功能，可手动输入城市</td></tr><tr><td><code>host_permissions</code></td><td><strong>仅 10 个自有接口/图床域名</strong>的跨域请求（见下表）。不包含 <code>*://*/*</code>，不申请任何网站的访问权，不注入脚本</td></tr></tbody>
+</table>
+<h2>存了什么（全部在本机 <code>chrome.storage.local</code>）</h2>
+<table>
+<thead><tr><th>存储键</th><th>内容</th></tr></thead>
+<tbody><tr><td><code>settings</code> / <code>themeSettings</code></td><td>界面设置、主题色、字体等</td></tr><tr><td><code>quickAccessSites</code></td><td>快捷访问的站点名、URL、自定义图标（<code>data:image</code>）</td></tr><tr><td><code>todos</code> / <code>notes</code></td><td>待办与便签文本</td></tr><tr><td><code>pomodoroSettings</code> / <code>pomodoroStats</code></td><td>番茄钟的设置与历史统计</td></tr><tr><td><code>savedWallpaperId</code> / <code>savedWallpaperUrl</code> / <code>savedWallpaperData</code> / <code>savedWallpaperBlob</code> / <code>savedWallpaperBlobUrl</code></td><td>当前壁纸的元信息与图片缓存</td></tr><tr><td><code>searchEngine</code> / <code>customEngines</code> / <code>searchHistory</code> / <code>engineIcons</code> / <code>engineLogos</code></td><td>搜索引擎选择、自定义引擎、搜索历史、引擎图标</td></tr><tr><td><code>om_weather_&lt;纬度&gt;_&lt;经度&gt;</code> / <code>ntce-sun-*</code> / <code>geo*</code></td><td>天气、日出日落、地理编码的缓存（坐标保留两位小数，约 1 km 精度）</td></tr><tr><td><code>demoFolderSeeded</code></td><td>是否已插入过一次演示文件夹</td></tr></tbody>
+</table>
+<p><strong>清除方式</strong>：扩展详情页 →「网站数据」→ 清除，或直接卸载扩展。卸载即彻底删除，本扩展没有任何副本在别处。</p>
+<h2>什么时候联网、向谁</h2>
+<p>只在对应功能被使用时发请求，全部为 HTTPS：</p>
+<table>
+<thead><tr><th>目的地</th><th>何时</th><th>发送了什么</th><th>目的</th></tr></thead>
+<tbody><tr><td><code>api.open-meteo.com</code> / <code>geocoding-api.open-meteo.com</code></td><td>显示天气；搜索城市</td><td><strong>坐标或城市名</strong></td><td>天气与地理编码</td></tr><tr><td><code>restapi.amap.com</code></td><td>天气设置里使用高德天气源时</td><td><strong>坐标或城市名</strong></td><td>中文城市天气</td></tr><tr><td><code>t0.gstatic.com</code>（Google favicon 服务）</td><td>渲染未自定义图标的站点方块时</td><td><strong>该站点的域名</strong></td><td>取站点图标</td></tr><tr><td><code>picsum.photos</code> / <code>fastly.picsum.photos</code></td><td>浏览/使用 Picsum 壁纸源时</td><td>常规 HTTP 请求头</td><td>取壁纸缩略图与原图</td></tr><tr><td><code>api.pexels.com</code> / <code>images.pexels.com</code></td><td>浏览/使用 Pexels 壁纸源时</td><td>常规 HTTP 请求头（<strong>不含</strong>用户令牌）</td><td>取壁纸列表与图片</td></tr><tr><td><code>wallhaven.cc</code> / <code>th.wallhaven.cc</code> / <code>w.wallhaven.cc</code></td><td>浏览/使用 Wallhaven 壁纸源时</td><td>常规 HTTP 请求头</td><td>取壁纸列表与图片</td></tr></tbody>
+</table>
+<p>这些第三方会像对待任何网页请求一样看到你的 IP 地址与请求时间，这是客户端直连无法避免的。</p>
+<p>它们各自有自己的隐私政策，本扩展无法代替它们作出承诺。<strong>不使用某个功能，就不会有任何相关请求。</strong></p>
+<p>谁会收到请求取决于你的设置：</p>
+<ul><li><strong>壁纸</strong>：默认使用 Picsum；你去浏览 Pexels / Wallhaven 时才会请求对应站点</li><li><strong>天气</strong>：默认 Open-Meteo（免密钥）。只有在设置里填入高德 Key 之后，才会请求 <code>restapi.amap.com</code></li><li><strong>站点图标</strong>：只对快捷访问里没有自定义图标的站点发起，且只带域名</li></ul>
+<h3>需要特别说清楚的一件事</h3>
+<p>选「高德天气」时，天气查询会把<strong>坐标</strong>发给 <code>restapi.amap.com</code>（中国境内服务）。</p>
+<p>如果你不希望坐标离开设备，请在设置里选默认的 Open-Meteo 源，或完全关闭天气组件。</p>
+<h3>不会发生的联网</h3>
+<ul><li>不加载任何远程 JavaScript / CSS / 字体</li><li>不向自建服务器发送任何数据（本扩展没有服务器）</li><li>站点图标只把<strong>域名本身</strong>作为 URL 参数发给图标服务，不带任何 Cookie 或访问记录</li></ul>
+<h2>一个诚实的说明：站点图标与 host 权限</h2>
+<p>站点图标（favicon）由 Google 的 <code>gstatic.com</code> 服务提供，扩展<strong>没有</strong>申请这些站点的 host 权限 ——</p>
+<p>卡片上显示的是服务端返回的图片，扩展本身拿不到你访问那些站点的任何内容。</p>
+<h2>儿童隐私</h2>
+<p>本扩展不面向儿童，也不收集任何年龄段信息或个人身份信息。</p>
+<h2>变更</h2>
+<p>本说明如有实质变更，会随扩展版本一起发布，并更新页面顶部的日期与版本号。</p>
+<h2>联系方式</h2>
+<ul><li>问题与建议：&lt;https://github.com/lucky845/new-tab-vue3-chrome-extension/issues&gt;</li><li>源码：&lt;https://github.com/lucky845/new-tab-vue3-chrome-extension&gt;</li></ul>
+<hr>
+<blockquote>本文档同时作为 Chrome 应用商店 / Microsoft Edge 加载项商店要求的隐私政策页面，</blockquote>
+<blockquote>由 GitHub Pages 托管：&lt;https://lucky845.github.io/new-tab-vue3-chrome-extension/PRIVACY.html&gt;</blockquote>
+  </body>
+</html>

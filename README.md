@@ -121,7 +121,7 @@ WXT_VUE3_API_PROXY=1 npx wxt . -p 3100
 
 - 页面侧请求 `/__api/<host>/<path>` 会被 Vite 转发到 `https://<host>/<path>`；改写逻辑见 `src/lib/http.ts` 的 `resolveFetchUrl()`，代理规则见 `wxt.config.ts` 的 `buildProxy()`。
 - 默认关闭，只在 `import.meta.env.DEV` 且非扩展源时生效；生产构建里该前缀恒为 `undefined`，请求原样直连。
-- 扩展正式运行时依赖 `host_permissions`，不经过反代。
+- 扩展正式运行时依赖 `host_permissions`（只含自有接口与图床域名），不经过反代；站点图标不进反代，它靠 CSP 的 `img-src` 白名单显示。
 - `wxt` 必须带项目根目录参数（`npx wxt .`），否则它会把上级目录当成项目根，去 `./dev/entrypoints` 找入口并报错。
 
 ## 分支与提交
@@ -174,11 +174,15 @@ git push && git push --tags
 
 ## 权限说明
 
-| 权限               | 用途                                                          |
-| ------------------ | ------------------------------------------------------------- |
-| `storage`          | 保存设置、壁纸缓存、快捷访问、待办、便签等全部本地数据        |
-| `geolocation`      | 天气组件定位到所在城市（首次使用会请求授权）                  |
-| `host_permissions` | 跨域 `fetch` 壁纸原图、天气接口与站点 favicon；不注入任何脚本 |
+| 权限               | 用途                                                                                                      |
+| ------------------ | --------------------------------------------------------------------------------------------------------- |
+| `storage`          | 保存设置、壁纸缓存、快捷访问、待办、便签等全部本地数据                                                    |
+| `geolocation`      | 天气组件定位到所在城市（首次使用会请求授权）                                                              |
+| `host_permissions` | **仅 10 个自有接口/图床域名**（壁纸原图、天气接口）的跨域 `fetch`；不注入任何脚本，不申请任何站点的访问权 |
+
+站点图标（favicon）不占 `host_permissions`：图片经 CSP 的 `img-src` 白名单直接显示。
+完整的「存了什么、向谁发请求」见 [doc/PRIVACY.md](doc/PRIVACY.md)，商店审核用的网页版是
+<https://lucky845.github.io/new-tab-vue3-chrome-extension/PRIVACY.html>。
 
 数据不上传；卸载扩展或在扩展详情里清除数据即彻底删除。
 

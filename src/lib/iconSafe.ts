@@ -161,19 +161,31 @@ export function isDataImage(value: string): boolean {
     return /^data:image\/(png|jpeg|webp);base64,/i.test((value || '').trim());
 }
 
+/** 站点图标服务的域名：只放行这几个，扩展不申请任何站点的 host 权限 */
+export const FAVICON_HOSTS = ['www.google.com', 't0.gstatic.com', 't1.gstatic.com', 't2.gstatic.com', 't3.gstatic.com'] as const;
+
 /**
  * 站点图标的地址。
  *
- * 走 Google 的 favicon 服务而不是 `<host>/favicon.ico`：后者在多数站点上要么
- * 404、要么返回 16px 的小图，作为 26px 的引擎图标糊成一片。服务端会自己缓存，
- * 扩展这边只要一条 URL，不用申请权限、也不用往存储里塞二进制。
+ * 走 Google 的 faviconV2 接口直接拿图，而不是 `<host>/favicon.ico`：后者在多数站点上
+ * 要么 404、要么返回 16px 的小图，作为 26px 的引擎图标糊成一片。
  *
- * 注意它仍然是**远程图片**：要么在 CSP 的 img-src 白名单里，要么走开发反代。
+ * 为什么是 t0.gstatic.com 而不是 www.google.com/s2/favicons：后者会 301 到 gstatic，
+ * 而 301 的响应是 text/html + x-content-type-options: nosniff。扩展没有申请这些站点的
+ * host 权限，读不到响应头也读不到像素，301 会让两条探测路都失效；直链是 200 + image/*，
+ * 至少能在 CSP 的 img-src 白名单里正常显示。
  */
 export function siteIconUrl(host: string, size = 128): string {
     const domain = (host || '').trim();
     if (!domain) return '';
-    return `https://www.google.com/s2/favicons?sz=${size}&domain_url=${encodeURIComponent('https://' + domain)}`;
+    const query = new URLSearchParams({
+        client: 'SOCIAL',
+        type: 'FAVICON',
+        fallback_opts: 'TYPE,SIZE,URL',
+        url: 'https://' + domain,
+        size: String(size),
+    });
+    return `https://t0.gstatic.com/faviconV2?${query.toString()}`;
 }
 
 /** 站点图标只认远程 http(s) 或本机 data:image，别的协议一律不当图片用 */

@@ -1,0 +1,36 @@
+name: Pages
+
+# 只发布 doc/ 下的静态页面：商店审核要一个"任何人不登录也能打开"的隐私政策地址，
+# GitHub Pages 是唯一不需要额外托管的选项。仓库源码本身仍然只有 master 一条主线，
+# 这里不构建扩展、不碰 .output。
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'doc/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: doc
+      - id: deployment
+        uses: actions/deploy-pages@v4

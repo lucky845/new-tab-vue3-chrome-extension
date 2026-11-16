@@ -87,15 +87,18 @@ C  有效人日 1–5        已含三浏览器回归与文档，单人负荷系
 
 ### 4.1 L0 硬性门槛（先做，不参与排序）
 
-- [ ] **砍掉 `*://*/*` host_permissions** — 上架唯一必须改的代码
+- [x] **砍掉 `*://*/*` host_permissions** — 上架唯一必须改的代码（已去掉 wildcard，也去掉了 `www.google.com`；残留的代价见下）
     - 现状：`wxt.config.ts` host_permissions 最后一项，构建产物如实带上
     - 影响：触发最小权限原则审核整改；即使过审也显示"读取你在所有网站的数据"
     - 方案：favicon 只留 `https://www.google.com/` + 首字兜底；用户上传图标走已有裁剪器。若确有自定义域名 favicon 需求，改 `optional_host_permissions` 在用户添加该站点时动态申请
     - 成本：S（0.5 人日，改 manifest + AppIcon 兜底链路验证）
-- [ ] **新建 `PRIVACY.md` 并发布到 GitHub Pages**
+    - **实际做法**：favicon 改走 `t0.gstatic.com/faviconV2` 直链（旧 `www.google.com/s2/favicons` 会 301 到 gstatic，而 301 是 `text/html` + `nosniff`，在无权限时两条探测路全废）。图标经 CSP 的 `img-src` 白名单显示，不再申请任何站点权限
+    - **未获批准的代价（已接受）**：没有 host_permissions 就读不到跨源响应头，也读不到像素 —— AppIcon 的「是否铺满」判定在扩展里恒为否，图标一律按 76% 显示；设置面板的「用站点图标」只能对返回 CORS 的服务生效。要恢复得走 `optional_host_permissions` 动态申请
+- [x] **新建 `PRIVACY.md` 并发布到 GitHub Pages**
     - Chrome 政策：处理任何用户数据必须提供隐私政策且填 dashboard 链接，**无政策必然审核不过**
     - 必须如实写：天气请求会向 Open-Meteo 传你的 IP 与大致坐标；壁纸请求从 picsum/wallhaven 拉图。其余数据仅在 `chrome.storage.local`
     - 成本：S（0.5 人日）
+    - **已完成**：`doc/PRIVACY.md`（商店审核用）+ `doc/PRIVACY.html`（Pages 用同一份内容）+ `.github/workflows/pages.yml`。**待办：在仓库 Settings → Pages 把 Source 选成 GitHub Actions**，之后地址为 <https://lucky845.github.io/new-tab-vue3-chrome-extension/PRIVACY.html>
 - [ ] **Dependabot moderate 漏洞**
     - 成本：S
 
