@@ -2,7 +2,8 @@
 import { nextTick, onMounted, onUnmounted, ref, watch, type Directive } from 'vue';
 import { QUICK_TOOLS } from '@/src/config/tools';
 import { createIconNode } from '@/src/lib/iconSafe';
-import { panelOriginStyle, usePanels } from '@/src/composables/usePanels';
+import { usePanels } from '@/src/composables/usePanels';
+import GlassPanel from '@/src/components/common/GlassPanel.vue';
 import { useTools } from '@/src/composables/useTools';
 
 /**
@@ -82,13 +83,13 @@ watch(
 
 <template>
         <!-- 小工具面板 -->
-        <div
-            id="tools-panel"
-            :style="panelOriginStyle('tools')"
-            class="settings-panel"
-            :class="{ 'u-hidden': !isOpen('tools') }"
-            @click.self="closePanel()"
-        >
+        <GlassPanel
+            panelId="tools"
+            :open="isOpen('tools')"
+            variant="settings"
+            elementId="tools-panel"
+            @dismiss="closePanel()"
+          >
             <div class="settings-content tools-content">
                 <div class="tools-panel-header">
                     <h2 id="tools-panel-title">{{ activeTool?.name ?? '小工具' }}</h2>
@@ -147,5 +148,5 @@ watch(
                     <pre id="tool-output" class="tool-output">{{ output }}</pre>
                 </div>
             </div>
-        </div>
+        </GlassPanel>
 </template>

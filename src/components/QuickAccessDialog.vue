@@ -3,7 +3,7 @@ import { onMounted, onUnmounted, ref } from 'vue';
 import { createIconNode } from '@/src/lib/iconSafe';
 import { useQuickAccess } from '@/src/composables/useQuickAccess';
 import { quickAccessBridge } from '@/src/composables/useQuickAccessBridge';
-import { panelOriginStyle } from '@/src/composables/usePanels';
+import GlassPanel from '@/src/components/common/GlassPanel.vue';
 import { useTip, type TipHandle } from '@/src/composables/useTip';
 import { toast } from '@/src/composables/useToast';
 
@@ -260,13 +260,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div
-        id="add-quick-access-panel"
-        :style="panelOriginStyle('add-qa')"
-        class="settings-panel"
-        :class="{ 'u-hidden': !dialogOpen }"
-        @click.self="closeDialog"
-    >
+    <GlassPanel
+        panelId="add-qa"
+        :open="dialogOpen"
+        variant="settings"
+        elementId="add-quick-access-panel"
+        @dismiss="closeDialog"
+      >
         <div class="settings-content">
             <button
                 id="close-qa-btn"
@@ -375,5 +375,5 @@ onUnmounted(() => {
                 </button>
             </div>
         </div>
-    </div>
+    </GlassPanel>
 </template>

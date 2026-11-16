@@ -17,7 +17,8 @@
  * 自持表单状态（回显降级）。
  */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
-import { panelOriginStyle, usePanels } from '@/src/composables/usePanels';
+import { usePanels } from '@/src/composables/usePanels';
+import GlassPanel from '@/src/components/common/GlassPanel.vue';
 import { resolveFetchUrl } from '@/src/lib/http';
 import {
   CATEGORIES,
@@ -166,11 +167,12 @@ async function onJumpEnter(): Promise<void> {
 </script>
 
 <template>
-  <div
-    id="wallpaper-panel"
-    :style="panelOriginStyle('wallpaper')"
-    class="settings-panel"
-    :class="{ 'u-hidden': !isOpen('wallpaper') }"
+  <GlassPanel
+    panelId="wallpaper"
+    :open="isOpen('wallpaper')"
+    variant="settings"
+    elementId="wallpaper-panel"
+    :dismissable="false"
   >
     <div class="wallpaper-content settings-content">
       <button id="close-wallpaper-btn" class="close-panel-btn" type="button" title="关闭" @click="close('wallpaper')">✕</button>
@@ -316,5 +318,5 @@ async function onJumpEnter(): Promise<void> {
       </div>
       <button id="close-wallpaper-panel-btn" class="close-panel-btn" @click="closeWallpaperPanel">✕</button>
     </div>
-  </div>
+  </GlassPanel>
 </template>

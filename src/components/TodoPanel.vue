@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import Sortable from 'sortablejs';
-import { panelOriginStyle, usePanels } from '@/src/composables/usePanels';
+import { usePanels } from '@/src/composables/usePanels';
+import GlassPanel from '@/src/components/common/GlassPanel.vue';
 import { isTodoOverdue, useTodo, type Todo, type TodoCategory } from '@/src/composables/useTodo';
 import { toast as showToast } from '@/src/composables/useToast';
 
@@ -138,12 +139,12 @@ onUnmounted(() => {
 
 <template>
   <!-- 待办事项面板 -->
-  <div
-    id="todo-panel"
-    :style="panelOriginStyle('todo')"
-    class="widget-panel"
-    :class="{ 'u-hidden': !isOpen('todo') }"
-    @click.self="close('todo')"
+  <GlassPanel
+    panelId="todo"
+    :open="isOpen('todo')"
+    variant="widget"
+    elementId="todo-panel"
+    @dismiss="close('todo')"
   >
     <div class="widget-content">
       <div class="widget-header">
@@ -213,5 +214,5 @@ onUnmounted(() => {
         <button id="todo-clear-done-btn" class="link-btn" @click="clearDone">清除已完成</button>
       </div>
     </div>
-  </div>
+  </GlassPanel>
 </template>

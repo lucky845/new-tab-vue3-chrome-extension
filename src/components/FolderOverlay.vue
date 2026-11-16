@@ -4,7 +4,7 @@ import { safeOpen } from '@/src/lib/urlSafe';
 import { useQuickAccess } from '@/src/composables/useQuickAccess';
 import type { QuickAccessNode } from '@/src/lib/defaultSites';
 import { quickAccessBridge } from '@/src/composables/useQuickAccessBridge';
-import { panelOriginStyle } from '@/src/composables/usePanels';
+import GlassPanel from '@/src/components/common/GlassPanel.vue';
 import { useDialog } from '@/src/composables/useDialog';
 import { toast } from '@/src/composables/useToast';
 import AppIcon from '@/src/components/AppIcon.vue';
@@ -559,13 +559,13 @@ onUnmounted(() => {
 </script>
 
 <template>
-    <div
-        id="folder-overlay"
-        :style="panelOriginStyle('folder')"
-        class="folder-overlay"
-        :class="{ 'u-hidden': !folderOpen }"
-        @click.self="closeFolder"
-    >
+    <GlassPanel
+        panelId="folder"
+        :open="folderOpen"
+        variant="folder"
+        elementId="folder-overlay"
+        @dismiss="closeFolder"
+      >
         <div class="folder-popover" ref="popoverEl" :class="{ 'drag-out': dragOut }">
             <div class="folder-popover-header">
                 <h3 id="folder-overlay-title">{{ folderTitle }}</h3>
@@ -612,7 +612,7 @@ onUnmounted(() => {
             </div>
             <p id="folder-empty-hint" class="folder-empty-hint" :class="{ 'u-hidden': emptyHintHidden }">{{ EMPTY_HINT_TEXT }}</p>
         </div>
-    </div>
+    </GlassPanel>
 
     <Teleport to="body">
         <div v-if="contextMenu" class="context-menu" :style="menuCss">
