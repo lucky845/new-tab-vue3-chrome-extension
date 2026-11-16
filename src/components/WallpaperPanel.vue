@@ -45,6 +45,11 @@ const {
   applyPexelsWallpaper,
   setLocalWallpaper,
   clearLocalWallpaper,
+  savedWallpaperId,
+  localLibrary,
+  refreshLocalLibrary,
+  applyLocalWallpaper,
+  removeLocalWallpaper,
   closeWallpaperPanel,
   setAuthErrorHandler,
 } = useWallpaper();
@@ -58,6 +63,24 @@ const jumpInputEl = ref<HTMLInputElement | null>(null);
 const localMsg = ref('');
 const localBusy = ref(false);
 let localMsgTimer: ReturnType<typeof setTimeout> | null = null;
+
+const activeLocalId = computed(() => {
+  const id = savedWallpaperId.value;
+  return typeof id === 'string' && id.startsWith('local:') ? id : '';
+});
+
+/** 库缩略图整块点击：应用该本地壁纸（写五键哨兵直出）。 */
+async function onApplyLocal(entryId: string): Promise<void> {
+  await applyLocalWallpaper(entryId);
+  flashLocalMsg('本地壁纸已应用');
+}
+
+/** × 点击：从库里删除；删的正是当前壁纸会一并撤回随机图。 */
+async function onRemoveLocal(entryId: string): Promise<void> {
+  await removeLocalWallpaper(entryId);
+  await refreshLocalLibrary();
+  flashLocalMsg('已从本地库移除');
+}
 
 function flashLocalMsg(text: string): void {
   localMsg.value = text;
@@ -74,6 +97,7 @@ async function onLocalFile(event: Event): Promise<void> {
   localBusy.value = true;
   flashLocalMsg('正在处理图片…');
   const result = await setLocalWallpaper(file);
+  if (result.ok) await refreshLocalLibrary();
   localBusy.value = false;
   flashLocalMsg(result.message);
 }
@@ -102,6 +126,7 @@ watch(
 
 onMounted(() => {
   setAuthErrorHandler(() => open('settings'));
+  void refreshLocalLibrary();
 });
 onUnmounted(() => {
   setAuthErrorHandler(null);
@@ -182,6 +207,30 @@ async function onJumpEnter(): Promise<void> {
               移除本地壁纸
             </button>
             <span v-if="localMsg" class="wallpaper-local-msg">{{ localMsg }}</span>
+          </div>
+          <div v-if="localLibrary.length > 0" class="wallpaper-local-library">
+            <div class="wallpaper-local-library-title">本地壁纸（{{ localLibrary.length }}/4）</div>
+            <div class="wallpaper-local-thumbs">
+              <div
+                v-for="item in localLibrary"
+                :key="item.id"
+                class="wallpaper-local-thumb"
+                :class="{ 'is-active': item.id === activeLocalId }"
+                :title="item.name"
+                @click="onApplyLocal(item.id)"
+              >
+                <img :src="item.dataUrl" :alt="item.name" />
+                <button
+                  class="wallpaper-local-thumb-remove"
+                  type="button"
+                  title="从本地库移除"
+                  @click.stop="onRemoveLocal(item.id)"
+                >
+                  ×
+                </button>
+                <span v-if="item.id === activeLocalId" class="wallpaper-local-thumb-badge">当前</span>
+              </div>
+            </div>
           </div>
         </div>
         <div id="wallpaper-grid" class="wallpaper-grid">

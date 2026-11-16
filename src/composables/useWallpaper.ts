@@ -111,6 +111,14 @@ interface WallhavenResponse {
 /** Pexels 401 时的回调（legacy onAuthError 字段）。 */
 type AuthErrorHandler = (() => void) | null;
 
+/** 本地壁纸库条目：id 兼作 savedWallpaperId 哨兵（local:<ts>），dataUrl 为压缩后烤图。 */
+export interface LocalWallpaperEntry {
+  id: string;
+  dataUrl: string;
+  name: string;
+  addedAt: number;
+}
+
 interface WallpaperApi {
   // 数据层（wallpaper-manager.js 对应物）
   fetchAndSetWallpaper(): Promise<void>;
@@ -120,6 +128,16 @@ interface WallpaperApi {
   setLocalWallpaper(file: File): Promise<{ ok: boolean; message: string }>;
   /** 移除本地壁纸并回到随机图。 */
   clearLocalWallpaper(): Promise<void>;
+  /** 当前壁纸 ID（本地条目为 local:<ts> 哨兵），面板徽标判断用。 */
+  savedWallpaperId: Ref<string>;
+  /** 本地壁纸库（可见可管理的缩略图列表，刷新不丢）。 */
+  localLibrary: Ref<LocalWallpaperEntry[]>;
+  /** 把当前生效的本地烤图收进库（上传时自动调用）。 */
+  refreshLocalLibrary(): Promise<void>;
+  /** 从库里应用一张本地壁纸。 */
+  applyLocalWallpaper(entryId: string): Promise<void>;
+  /** 从库里删除一张本地壁纸；若正是当前壁纸则一并撤回随机图。 */
+  removeLocalWallpaper(entryId: string): Promise<void>;
   searchPhotos(query: string, page?: number): Promise<WallpaperSearchResult>;
   // UI 状态（app.js 壁纸段对应物，全部响应式）
   photos: Ref<WallpaperPhoto[]>;
@@ -242,6 +260,23 @@ function createWallpaperApi(): WallpaperApi {
       setWallpaper(result.savedWallpaperBlob);
       console.log('[壁纸] 命中本地缓存，零请求');
       return;
+    }
+
+    // 1a-2. 本地壁纸：blob 丢了（被清/超配额）时从库里按哨兵 id 找回；库空才放行随机。
+    const localSavedId = String(result.savedWallpaperId || '');
+    if (localSavedId.startsWith('local:')) {
+      const entry = (await readLocalLibrary()).find((item) => item.id === localSavedId);
+      if (entry) {
+        savedWallpaperId.value = entry.id;
+        savedWallpaperUrl.value = entry.id;
+        savedWallpaperData.value = { id: entry.id, url: '', photographer: '本地图片', alt: entry.name };
+        savedWallpaperBlob.value = entry.dataUrl;
+        savedWallpaperBlobUrl.value = entry.id;
+        setWallpaper(entry.dataUrl);
+        console.log('[壁纸] 本地库恢复:', entry.name);
+        return;
+      }
+      await removeSavedWallpaperKeys(); // 库里没有这张了：清键走随机，别卡在死哨兵上
     }
 
     // 1b. 有缓存 URL：直接用；Pexels 来源异步校验 ID，失效才换新。
@@ -490,10 +525,11 @@ function createWallpaperApi(): WallpaperApi {
         }
       }
       if (!baked) return { ok: false, message: '图片压缩后仍过大，请换一张较小的图片' };
-      const sentinel = 'local:' + Date.now();
-      savedWallpaperId.value = 'local';
+      const entryId = await addToLocalLibrary(baked, file.name);
+      const sentinel = entryId;
+      savedWallpaperId.value = sentinel;
       savedWallpaperUrl.value = sentinel;
-      savedWallpaperData.value = { id: 'local', url: '', photographer: '本地图片', alt: file.name };
+      savedWallpaperData.value = { id: sentinel, url: '', photographer: '本地图片', alt: file.name };
       savedWallpaperBlob.value = baked;
       savedWallpaperBlobUrl.value = sentinel;
       setWallpaper(baked);
@@ -512,6 +548,105 @@ function createWallpaperApi(): WallpaperApi {
     savedWallpaperBlobUrl.value = '';
     await chrome.storage.local.remove(['savedWallpaperBlob', 'savedWallpaperBlobUrl']);
     await fetchRandomWallpaper(true);
+  }
+
+  // ---------- 本地壁纸库（可见、可应用、可删除；上限防吃满 10MB 配额） ----------
+
+  const LOCAL_LIBRARY_KEY = 'localWallpapers';
+  /** 库容量预算：单库 4 张、总量 6M 字符，保证 savedWallpaperBlob(≤5M) + 库 ≤ chrome.storage 10MB。 */
+  const LOCAL_LIBRARY_MAX_ENTRIES = 4;
+  const LOCAL_LIBRARY_MAX_TOTAL_CHARS = 6_000_000;
+  const LOCAL_LIBRARY_ENTRY_MAX_CHARS = 4_000_000;
+
+  const localLibrary = ref<LocalWallpaperEntry[]>([]);
+
+  async function readLocalLibrary(): Promise<LocalWallpaperEntry[]> {
+    try {
+      const stored = await chrome.storage.local.get([LOCAL_LIBRARY_KEY]);
+      const raw = stored[LOCAL_LIBRARY_KEY];
+      if (!Array.isArray(raw)) return [];
+      return raw.filter(
+        (item): item is LocalWallpaperEntry =>
+          !!item &&
+          typeof (item as LocalWallpaperEntry).id === 'string' &&
+          typeof (item as LocalWallpaperEntry).dataUrl === 'string'
+      );
+    } catch (error) {
+      console.warn('[壁纸] 本地库读取失败:', (error as Error).message);
+      return [];
+    }
+  }
+
+  async function writeLocalLibrary(list: LocalWallpaperEntry[]): Promise<void> {
+    localLibrary.value = list;
+    try {
+      await chrome.storage.local.set({ [LOCAL_LIBRARY_KEY]: list });
+    } catch (error) {
+      // 超配额：库里最老的一张逐个放弃，直到写得进去；库瘦身不撤当前壁纸
+      console.warn('[壁纸] 本地库写入失败，尝试瘦身:', (error as Error).message);
+      const trimmed = [...list];
+      while (trimmed.length > 0) {
+        trimmed.shift();
+        try {
+          await chrome.storage.local.set({ [LOCAL_LIBRARY_KEY]: trimmed });
+          localLibrary.value = trimmed;
+          return;
+        } catch {
+          continue;
+        }
+      }
+    }
+  }
+
+  /** 把一张压缩后的 dataUrl 收进库：超预算按加入时间淘汰最老的。 */
+  async function addToLocalLibrary(dataUrl: string, name: string): Promise<string> {
+    const list = await readLocalLibrary();
+    const existing = list.find((item) => item.dataUrl === dataUrl);
+    if (existing) return existing.id; // 同一张图重复上传不重复入库
+    const entry: LocalWallpaperEntry = {
+      id: 'local:' + Date.now(),
+      dataUrl,
+      name: name || '本地图片',
+      addedAt: Date.now(),
+    };
+    if (dataUrl.length > LOCAL_LIBRARY_ENTRY_MAX_CHARS) return entry.id; // 超限不入库，仅当当前壁纸
+    list.push(entry);
+    // 容量预算：先按张数、再按总字符，淘汰最老的（正在使用的哨兵不在库里也安全）
+    while (list.length > LOCAL_LIBRARY_MAX_ENTRIES) list.shift();
+    let total = list.reduce((sum, item) => sum + item.dataUrl.length, 0);
+    while (total > LOCAL_LIBRARY_MAX_TOTAL_CHARS && list.length > 1) {
+      total -= list[0].dataUrl.length;
+      list.shift();
+    }
+    await writeLocalLibrary(list);
+    return entry.id;
+  }
+
+  /** 面板打开/启动时刷新库列表（ storage onChanged 不订阅，读时拉平）。 */
+  async function refreshLocalLibrary(): Promise<void> {
+    localLibrary.value = await readLocalLibrary();
+  }
+
+  /** 从库里应用：写齐五键（哨兵=条目 id）并直出，下次启动走 1a 快路径。 */
+  async function applyLocalWallpaper(entryId: string): Promise<void> {
+    const entry = localLibrary.value.find((item) => item.id === entryId) ?? (await readLocalLibrary()).find((item) => item.id === entryId);
+    if (!entry) return;
+    savedWallpaperId.value = entry.id;
+    savedWallpaperUrl.value = entry.id;
+    savedWallpaperData.value = { id: entry.id, url: '', photographer: '本地图片', alt: entry.name };
+    savedWallpaperBlob.value = entry.dataUrl;
+    savedWallpaperBlobUrl.value = entry.id;
+    setWallpaper(entry.dataUrl);
+  }
+
+  /** 删除库条目；删的正是当前壁纸时回随机图。 */
+  async function removeLocalWallpaper(entryId: string): Promise<void> {
+    const list = await readLocalLibrary();
+    const next = list.filter((item) => item.id !== entryId);
+    await writeLocalLibrary(next);
+    if (savedWallpaperId.value === entryId || savedWallpaperBlobUrl.value === entryId) {
+      await clearLocalWallpaper();
+    }
   }
 
   // ---------- 壁纸亮度分档（决定蒙版厚度） ----------
@@ -1000,6 +1135,11 @@ function createWallpaperApi(): WallpaperApi {
     fetchRandomWallpaper,
     setLocalWallpaper,
     clearLocalWallpaper,
+    savedWallpaperId,
+    localLibrary,
+    refreshLocalLibrary,
+    applyLocalWallpaper,
+    removeLocalWallpaper,
     applyPexelsWallpaper,
     searchPhotos,
     photos,
