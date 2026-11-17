@@ -23,6 +23,7 @@ import { useTheme } from '@/src/composables/useTheme';
 import { bindWingsAttribute } from '@/src/composables/useSideCards';
 import ToastHost from '@/src/components/common/ToastHost.vue';
 import TipHost from '@/src/components/common/TipHost.vue';
+import KeyboardShortcuts from '@/src/components/common/KeyboardShortcuts.vue';
 
 /**
  * 首屏外壳 + 已迁移面板挂载点。
@@ -120,4 +121,5 @@ onUnmounted(() => {
     </Teleport>
     <ToastHost />
     <TipHost />
+    <KeyboardShortcuts />
 </template>

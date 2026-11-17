@@ -96,6 +96,129 @@ export interface QuickTool {
         return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
     };
 
+    /** base64url（JWT 用的变体）→ 原始字节：还原 -/_ 与补 = 填充 */
+    const base64UrlToBytes = (seg: string) => {
+        const normalized = seg.replace(/-/g, '+').replace(/_/g, '/');
+        const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+        const bin = atob(padded);
+        return Uint8Array.from(bin, c => c.charCodeAt(0));
+    };
+
+    /** 秒级时间戳 → 本地可读，越界/非法返回 null（JWT 的 exp/iat/nbf 都是秒） */
+    const formatUnixSeconds = (value: unknown) => {
+        if (typeof value !== 'number' || !Number.isFinite(value)) return null;
+        const ms = value * 1000;
+        const d = new Date(ms);
+        if (isNaN(d.getTime())) return null;
+        return formatDate(d);
+    };
+
+    /** JWT 的 claims 里时间字段统一加可读注释；JSON 结构保持原样 */
+    const annotateJwtClaims = (payload: Record<string, unknown>) => {
+        const notes: string[] = [];
+        (['iat', 'nbf', 'exp'] as const).forEach(k => {
+            const readable = formatUnixSeconds(payload[k]);
+            if (readable) notes.push(`${k}: ${readable}`);
+        });
+        return notes;
+    };
+
+    const JWT_CLAIM_HINTS: Record<string, string> = {
+        iss: '签发者',
+        sub: '主体',
+        aud: '受众',
+        exp: '过期时间',
+        nbf: '生效时间',
+        iat: '签发时间',
+        jti: '唯一 ID',
+    };
+
+    /** HTML 实体表：覆盖常用命名实体 + 数字实体 */
+    const NAMED_ENTITIES: Record<string, string> = {
+        amp: '&',
+        lt: '<',
+        gt: '>',
+        quot: '"',
+        apos: "'",
+        nbsp: '\u00a0',
+        copy: '©',
+        reg: '®',
+        trade: '™',
+        hellip: '…',
+        mdash: '—',
+        ndash: '–',
+        lsquo: '‘',
+        rsquo: '’',
+        ldquo: '“',
+        rdquo: '”',
+        bull: '•',
+        middot: '·',
+        times: '×',
+        divide: '÷',
+        deg: '°',
+        plusmn: '±',
+        euro: '€',
+        pound: '£',
+        yen: '¥',
+        cent: '¢',
+        sect: '§',
+        para: '¶',
+        dagger: '†',
+        permil: '‰',
+        laquo: '«',
+        raquo: '»',
+        frac12: '½',
+        frac14: '¼',
+        frac34: '¾',
+        sup2: '²',
+        sup3: '³',
+        micro: 'µ',
+        alpha: 'α',
+        beta: 'β',
+        gamma: 'γ',
+        delta: 'δ',
+        pi: 'π',
+        sigma: 'σ',
+        omega: 'ω',
+        rarr: '→',
+        larr: '←',
+        uarr: '↑',
+        darr: '↓',
+        harr: '↔',
+    };
+
+    const ENTITY_SOURCE = '&(#\\d+|#x[0-9a-f]+|[a-z][a-z0-9]*);';
+    /** 带 g 用于 replace；判定只用一个不带 g 的副本（g 正则的 test 会推进 lastIndex） */
+    const ENTITY_PATTERN = new RegExp(ENTITY_SOURCE, 'gi');
+    const ENTITY_TEST = new RegExp(ENTITY_SOURCE, 'i');
+
+    /** 解码一个实体；不认识的命名实体原样返回 null */
+    const decodeEntity = (body: string) => {
+        if (body.startsWith('#')) {
+            const code = body[1] === 'x' || body[1] === 'X'
+                ? parseInt(body.slice(2), 16)
+                : parseInt(body.slice(1), 10);
+            if (!Number.isFinite(code) || code < 0 || code > 0x10ffff) return null;
+            try {
+                return String.fromCodePoint(code);
+            } catch {
+                return null;
+            }
+        }
+        return Object.prototype.hasOwnProperty.call(NAMED_ENTITIES, body.toLowerCase())
+            ? NAMED_ENTITIES[body.toLowerCase()] ?? null
+            : null;
+    };
+
+    /** 转义：& 必须最先替换，否则后续替换出的 & 会被二次转义 */
+    const escapeHtml = (text: string) =>
+        text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
     // ---------- 工具定义 ----------
 
     export const QUICK_TOOLS: QuickTool[] = [
@@ -286,6 +409,87 @@ export interface QuickTool {
                         .toUpperCase();
                 const hsl = rgb2hsl(rgb);
                 return `HEX: ${hex}\nRGB: rgb(${rgb.r}, ${rgb.g}, ${rgb.b})\nHSL: hsl(${hsl.h}, ${hsl.s}%, ${hsl.l}%)`;
+            },
+        },
+        {
+            id: 'jwt',
+            name: 'JWT',
+            icon: '🪙',
+            desc: '解析头部与载荷',
+            placeholder: '粘贴 JWT（格式 aaa.bbb.ccc）',
+            kind: 'transform',
+            run(input) {
+                const t = input.trim().replace(/^Bearer\s+/i, '');
+                if (!t) return '';
+                const parts = t.split('.');
+                if (parts.length !== 3) return '不是合法的 JWT：应有三段，用 . 分隔';
+                const decodeSegment = (seg: string) => {
+                    const text = new TextDecoder().decode(base64UrlToBytes(seg));
+                    return JSON.parse(text) as Record<string, unknown>;
+                };
+                let header: Record<string, unknown>;
+                let payload: Record<string, unknown>;
+                try {
+                    header = decodeSegment(parts[0]);
+                    payload = decodeSegment(parts[1]);
+                } catch (e: unknown) {
+                    return `JWT 解析失败: ${(e as Error).message}`;
+                }
+                const lines = [
+                    '--- Header ---',
+                    JSON.stringify(header, null, 2),
+                    '',
+                    '--- Payload ---',
+                    JSON.stringify(payload, null, 2),
+                ];
+                const notes = annotateJwtClaims(payload);
+                const hints = Object.keys(payload)
+                    .filter(k => JWT_CLAIM_HINTS[k])
+                    .map(k => `${k} = ${JWT_CLAIM_HINTS[k]}`);
+                if (notes.length || hints.length) {
+                    lines.push('', '--- 时间与字段 ---');
+                    if (notes.length) lines.push(...notes);
+                    if (hints.length) lines.push(hints.join(' / '));
+                } else {
+                    lines.push('', '载荷里没有标准的时间字段（iat / nbf / exp）');
+                }
+                // 过期判断永远给一句，避免用户自己换算秒数
+                const exp = payload.exp;
+                const readable = formatUnixSeconds(exp);
+                lines.push('', readable ? `状态: ${readable} 过期` : '状态: 无 exp 字段，不过期');
+                if (readable) {
+                    const expired = typeof exp === 'number' && exp * 1000 < Date.now();
+                    lines.push(expired ? '已过期' : '仍在有效期内');
+                }
+                lines.push('', '签名未校验（本工具只解码不验签）');
+                return lines.join('\n');
+            },
+        },
+        {
+            id: 'htmlentity',
+            name: 'HTML 实体',
+            icon: '&amp;',
+            desc: '转义 / 反转义',
+            placeholder: '&lt;div&gt; 或 <div>',
+            kind: 'transform',
+            run(input) {
+                if (!input) return '';
+                // 含实体 → 优先按解码处理（与 base64/URL 的「自动判别」一致）
+                if (ENTITY_TEST.test(input)) {
+                    let unknown = 0;
+                    const decoded = input.replace(ENTITY_PATTERN, (match, body: string) => {
+                        const value = decodeEntity(body);
+                        if (value == null) {
+                            unknown++;
+                            return match;
+                        }
+                        return value;
+                    });
+                    return unknown
+                        ? `${decoded}\n\n（${unknown} 个实体无法识别，已原样保留）`
+                        : decoded;
+                }
+                return escapeHtml(input);
             },
         },
         {

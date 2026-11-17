@@ -1244,6 +1244,80 @@ body {
     color: rgb(var(--danger) / 0.95);
 }
 
+/* 粘贴导入区：省掉「先存文件再选文件」的一步，纯本地文本不涉及剪贴板读取权限 */
+.backup-paste {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+    align-items: stretch;
+}
+
+.backup-paste-input {
+    flex: 1 1 auto;
+    min-height: 84px;
+    padding: 8px 10px;
+    border-radius: var(--radius-control);
+    border: 1px solid var(--glass-edge);
+    background: rgb(var(--ink) / calc(0.06 * var(--wash-k)));
+    color: var(--text-primary);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    resize: vertical;
+}
+
+.backup-paste-input:focus {
+    outline: 2px solid rgb(var(--accent) / 0.55);
+    outline-offset: 1px;
+}
+
+.backup-paste .settings-btn {
+    align-self: flex-start;
+}
+
+/* 键盘快捷键清单：kbd 走控件同族玻璃，避免在设置页里像纯文本 */
+.shortcut-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.shortcut-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 13px;
+}
+
+.shortcut-keys {
+    display: inline-flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.shortcut-keys kbd {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 6px;
+    border: 1px solid var(--glass-edge);
+    background: rgb(var(--ink) / calc(0.06 * var(--wash-k)));
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.shortcut-label {
+    color: var(--text-secondary, var(--text-primary));
+}
+
 .settings-btn.primary {
     background-color: rgb(var(--btn-blue));
     color: rgb(var(--on-accent));
@@ -3642,6 +3716,18 @@ body:not([data-wings='none']) #quick-access-grid .quick-access-grid {
 .tools-content {
     max-width: 720px;
     margin: 0 auto;
+    /* 面板定高 88vh，工具从 12 个涨到 14 个后一屏放不下：
+       让两个视图各自滚动，而不是把底部两格裁掉 */
+    display: flex;
+    flex-direction: column;
+}
+
+#tools-grid-view,
+#tools-detail-view {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
 }
 
 .tools-panel-header {

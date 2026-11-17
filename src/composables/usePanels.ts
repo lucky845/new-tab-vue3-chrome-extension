@@ -94,7 +94,12 @@ const TRIGGER_SELECTOR: Partial<Record<PanelId, string>> = {
   settings: '#settings-btn',
 };
 
-function seedOriginFromTrigger(id: PanelId): void {
+/**
+ * 从面板对应的触发按钮取展开原点。
+ * 键盘触发时没有有意义的点击坐标，用它把原点补到按钮中心上，
+ * 否则卡片会从一个跟动作无关的位置长出来。
+ */
+export function seedPanelOriginFromTrigger(id: PanelId): void {
   if (origins.has(id)) return;
   const sel = TRIGGER_SELECTOR[id];
   if (!sel) return;
@@ -108,14 +113,14 @@ export function usePanels(): PanelsApi {
   return {
     isOpen: (id) => state[id],
     open: (id) => {
-      seedOriginFromTrigger(id);
+      seedPanelOriginFromTrigger(id);
       state[id] = true;
     },
     close: (id) => {
       state[id] = false;
     },
     toggle: (id) => {
-      if (!state[id]) seedOriginFromTrigger(id);
+      if (!state[id]) seedPanelOriginFromTrigger(id);
       state[id] = !state[id];
     },
     closeAll: () => {

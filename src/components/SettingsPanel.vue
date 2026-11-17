@@ -28,7 +28,8 @@ import {
     getWallpaperSource,
     type CustomEngine,
 } from '@/src/composables/useSettings';
-import { exportToFile, importFromText, SCHEMA_VERSION } from '@/src/lib/backup';
+import { buildPayload, exportToFile, importFromText, SCHEMA_VERSION } from '@/src/lib/backup';
+import { copyText } from '@/src/lib/clipboard';
 import { siteIconUrl } from '@/src/lib/iconSafe';
 import EngineIcon from '@/src/components/EngineIcon.vue';
 import EngineLogoPicker from '@/src/components/EngineLogoPicker.vue';
@@ -37,6 +38,7 @@ import { onWeatherSettingsSaved } from '@/src/composables/useWeather';
 import { useSearch } from '@/src/composables/useSearch';
 import { SIDE_CARD_LABELS, useSideCards, type SideCardId, type SideCardMode } from '@/src/composables/useSideCards';
 import { toast as showToast } from '@/src/composables/useToast';
+import { SHORTCUTS } from '@/src/config/shortcuts';
 
 const panels = usePanels();
 const themeApi = useTheme();
@@ -312,12 +314,15 @@ const builtinEngines = computed(() => useSearch().engines.value.filter(e => !e.i
 
 /* ---------- 备份与恢复（legacy exportData / importData / setBackupStatus） ---------- */
 const DEFAULT_BACKUP_STATUS =
-    '导出为单个 JSON 文件，含设置、搜索引擎与图标、快捷方式、待办、便签、番茄钟、搜索历史、侧边卡片布局、主题偏好、壁纸（含本地壁纸库）。天气、地理与日出缓存不导出（恢复后自动重新获取）。';
+    '备份是单个 JSON，含设置、搜索引擎与图标、快捷方式、待办、便签、番茄钟、搜索历史、侧边卡片布局、主题偏好、壁纸（含本地壁纸库）。天气、地理与日出缓存不导出（恢复后自动重新获取）。可下载成文件，也可复制到剪贴板或粘贴文本导入。';
 const backupStatus = ref(DEFAULT_BACKUP_STATUS);
 const backupKind = ref<'' | 'error' | 'success'>('');
 const exportDisabled = ref(false);
 const importDisabled = ref(false);
 const importInput = ref<HTMLInputElement | null>(null);
+/** 剪贴板不可用时的粘贴兜底输入（粘贴由浏览器原生处理，不需要 clipboardRead 权限） */
+const pasteText = ref('');
+const pasteOpen = ref(false);
 
 function setBackupStatus(message: string, kind: '' | 'error' | 'success'): void {
     backupStatus.value = message;
@@ -344,20 +349,13 @@ async function exportData(): Promise<void> {
     }
 }
 
-async function importData(event: Event): Promise<void> {
-    const input = event.target as HTMLInputElement;
-    const file = input && input.files && input.files[0];
-    // 无论成功失败都清空 input，否则连续导入同一个文件不会再触发 change
-    const reset = (): void => {
-        if (input) input.value = '';
-    };
-    if (!file) {
-        reset();
-        return;
-    }
+/**
+ * 导入的唯一落地实现：文件选择与剪贴板两条入口共用。
+ * 成功后会刷新页面（各模块内存里持有旧数据，直接改 storage 不会自动生效）。
+ */
+async function applyImportText(text: string): Promise<void> {
     importDisabled.value = true;
     try {
-        const text = await file.text();
         const result = await importFromText(text);
         const notes: string[] = [];
         if (result.migratedTo) notes.push('已从 v' + result.schemaVersion + ' 升级格式');
@@ -381,6 +379,7 @@ async function importData(event: Event): Promise<void> {
             '已导入 ' + result.keys.length + ' 项数据' + when + detail + '，即将刷新页面生效…',
             'success'
         );
+        pasteText.value = '';
         showToast('导入成功，正在刷新…', 'success');
         // 各模块内存里持有旧数据，直接改 storage 不会自动生效，刷新最稳妥
         setTimeout(() => window.location.reload(), 900);
@@ -390,13 +389,55 @@ async function importData(event: Event): Promise<void> {
         setBackupStatus('导入失败：' + message, 'error');
         showToast('导入失败：' + (message || '文件不合法'), 'error');
         importDisabled.value = false;
-        reset();
     }
     // 成功分支不重置按钮：页面即将刷新，避免出现「可再次点击」的瞬时假象
 }
 
+async function importData(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input && input.files && input.files[0];
+    if (!file) return;
+    try {
+        await applyImportText(await file.text());
+    } finally {
+        // 无论成功失败都清空 input，否则连续导入同一个文件不会再触发 change
+        if (input) input.value = '';
+    }
+}
+
+/** 粘贴框导入：剪贴板 API 被拒时的最后一条路，纯本地文本不碰权限 */
+async function importFromPasteBox(): Promise<void> {
+    if (!pasteText.value.trim()) {
+        setBackupStatus('粘贴框是空的，请先粘贴备份内容', 'error');
+        return;
+    }
+    await applyImportText(pasteText.value);
+}
 function openImportPicker(): void {
     importInput.value?.click();
+}
+
+/** 复制整份备份 JSON 到剪贴板：小体量数据不用落盘再找文件 */
+async function copyBackup(): Promise<void> {
+    exportDisabled.value = true;
+    try {
+        const built = await buildPayload();
+        const text = JSON.stringify(built.payload, null, 2);
+        const kb = (new TextEncoder().encode(text).length / 1024).toFixed(1);
+        if (!(await copyText(text))) {
+            setBackupStatus('复制失败：剪贴板不可用，请改用「导出备份」下载文件', 'error');
+            showToast('复制备份失败', 'error');
+            return;
+        }
+        setBackupStatus('已复制备份（' + built.stats.keys + ' 项，约 ' + kb + ' KB）到剪贴板', 'success');
+        showToast('备份已复制', 'success');
+    } catch (error) {
+        log.error('复制备份失败:', error);
+        setBackupStatus('复制失败：' + ((error as Error).message || '未知错误'), 'error');
+        showToast('复制备份失败', 'error');
+    } finally {
+        exportDisabled.value = false;
+    }
 }
 
 /* ---------- 打开回显 / 关闭回滚 / 保存 ---------- */
@@ -1025,12 +1066,31 @@ watch(
                         </button>
                         <button
                             type="button"
+                            id="copy-backup-btn"
+                            class="settings-btn secondary"
+                            :disabled="exportDisabled"
+                            @click="copyBackup"
+                        >
+                            复制备份
+                        </button>
+                        <button
+                            type="button"
                             id="import-data-btn"
                             class="settings-btn secondary"
                             :disabled="importDisabled"
                             @click="openImportPicker"
                         >
                             导入备份
+                        </button>
+                        <button
+                            type="button"
+                            id="paste-import-btn"
+                            class="settings-btn secondary"
+                            :disabled="importDisabled"
+                            :aria-expanded="pasteOpen"
+                            @click="pasteOpen = !pasteOpen"
+                        >
+                            粘贴文本导入
                         </button>
                         <input
                             type="file"
@@ -1041,6 +1101,25 @@ watch(
                             @change="importData"
                         />
                     </div>
+                    <div v-show="pasteOpen" class="backup-paste">
+                        <textarea
+                            id="backup-paste-input"
+                            v-model="pasteText"
+                            class="backup-paste-input"
+                            spellcheck="false"
+                            placeholder="把备份 JSON 全文粘贴到这里，再点右侧导入"
+                            aria-label="粘贴备份 JSON"
+                        ></textarea>
+                        <button
+                            type="button"
+                            id="paste-import-confirm"
+                            class="settings-btn secondary"
+                            :disabled="importDisabled || !pasteText.trim()"
+                            @click="importFromPasteBox"
+                        >
+                            导入
+                        </button>
+                    </div>
                     <p
                         class="api-key-description"
                         id="backup-status"
@@ -1050,6 +1129,21 @@ watch(
                         }"
                     >
                         {{ backupStatus }}
+                    </p>
+                </div>
+
+                <div class="setting-item" v-show="activeTab === 'advanced'">
+                    <label>键盘快捷键</label>
+                    <ul class="shortcut-list">
+                        <li v-for="sc in SHORTCUTS" :key="sc.keys.join('+')" class="shortcut-row">
+                            <span class="shortcut-keys">
+                                <kbd v-for="k in sc.keys" :key="k">{{ k }}</kbd>
+                            </span>
+                            <span class="shortcut-label">{{ sc.label }}</span>
+                        </li>
+                    </ul>
+                    <p class="api-key-description">
+                        焦点在输入框内时不响应；确认框、文件夹浮层打开或图标拖拽中也不响应。
                     </p>
                 </div>
             </div>
