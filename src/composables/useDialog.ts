@@ -9,6 +9,8 @@
  * - 经典 dshDialog 全局挂载 → 纯 ESM export，零全局对象挂载
  */
 
+import { PANEL_GLASS, applyGlass } from '@/src/lib/glass';
+
 interface PromptOptions {
   confirmText?: string;
   cancelText?: string;
@@ -64,6 +66,10 @@ function createOverlay() {
     '</div>',
   ].join('');
   document.body.appendChild(overlay);
+  // 对话框不在 #legacy-panels-root 里（直接挂 body），玻璃挂载中心的 MutationObserver
+  // 扫不到，这里显式补一次：面板档材质，与设置/壁纸面板同一套光学参数。
+  const panel = overlay.querySelector<HTMLElement>('.dsh-dialog__panel');
+  if (panel) applyGlass(panel, PANEL_GLASS);
   function q<TNode extends Element>(selector: string): TNode {
     const node = overlay.querySelector<TNode>(selector);
     if (!node) throw new Error('[dialog] 缺少节点: ' + selector);

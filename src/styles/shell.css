@@ -52,17 +52,44 @@
   padding: 0 48px;
 }
 
+/* 时钟段是浮字样式的唯一真源（app.css 里同名段落已删除，那边只留指针注释）：
+   外壳布局在这里，字号/字重/字色/光晕也在这里，避免"改了一份被另一份盖掉"。 */
 .clock-container {
   display: flex;
   flex-direction: column;
   align-items: center;
+  /* margin-top 原在 app.css 的同名规则里；两处都生效过，迁真源时一并搬来，否则时钟整块上移 6vh。 */
+  margin-top: 6vh;
   margin-bottom: 40px;
-  /* 令牌翻面：浅色=近黑墨(--ink 15 21 26)，深色=白墨；托底光晕同样随主题翻 */
-  color: rgb(var(--ink) / var(--text-k));
+  /* 字色基值跟随主题墨色；壁纸亮度极端时由 html[data-photo-ink] 翻面（见下）。 */
+  --clock-ink: var(--ink);
+  color: rgb(var(--clock-ink) / var(--text-k));
   text-align: center;
+  /* 只沿字形走的三层高斯光晕，不做整块椭圆托底 —— 那圈"白色蒙版"已按用户要求移除。
+     半径 2/24/64：近层压笔画毛边，中远两层把光晕铺粗、过渡拉柔。 */
   text-shadow:
     0 1px 2px var(--on-photo-halo),
-    0 2px 12px var(--on-photo-halo);
+    0 4px 24px var(--on-photo-halo),
+    0 10px 64px var(--on-photo-halo);
+}
+
+/* 浮字字色翻面：亮壁纸用墨字 + 白光晕，暗壁纸用白字 + 暗光晕。
+   字面量写死而不复用 --ink：暗壁纸配浅色主题时 --ink 本身是墨色，表达不了白字。
+   光晕必须跟着翻 —— 墨字配暗光晕、白字配白光晕都会把笔画糊成灰边。 */
+html[data-photo-ink='dark'] .clock-container {
+  --clock-ink: 15 21 26;
+  --on-photo-halo: rgb(var(--spec) / 0.85);
+}
+
+html[data-photo-ink='light'] .clock-container {
+  --clock-ink: 255 255 255;
+  --on-photo-halo: rgb(var(--shadow) / 0.72);
+}
+
+/* 深色主题不参与亮度翻面：壁纸被 veil 压暗后一律浅色浮字（理由见 app.css 同名段落）。 */
+html[data-theme='dark'] .clock-container {
+  --clock-ink: 255 255 255;
+  --on-photo-halo: rgb(var(--shadow) / 0.72);
 }
 
 .clock-time {
@@ -70,27 +97,28 @@
   font-weight: 200;
   line-height: 1;
   letter-spacing: -0.02em;
+  color: rgb(var(--clock-ink));
 }
 
 .clock-date {
   margin-top: 12px;
   font-size: 18px;
   font-weight: 400;
-  /* 用墨色 alpha 分主次，不用 opacity：opacity 会连托底光晕一起溶进壁纸 */
-  color: rgb(var(--ink) / calc(0.96 * var(--text-k)));
+  /* 用墨色 alpha 分主次，不用 opacity：opacity 会连光晕一起溶进壁纸 */
+  color: rgb(var(--clock-ink) / calc(0.96 * var(--text-k)));
 }
 
 .clock-greeting {
   margin-top: 6px;
   font-size: 15px;
-  color: rgb(var(--ink) / calc(0.9 * var(--text-k)));
+  color: rgb(var(--clock-ink) / calc(0.9 * var(--text-k)));
 }
 
 .tagline {
   min-height: 20px;
   margin-top: 8px;
   font-size: 13px;
-  color: rgb(var(--ink) / calc(0.86 * var(--text-k)));
+  color: rgb(var(--clock-ink) / calc(0.86 * var(--text-k)));
   font-style: italic;
 }
 

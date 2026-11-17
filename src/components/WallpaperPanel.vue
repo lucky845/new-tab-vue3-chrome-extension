@@ -317,7 +317,6 @@ async function onJumpEnter(): Promise<void> {
           </div>
         </div>
       </div>
-      <button id="close-wallpaper-panel-btn" class="close-panel-btn" @click="closeWallpaperPanel">✕</button>
     </div>
   </GlassPanel>
 </template>

@@ -66,7 +66,10 @@
 }
 
 .quick-access-item .name {
-  text-shadow: 0 1px 2px rgb(0 0 0 / 0.24);
+  /* 本文件在 public/theme/app.css 之后打包，这条会盖掉那边的 text-shadow。
+     只写死一条墨影是不行的：壁纸亮度极端时字色会翻面（html[data-photo-ink]），
+     墨字配墨影等于没有边界 —— 所以阴影也走同一组令牌，跟着字色一起翻。 */
+  text-shadow: 0 1px 2px var(--on-photo-label-shadow);
 }
 
 /* --- 从手写 WebGL 玻璃迁到 @surdeddd/liquidglass ---
@@ -92,6 +95,104 @@
 [data-glass='lib']::after {
     content: none;
     display: none;
+}
+
+/* 2.5 填充接管：库把 tint 写进宿主的内联 background，写死就跟不上主题切换
+   与壁纸翻面（html[data-photo-ink]）。所以材质档里 tintOpacity 一律给 0，
+   底色由这里用本项目既有的主题令牌夺回 —— 浅色白玻璃、深色冷黑玻璃、
+   亮/暗壁纸翻面全部自动成立，不必在 JS 里重复调色。
+   内联样式优先级高于普通规则，必须 !important 才盖得住。 */
+/* 面板：折射边缘由库画在宿主上，磨砂底衬交给 ::before。
+   为什么分两层：宿主上的 backdrop-filter 就是库的折射效果本身，再往同一个
+   元素上叠 blur 会把折射链一起糊掉（实测面板变成一块白板）；而 ::before 是
+   独立合成层，blur 只作用于它自己，两层叠加才有「边缘弯折 + 背后压糊」。
+   两层都用 --panel-glass-fill，主题切换与壁纸翻面自动跟随。 */
+.settings-content[data-glass='lib'],
+.widget-content[data-glass='lib'],
+.folder-popover[data-glass='lib'],
+.dsh-dialog__panel[data-glass='lib'] {
+    background-color: transparent !important;
+    background-image: none !important;
+}
+
+.settings-content[data-glass='lib']::before,
+.widget-content[data-glass='lib']::before,
+.folder-popover[data-glass='lib']::before,
+.dsh-dialog__panel[data-glass='lib']::before {
+    /* 上面第 2 条让位规则会把 ::before 关掉，这里显式要回来 */
+    content: '' !important;
+    display: block !important;
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    /* 负层级 + 宿主 isolation:isolate：底衬落后于内容，但不会掉到宿主外面去。
+       不能用「给子元素 position:relative/z-index:1」那套抬升——面板里的关闭按钮
+       本来就靠 position:absolute 定位到右上角，被改成 relative 后会掉回文档流，
+       和标题挤在左上角（壁纸页还会因此露出两个 ✕）。 */
+    z-index: -1;
+    /* 底色不直接取 --panel-glass-fill（0.62 在这块大面积上仍显透，背后的时钟大字
+       会透出来干扰阅读）。这里把它再压一档：实底 α 与主题令牌同族但更实，
+       深色主题另给一组。模糊 36px 是「压糊背后内容、又保留壁纸存在感」的实测档，
+       滚动帧率与不加这一层无差异。 */
+    background-color: var(--panel-glass-scrim);
+    backdrop-filter: blur(36px) saturate(1.25);
+}
+
+/* 建立独立层叠上下文，让上面的 z-index:-1 只在本面板内生效 */
+.settings-content[data-glass='lib'],
+.widget-content[data-glass='lib'],
+.folder-popover[data-glass='lib'],
+.dsh-dialog__panel[data-glass='lib'] {
+    isolation: isolate;
+}
+
+/* 小件（侧卡 / 天气卡 / 控制按钮）的静态边缘。
+   这几类的 CARD_GLASS/CHIP_GLASS/CONTROL_GLASS 里 specular 是 0：库只有在
+   specular > 0 时才 mountBezel，也只有在有 bezel 时才 registerLight —— 关掉之后
+   库不再于 pointermove 中回写宿主的 --lg-light-angle，宿主（同时是 backdrop-filter
+   的目标）也就不会整层重绘。代价是没有库画的亮边，所以这里用一条不随指针变化的
+   静态描边补回「一块料」的形状；亮/暗主题各自取 --glass-edge。
+   底衬只给一层主题底色，不叠 blur —— 小元素上再模糊会看不清文字。 */
+.side-card[data-glass='lib'],
+.weather-widget[data-glass='lib'],
+.control-btn[data-glass='lib'] {
+    background-image: none !important;
+    border-color: var(--glass-edge) !important;
+}
+
+.side-card[data-glass='lib'],
+.weather-widget[data-glass='lib'] {
+    background-color: var(--glass-card-fill) !important;
+}
+
+.control-btn[data-glass='lib'] {
+    background-color: var(--glass-fill) !important;
+}
+
+.control-btn[data-glass='lib']:hover {
+    background-color: var(--glass-fill-hover) !important;
+}
+
+/* 2.55 小件玻璃固定受光角。
+   上面把三档的 specular 归零后，库已经销毁 bezel、也不再 registerLight，
+   本段其实不会再参与绘制。保留它是双保险：将来若重新打开 specular，库的
+   --lg-light-angle 会由全局 pointermove 驱动（dist/index.js flush() 按「指针 → 元素中心」
+   算角度写宿主内联样式），在一两百像素的小件上表现为整圈高光跟着鼠标转一圈。
+   这几类是常驻 chrome，不该跟着鼠标动；搜索框、快捷图标继续保留随指针游光。 */
+.side-card[data-glass='lib'],
+.weather-widget[data-glass='lib'],
+.control-btn[data-glass='lib'] {
+    --lg-light-angle: 135deg !important;
+}
+
+/* 2.6 玻璃宿主默认不吃光标（见 app.css 的白名单段）。面板内容层现在是玻璃宿主，
+   不在这里重新打开，整块面板就会点不动。 */
+.settings-content[data-glass='lib'],
+.widget-content[data-glass='lib'],
+.folder-popover[data-glass='lib'],
+.dsh-dialog__panel[data-glass='lib'] {
+    pointer-events: auto;
 }
 
 /* 3. 内容层级：不要在这里统一给子元素加 position:relative —— 旧样式表里

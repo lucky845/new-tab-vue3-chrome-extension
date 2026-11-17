@@ -23,12 +23,86 @@ export interface GlassOptions {
   dispersion?: number;
   frost?: number;
   physics?: boolean;
+  /**
+   * 折射带宽（px）。库在 'auto' 时按 `min(BAND_LIMIT=20, 0.7 * min(w,h)/2)` 封顶 ——
+   * 20px 在 65px 高的搜索框上占 31%（整条像水波），在 619px 高的面板上只占 3%，
+   * 观感退化成「平玻璃」。大面板必须显式给带宽，才能保住同一个「玻璃厚边」比例。
+   * 传数字时库直接取该值，绕开 20px 上限。
+   */
+  bevelWidth?: number;
+  /** 底色不透明度（0-1）：库 clear 预设只有 0.0765，等于没底，面板上文字会糊。 */
+  tintOpacity?: number;
+  /** 高斯模糊半径（库单位，非 px）：面板需要比细条更大的模糊兜住文字底。 */
+  blur?: number;
+  saturation?: number;
+  brightness?: number;
   /** 圆角半径（px）。不传时库会自行按 min(宽,高)*0.36 覆盖 border-radius；
       方格这类需要比 0.36 更方的形状时显式传入。 */
   radius?: number;
   /** 边缘高光强度（0-1），决定库注入的 .lg-bezel 的亮度；卡片类降到 0.5 左右边缘更干净 */
   specular?: number;
 }
+
+/**
+ * 材质档位
+ * ------------------------------------------------------------
+ * 搜索框之所以看着像「一块厚玻璃」，靠的是比例而不是参数：折射带宽度占
+ * 元素短边的份额。库在 bevelWidth:'auto' 时按 `min(20, 0.7 * min(w,h)/2)`
+ * 封顶 —— 20px 落在 65px 高的搜索条上占 31%（整条都是弯的），落在
+ * 500x617 的面板上只占 3%，观感退化成一层平玻璃。所以按元素尺度分档
+ * 显式给带宽，比例才对得上。
+ *
+ * tintOpacity 一律 0：库把 tint 写进元素的内联 background，写死就跟不上
+ * 主题切换与壁纸翻面。填充改由 styles/glass.css 用主题令牌 !important
+ * 夺回（该文件「填充接管」段），同一套光学参数在浅色/深色/翻面下都成立。
+ *
+ * dispersion 一律 0 是性能取舍而非审美：色散让滤镜链多走三个位移通道
+ * （lgDispR/G/B + feComposite），实测面板滚动 87fps → 52fps，而色边在
+ * 面板尺寸上肉眼几乎看不出来，只有搜索框那种细条值得开。
+ */
+export const PANEL_GLASS: GlassOptions = {
+  refraction: 0.5,
+  dispersion: 0,
+  frost: 0,
+  bevelWidth: 96,
+  tintOpacity: 0,
+  blur: 12,
+};
+
+export const CARD_GLASS: GlassOptions = {
+  refraction: 0.5,
+  dispersion: 0,
+  frost: 0,
+  bevelWidth: 56,
+  tintOpacity: 0,
+  blur: 5,
+  specular: 0,
+  // 侧卡是常驻 chrome，不吃库的动态 bevel：specular>0 会让库 mountBezel 并在每次
+  // pointermove 里把宿主的 --lg-light-angle 内联改写一次（dist/index.js flush() →
+  // bezel.update()），宿主正是 backdrop-filter 的目标，重写自定义属性能让折射链
+  // 整层重绘 —— 彩色壁纸上的表现就是「白闪一下」。改成 0 后库销毁 bezel、注销光照，
+  // 小件彻底不再随指针改样式；边缘亮线改由 CSS 静态描边给（见 styles/glass.css）。
+};
+
+export const CHIP_GLASS: GlassOptions = {
+  refraction: 0.5,
+  dispersion: 0,
+  frost: 0,
+  bevelWidth: 44,
+  tintOpacity: 0,
+  blur: 4,
+  specular: 0,
+};
+
+export const CONTROL_GLASS: GlassOptions = {
+  refraction: 0.5,
+  dispersion: 0,
+  frost: 0,
+  bevelWidth: 14,
+  tintOpacity: 0,
+  blur: 3,
+  specular: 0,
+};
 
 const handles = new WeakMap<HTMLElement, LiquidGlassHandle>();
 
@@ -42,8 +116,15 @@ export function applyGlass(el: HTMLElement, options: GlassOptions = {}): LiquidG
       refraction: options.refraction ?? 0.5,
       dispersion: options.dispersion ?? 0.18,
       frost: options.frost ?? 0,
-      specular: 0.8,
+      // specular 可调：它同时决定库写进宿主的 1px 内联白边亮度，以及是否挂动态
+      // bezel（syncBezel 里 specular > 0 才 mountBezel + registerLight）。小件给 0。
+      specular: options.specular ?? 0.8,
       shadow: options.square ? 0.28 : 0,
+      ...(options.bevelWidth !== undefined ? { bevelWidth: options.bevelWidth } : {}),
+      ...(options.tintOpacity !== undefined ? { tintOpacity: options.tintOpacity } : {}),
+      ...(options.blur !== undefined ? { blur: options.blur } : {}),
+      ...(options.saturation !== undefined ? { saturation: options.saturation } : {}),
+      ...(options.brightness !== undefined ? { brightness: options.brightness } : {}),
       // 物理默认关闭：库的 hover 磁性（MAGNET_RATIO 0.05）会改写宿主 transform，
       // 全屏面板/卡片被鼠标带着漂移（bug m00309-2「弹窗跟着鼠标动」）。
       physics: options.physics ?? false,

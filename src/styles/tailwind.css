@@ -69,7 +69,11 @@
     font-family:
       -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'PingFang SC', 'Microsoft YaHei',
       system-ui, sans-serif;
-    color: hsl(var(--foreground));
+    /* 本项目的字色真源是 app.css 的 --text-primary（随 --ink 翻面：深色主题、
+       浅色主题 + 暗壁纸时都是白字）。--foreground 是 shadcn 的 HSL 变量，只在
+       tailwind 工具类里用；放在前面当兜底，它一旦接管 body 继承色，
+       玻璃里所有没写 color 的文字就会在暗底上保持近黑。 */
+    color: var(--text-primary, hsl(var(--foreground)));
     background: transparent;
     overflow: hidden;
   }
