@@ -7,11 +7,11 @@ import GlassPanel from '@/src/components/common/GlassPanel.vue';
 import { useTools } from '@/src/composables/useTools';
 
 /**
- * 小工具面板（两层视图：12 工具宫格 + 单工具详情）。
+ * 小工具面板（两层视图：工具宫格 + 单工具详情）。
  *
  * markup 从 entrypoints/newtab.html 470-502 逐字拷贝（id/class/中文文案/层级零改动），
  * 业务语义唯一权威是 v1.8.1:js/app.js 的小工具域，移植映射：
- *   - renderToolsGrid 的 createElement 循环   → v-for + :key（12 个工具是常量，无需每次打开重建）
+ *   - renderToolsGrid 的 createElement 循环   → v-for + :key（工具是常量，无需每次打开重建）
  *   - btn.addEventListener('click')           → @click
  *   - classList add/remove/toggle('u-hidden') → :class="{ 'u-hidden': ... }"
  *   - title/desc/input.placeholder 赋值        → 插值 + :placeholder

@@ -13,9 +13,9 @@ const run = (id: string, input: string): string | Promise<string> => {
 };
 
 describe('tools 定义', () => {
-  it('12 个工具且 id 唯一', () => {
-    expect(QUICK_TOOLS).toHaveLength(12);
-    expect(new Set(QUICK_TOOLS.map((t) => t.id)).size).toBe(12);
+  it('14 个工具且 id 唯一', () => {
+    expect(QUICK_TOOLS).toHaveLength(14);
+    expect(new Set(QUICK_TOOLS.map((t) => t.id)).size).toBe(14);
   });
   it('精选位只引用存在的工具 id', () => {
     expect(QUICK_TOOLS_FEATURED).toHaveLength(6);
@@ -65,6 +65,51 @@ describe('tools transform', () => {
   });
   it('hash 输出 64 位 SHA-256', async () => {
     expect(await run('hash', 'hello')).toMatch(/^[0-9a-f]{64}$/);
+  });
+  it('jwt 解析头部与载荷', async () => {
+    // HS256 示例 token：header {"alg":"HS256","typ":"JWT"}，payload 含 sub/name/iat
+    const token =
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9' +
+      '.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ' +
+      '.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c';
+    const out = await run('jwt', token);
+    expect(out).toContain('--- Header ---');
+    expect(out).toContain('"alg": "HS256"');
+    expect(out).toContain('--- Payload ---');
+    expect(out).toContain('"name": "John Doe"');
+    // iat=1516239022：本地时区决定是 01-17 还是 01-18，CI 跑 UTC、本机跑 +08，
+    // 所以只断言「能被读成日期时间」，不锁死具体日期。
+    expect(out).toMatch(/iat: 2018-01-1[78] \d{2}:\d{2}:\d{2}/);
+    expect(out).toContain('签名未校验');
+  });
+  it('jwt 容忍 Bearer 前缀与 base64url 变体', async () => {
+    // payload 段含 -_ 字符（base64url），验证不需要手动补填充
+    const token = 'eyJhbGciOiJub25lIn0.eyJzdWIiOiJhYmMifQ.';
+    const out = await run('jwt', 'Bearer ' + token);
+    expect(out).toContain('"alg": "none"');
+    expect(out).toContain('"sub": "abc"');
+    expect(out).toContain('无 exp 字段');
+  });
+  it('jwt 对非法输入给出可读提示', async () => {
+    expect(await run('jwt', '')).toBe('');
+    expect(await run('jwt', 'abc.def')).toContain('不是合法的 JWT');
+  });
+  it('htmlentity 转义与反转义', async () => {
+    expect(await run('htmlentity', '<div class="a">')).toBe(
+      '&lt;div class=&quot;a&quot;&gt;'
+    );
+    expect(await run('htmlentity', '&lt;div&gt;')).toBe('<div>');
+    // & 必须最先替换，否则会被二次转义
+    expect(await run('htmlentity', '&')).toBe('&amp;');
+    expect(await run('htmlentity', 'a & b')).toBe('a &amp; b');
+  });
+  it('htmlentity 支持数字与不常见命名实体', async () => {
+    expect(await run('htmlentity', '&#65;&#x42;')).toBe('AB');
+    expect(await run('htmlentity', '&copy;&nbsp;&hellip;')).toBe('©\u00a0…');
+    // 不认识的命名实体原样保留，并告知条数
+    const out = await run('htmlentity', '&nosuchentity; &lt;');
+    expect(out).toContain('&nosuchentity;');
+    expect(out).toContain('1 个实体无法识别');
   });
 });
 

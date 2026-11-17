@@ -14,6 +14,7 @@ import { computed, ref } from 'vue';
 import { QUICK_TOOLS, QUICK_TOOLS_FEATURED, type QuickTool } from '@/src/config/tools';
 import { usePanels } from '@/src/composables/usePanels';
 import { toast as showToast } from '@/src/composables/useToast';
+import { copyText } from '@/src/lib/clipboard';
 
 /** legacy 的两层视图：宫格（grid）+ 详情（detail），与 #tools-grid-view / #tools-detail-view 对应 */
 export type ToolsView = 'grid' | 'detail';
@@ -108,22 +109,10 @@ export function useTools() {
       showToast('没有可复制的结果', 'warning', 1800);
       return;
     }
-    try {
-      await navigator.clipboard.writeText(text);
-      showToast('已复制到剪贴板', 'success', 1600);
-    } catch {
-      // 剪贴板 API 不可用时的兜底（扩展页面/部分环境），与 legacy 逐行一致
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      const ok = document.execCommand('copy');
-      ta.remove();
-      if (ok) showToast('已复制到剪贴板', 'success', 1600);
-      else showToast('复制失败，请手动选择复制', 'error', 2200);
-    }
+    // 剪贴板降级逻辑收敛在 src/lib/clipboard.ts，备份页共用同一实现
+    const ok = await copyText(text);
+    if (ok) showToast('已复制到剪贴板', 'success', 1600);
+    else showToast('复制失败，请手动选择复制', 'error', 2200);
   }
 
   /** legacy bindToolsEvents（v1.8.1:js/app.js:2358-2402）里的清空按钮：清输入 + 清输出 */
@@ -136,7 +125,7 @@ export function useTools() {
    * legacy openToolsPanel（v1.8.1:js/app.js:2403-2415）。两条入口都归到这里：
    *   - 侧卡展开按钮 #tools-card-expand（无参）→ 宫格视图；
    *   - 侧卡 mini 工具按钮（renderToolsCard 产出，带 tool.id）→ 直开详情。
-   * renderToolsGrid 的重建由 ToolsPanel.vue 的 v-for 静态渲染取代（12 个工具是常量，无重建必要）。
+   * renderToolsGrid 的重建由 ToolsPanel.vue 的 v-for 静态渲染取代（工具是常量，无重建必要）。
    */
   function openPanel(toolId: string | null = null): void {
     panels.open('tools');
