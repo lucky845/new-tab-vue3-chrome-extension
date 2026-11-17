@@ -38,7 +38,6 @@ import { onWeatherSettingsSaved } from '@/src/composables/useWeather';
 import { useSearch } from '@/src/composables/useSearch';
 import { SIDE_CARD_LABELS, useSideCards, type SideCardId, type SideCardMode } from '@/src/composables/useSideCards';
 import { toast as showToast } from '@/src/composables/useToast';
-import { SHORTCUTS } from '@/src/config/shortcuts';
 
 const panels = usePanels();
 const themeApi = useTheme();
@@ -1129,21 +1128,6 @@ watch(
                         }"
                     >
                         {{ backupStatus }}
-                    </p>
-                </div>
-
-                <div class="setting-item" v-show="activeTab === 'advanced'">
-                    <label>键盘快捷键</label>
-                    <ul class="shortcut-list">
-                        <li v-for="sc in SHORTCUTS" :key="sc.keys.join('+')" class="shortcut-row">
-                            <span class="shortcut-keys">
-                                <kbd v-for="k in sc.keys" :key="k">{{ k }}</kbd>
-                            </span>
-                            <span class="shortcut-label">{{ sc.label }}</span>
-                        </li>
-                    </ul>
-                    <p class="api-key-description">
-                        焦点在输入框内时不响应；确认框、文件夹浮层打开或图标拖拽中也不响应。
                     </p>
                 </div>
             </div>
