@@ -1,14 +1,14 @@
 /**
- * 提示浮层（Vue3 ESM 版）
+ * 提示浮层 —— Vue 队列版
  * --------------------------------------------------------------------
- * 逐字移植 v1.8.1:js/utils/dsh-tip.js（504 行）：
- * - .dsh-tip / .dsh-tip--visible / .dsh-tip__icon / .dsh-tip__text /
- *   .dsh-tip__action / .dsh-tip__close / .dsh-tip__arrow / .dsh-tip-toasts
- * - GAP=8 / MARGIN=8 / ARROW=6、above/below/auto 翻转、视口钳制、同 key 去重
- * - 经典 dshTip 全局挂载 → 纯 ESM export + DOM，零全局对象挂载
- * - 样式真源已迁至 public/theme/app.css（.dsh-tip 同族），本文件只管 DOM 构造/定位/计时；
- *   无锚点 Toast 走 useToast.ts 的 Vue 队列（<ToastHost>），不再在本文件生成。
+ * 逐字对齐 v1.8.1:js/utils/dsh-tip.js 的行为（GAP=8 / MARGIN=8 / ARROW=6、
+ * above/below/auto 翻转、视口钳制、同 key 去重、closable||action 时悬停暂停），
+ * 但不再在运行时 createElement 拼 DOM：本文件只维护 reactive 队列与计时，
+ * 渲染交给 <TipHost>（锚定提示）/ <TipBubble>（气泡内容）。
+ * 样式真源仍在 public/theme/app.css 的 .dsh-tip 族，本文件不注入任何样式。
+ * 无锚点 Toast 走 useToast.ts 的队列（<ToastHost>），与本文件无关。
  */
+import { reactive } from 'vue';
 
 export interface TipAction {
   label: string;
@@ -35,7 +35,7 @@ const GAP = 8;
 const MARGIN = 8;
 const ARROW = 6;
 
-const ICONS: Record<string, string> = {
+export const TIP_ICONS: Record<string, string> = {
   success: '✓',
   error: '✕',
   warning: '!',
@@ -51,8 +51,21 @@ const DURATION: Record<string, number> = {
   loading: 0,
 };
 
+/** 定位只需要锚点矩形这几个字段（DOMRect 天然满足，单测可传普通对象） */
+export interface TipAnchorRect {
+  left: number;
+  top: number;
+  bottom: number;
+  width: number;
+}
 
-interface TipPlacement {
+/** 视口尺寸：显式传入可脱离 window（node 环境单测） */
+export interface TipViewport {
+  width: number;
+  height: number;
+}
+
+export interface TipPlacement {
   top: number;
   left: number;
   placement: 'above' | 'below';
@@ -60,14 +73,25 @@ interface TipPlacement {
   arrowY: number;
 }
 
-function computePosition(
-  anchorRect: DOMRect,
+function resolveViewport(viewport?: TipViewport): TipViewport {
+  if (viewport) return viewport;
+  if (typeof window !== 'undefined') return { width: window.innerWidth, height: window.innerHeight };
+  return { width: 0, height: 0 };
+}
+
+/**
+ * 锚定提示的几何解算：优先方向放得下就用它，否则翻到另一侧；两侧都放不下时
+ * 按 preferred 的反向兜底，最后统一做视口钳制（四边各留 MARGIN），箭头在
+ * 左右各留 14px 的范围内跟随锚点中心。
+ */
+export function computePosition(
+  anchorRect: TipAnchorRect,
   tipW: number,
   tipH: number,
   preferred: string,
+  viewport?: TipViewport,
 ): TipPlacement {
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
+  const { width: vw, height: vh } = resolveViewport(viewport);
   const anchorCenter = anchorRect.left + anchorRect.width / 2;
   const spaceAbove = anchorRect.top;
   const spaceBelow = vh - anchorRect.bottom;
@@ -77,9 +101,7 @@ function computePosition(
   if (preferred === 'above') placement = fitsAbove || !fitsBelow ? 'above' : 'below';
   else if (preferred === 'below') placement = fitsBelow || !fitsAbove ? 'below' : 'above';
   else placement = fitsBelow || !fitsAbove ? 'below' : 'above';
-  let top = placement === 'above'
-    ? anchorRect.top - tipH - GAP
-    : anchorRect.bottom + GAP;
+  let top = placement === 'above' ? anchorRect.top - tipH - GAP : anchorRect.bottom + GAP;
   top = Math.max(MARGIN, Math.min(top, vh - tipH - MARGIN));
   const left = Math.max(MARGIN, Math.min(anchorCenter - tipW / 2, vw - tipW - MARGIN));
   const arrowX = Math.max(14, Math.min(anchorCenter - left - ARROW, tipW - 14 - ARROW * 2));
@@ -93,263 +115,170 @@ function computePosition(
   };
 }
 
-interface TipConfig {
+/** 队列里的一条提示：渲染所需的一切都在这里，组件不持有业务状态 */
+export interface TipItem {
+  id: number;
   type: string;
   message: string;
-  duration: number | null;
   placement: string;
-  arrow: boolean;
+  /** 实际生效的展示时长（毫秒），<=0 表示常驻 */
+  duration: number;
   closable: boolean;
   action: TipAction | null;
   anchor: HTMLElement | null;
+  arrow: boolean;
   key: string;
+  /** 入场动画开关：插入后下一个事件循环才置 true，等价原来的 --visible 类时机 */
+  visible: boolean;
+  closed: boolean;
 }
 
-type TipElement = HTMLElement & { __dshTip?: Tip };
-const registry = new Map<string, Tip>();
+const items = reactive<TipItem[]>([]);
+const registry = new Map<string, TipItem>();
+const timers = new Map<number, ReturnType<typeof setTimeout>>();
+const removeTimers = new Map<number, ReturnType<typeof setTimeout>>();
+const remaining = new Map<number, number>();
+const startedAt = new Map<number, number>();
+let nextId = 1;
 
-class Tip {
-  readonly el: HTMLDivElement;
-  readonly lastDuration: number;
-  private cfg: TipConfig;
-  private timer: number | null = null;
-  private raf: number | null = null;
-  private removeTimer: number | null = null;
-  private observer: ResizeObserver | null = null;
-  private onResize: (() => void) | null = null;
-  private onScroll: (() => void) | null = null;
-  private onEnter: (() => void) | null = null;
-  private onLeave: (() => void) | null = null;
-  private startedAt = 0;
-  private remaining = 0;
-  private _closed = false;
-
-  get closed(): boolean {
-    return this._closed;
-  }
-
-  constructor(options: Partial<TipConfig>) {
-    const rawType = options.type || 'info';
-    const type = Object.prototype.hasOwnProperty.call(ICONS, rawType) ? rawType : 'info';
-    this.cfg = {
-      type,
-      message: options.message ?? '',
-      duration: options.duration ?? null,
-      placement: options.placement || 'auto',
-      arrow: options.arrow !== false,
-      closable: !!options.closable,
-      action: options.action ?? null,
-      anchor: options.anchor ?? null,
-      key: options.key || 'default',
-    };
-    this.lastDuration = this.cfg.duration == null
-      ? (DURATION[type] ?? DURATION.info ?? 2200)
-      : this.cfg.duration;
-
-    const el = document.createElement('div');
-    el.className = 'dsh-tip dsh-tip--' + type;
-    el.setAttribute('role', type === 'error' ? 'alert' : 'status');
-    this.el = el;
-
-    const icon = document.createElement('span');
-    icon.className = 'dsh-tip__icon';
-    icon.setAttribute('aria-hidden', 'true');
-    icon.textContent = ICONS[type] ?? '';
-    el.appendChild(icon);
-
-    const text = document.createElement('span');
-    text.className = 'dsh-tip__text';
-    text.textContent = this.cfg.message;
-    el.appendChild(text);
-
-    const actionList: TipAction[] = this.cfg.action ? [this.cfg.action] : [];
-    for (const act of actionList) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'dsh-tip__action';
-      btn.textContent = act.label;
-      if (act.title) btn.title = act.title;
-      btn.addEventListener('click', () => {
-        act.onClick();
-        this.close();
-      });
-      el.appendChild(btn);
-    }
-
-    if (this.cfg.closable) {
-      const btn = document.createElement('button');
-      btn.type = 'button';
-      btn.className = 'dsh-tip__close';
-      btn.setAttribute('aria-label', '关闭提示');
-      btn.textContent = '×';
-      btn.addEventListener('click', () => this.close());
-      el.appendChild(btn);
-    }
-
-    if (this.cfg.arrow && this.cfg.anchor) {
-      const arrow = document.createElement('span');
-      arrow.className = 'dsh-tip__arrow';
-      el.appendChild(arrow);
-    }
-
-    const rk = this.cfg.key;
-    el.dataset.dshTipKey = rk;
-    (el as TipElement).__dshTip = this;
-    document.querySelectorAll<TipElement>('.dsh-tip[data-dsh-tip-key]').forEach((node) => {
-      if (node === el || node.dataset.dshTipKey !== rk) return;
-      const prev = node.__dshTip;
-      if (prev) prev.close(true);
-      else node.remove();
-    });
-    const exist = registry.get(rk);
-    if (exist) exist.close(true);
-    registry.set(rk, this);
-
-    if (this.cfg.anchor) {
-      document.body.appendChild(el);
-    } else {
-      let host = document.querySelector<HTMLElement>('.dsh-tip-toasts');
-      if (!host) {
-        host = document.createElement('div');
-        host.className = 'dsh-tip-toasts';
-        host.setAttribute('aria-live', 'polite');
-        document.body.appendChild(host);
-      }
-      host.appendChild(el);
-    }
-
-    this.position();
-    this.raf = requestAnimationFrame(() => el.classList.add('dsh-tip--visible'));
-    this.bind();
-    this.schedule();
-  }
-
-  private position(): void {
-    const anchor = this.cfg.anchor;
-    if (!anchor || !anchor.isConnected) return;
-    const rect = anchor.getBoundingClientRect();
-    const p = computePosition(rect, this.el.offsetWidth, this.el.offsetHeight, this.cfg.placement);
-    this.el.style.top = p.top + 'px';
-    this.el.style.left = p.left + 'px';
-    this.el.dataset.dshTipPlacement = p.placement;
-    const arrow = this.el.querySelector<HTMLElement>('.dsh-tip__arrow');
-    if (arrow) {
-      arrow.style.left = p.arrowX + 'px';
-      arrow.style.top = p.arrowY + 'px';
-    }
-  }
-
-  private bind(): void {
-    this.onResize = () => this.position();
-    this.onScroll = () => this.position();
-    window.addEventListener('resize', this.onResize);
-    window.addEventListener('scroll', this.onScroll, true);
-    if (typeof ResizeObserver !== 'undefined') {
-      this.observer = new ResizeObserver(() => this.position());
-      this.observer.observe(this.el);
-      if (this.cfg.anchor) this.observer.observe(this.cfg.anchor);
-    }
-    if (this.cfg.closable || this.cfg.action) {
-      this.onEnter = () => this.pause();
-      this.onLeave = () => this.schedule();
-      this.el.addEventListener('mouseenter', this.onEnter);
-      this.el.addEventListener('mouseleave', this.onLeave);
-    }
-  }
-
-  private schedule(): void {
-    this.clearTimer();
-    if (this._closed || this.lastDuration <= 0) return;
-    this.remaining = this.remaining || this.lastDuration;
-    this.startedAt = Date.now();
-    this.timer = window.setTimeout(() => this.close(), this.remaining);
-  }
-
-  private pause(): void {
-    if (this.timer == null) return;
-    window.clearTimeout(this.timer);
-    this.timer = null;
-    this.remaining = Math.max(0, this.remaining - (Date.now() - this.startedAt));
-  }
-
-  private clearTimer(): void {
-    if (this.timer == null) return;
-    window.clearTimeout(this.timer);
-    this.timer = null;
-  }
-
-  close(immediate = false): void {
-    if (this._closed) return;
-    this._closed = true;
-    this.clearTimer();
-    if (this.raf != null) {
-      cancelAnimationFrame(this.raf);
-      this.raf = null;
-    }
-    if (this.observer) {
-      this.observer.disconnect();
-      this.observer = null;
-    }
-    if (this.onResize) window.removeEventListener('resize', this.onResize);
-    if (this.onScroll) window.removeEventListener('scroll', this.onScroll, true);
-    if (this.onEnter) this.el.removeEventListener('mouseenter', this.onEnter);
-    if (this.onLeave) this.el.removeEventListener('mouseleave', this.onLeave);
-    if (registry.get(this.cfg.key) === this) registry.delete(this.cfg.key);
-    const remove = () => {
-      if (this.removeTimer != null) {
-        window.clearTimeout(this.removeTimer);
-        this.removeTimer = null;
-      }
-      this.el.remove();
-      const host = document.querySelector('.dsh-tip-toasts');
-      if (host && host.childElementCount === 0) host.remove();
-    };
-    if (immediate) {
-      remove();
-      return;
-    }
-    this.el.classList.remove('dsh-tip--visible');
-    this.el.addEventListener('transitionend', remove, { once: true });
-    this.removeTimer = window.setTimeout(remove, 300);
-  }
+/** 只读队列：给 <TipHost> 渲染用 */
+export function useTipQueue() {
+  return { items };
 }
 
-function toHandle(tip: Tip): TipHandle {
+function clearTimer(id: number): void {
+  const timer = timers.get(id);
+  if (timer == null) return;
+  clearTimeout(timer);
+  timers.delete(id);
+}
+
+function schedule(item: TipItem): void {
+  clearTimer(item.id);
+  if (item.closed || item.duration <= 0) return;
+  // 用 ?? 而不是 ||：remaining 归零（悬停到时间用尽）时必须立刻关闭，
+  // 不能回落到完整 duration 重新计时一遍。
+  const left = remaining.get(item.id) ?? item.duration;
+  remaining.set(item.id, left);
+  startedAt.set(item.id, Date.now());
+  timers.set(
+    item.id,
+    setTimeout(() => closeItem(item), left),
+  );
+}
+
+function pauseItem(item: TipItem): void {
+  const timer = timers.get(item.id);
+  if (timer == null) return;
+  clearTimeout(timer);
+  timers.delete(item.id);
+  const started = startedAt.get(item.id) ?? Date.now();
+  const left = Math.max(0, (remaining.get(item.id) ?? item.duration) - (Date.now() - started));
+  remaining.set(item.id, left);
+}
+
+function removeItem(item: TipItem): void {
+  const timer = removeTimers.get(item.id);
+  if (timer != null) {
+    clearTimeout(timer);
+    removeTimers.delete(item.id);
+  }
+  const i = items.findIndex((t) => t.id === item.id);
+  if (i >= 0) items.splice(i, 1);
+}
+
+function closeItem(item: TipItem, immediate = false): void {
+  if (item.closed) return;
+  item.closed = true;
+  clearTimer(item.id);
+  remaining.delete(item.id);
+  startedAt.delete(item.id);
+  if (registry.get(item.key) === item) registry.delete(item.key);
+  if (immediate) {
+    removeItem(item);
+    return;
+  }
+  // 先收起（opacity/位移过渡 .2s），300ms 兜底移除，与原实现一致
+  item.visible = false;
+  removeTimers.set(
+    item.id,
+    setTimeout(() => removeItem(item), 300),
+  );
+}
+
+function toHandle(item: TipItem): TipHandle {
   return {
-    close: () => tip.close(),
+    close: () => closeItem(item),
     get closed() {
-      return tip.closed;
+      return item.closed;
     },
   };
 }
 
 /** 经典 dshTip.attach(anchor, options)：锚定元素，含定位/翻转/视口钳制/同 key 去重。 */
 export function attachTip(el: HTMLElement, opts: TipOptions): TipHandle {
-  return toHandle(new Tip({
-    type: opts.type,
-    message: opts.message,
-    duration: opts.duration ?? null,
-    placement: opts.placement,
-    closable: opts.closable,
+  const rawType = opts.type || 'info';
+  const type = Object.prototype.hasOwnProperty.call(TIP_ICONS, rawType) ? rawType : 'info';
+  const key = opts.key || 'default';
+  const explicit = opts.duration ?? null;
+  const duration = explicit == null ? (DURATION[type] ?? DURATION.info ?? 2200) : explicit;
+
+  // 同 key 去重：旧提示直接移除，不播收起过渡
+  const exist = registry.get(key);
+  if (exist) closeItem(exist, true);
+
+  const draft: TipItem = {
+    id: nextId++,
+    type,
+    message: opts.message ?? '',
+    placement: opts.placement || 'auto',
+    duration,
+    closable: !!opts.closable,
     action: opts.action ?? null,
     anchor: el,
-    key: opts.key,
-  }));
+    arrow: true,
+    key,
+    visible: false,
+    closed: false,
+  };
+  // push 进 reactive 数组后再取回：取到的是响应式代理，后续改 visible/closed
+  // 才能触发 <TipHost> 重渲染；直接改 draft 原始对象不会触发依赖。
+  items.push(draft);
+  const item = items[items.length - 1]!;
+  registry.set(key, item);
+  // 入场动画：先以 opacity:0 挂上去，下一轮事件循环再置 visible 让它过渡到 1。
+  // 这里刻意不用 requestAnimationFrame —— 后台标签页/隐藏窗口里 rAF 会被暂停，
+  // 提示会一直停在 opacity:0 不可见（预览页实测踩到）。
+  setTimeout(() => {
+    if (!item.closed) item.visible = true;
+  }, 0);
+  schedule(item);
+  return toHandle(item);
 }
 
-/** 按 key 关闭同组提示（含遗留 DOM 残留清理）。 */
+/** 按 key 关闭同组提示。 */
 export function closeTipByKey(key: string): void {
   const tip = registry.get(key);
   if (tip) {
-    tip.close();
+    closeItem(tip);
     return;
   }
-  document.querySelectorAll<TipElement>('.dsh-tip[data-dsh-tip-key]').forEach((node) => {
-    if (node.dataset.dshTipKey !== key) return;
-    const prev = node.__dshTip;
-    if (prev) prev.close();
-    else node.remove();
-  });
+  items.filter((t) => t.key === key && !t.closed).forEach((t) => closeItem(t));
+}
+
+/** 悬停暂停/移出续计时：只有 closable 或带 action 的提示需要（与原 bind() 同条件） */
+export function pauseTip(id: number): void {
+  const item = items.find((t) => t.id === id);
+  if (!item || item.closed) return;
+  if (!item.closable && !item.action) return;
+  pauseItem(item);
+}
+
+export function resumeTip(id: number): void {
+  const item = items.find((t) => t.id === id);
+  if (!item || item.closed) return;
+  if (!item.closable && !item.action) return;
+  schedule(item);
 }
 
 export function useTip() {
