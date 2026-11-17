@@ -1,5 +1,5 @@
 /**
- * 链接安全工具（移植自 public/legacy-js/utils/url-safe.js，语义逐行等价）。
+ * 链接安全工具（移植自 v1.8.1:js/utils/url-safe.js，语义逐行等价）。
  *
  * 为什么需要这个：快捷方式、自定义搜索引擎、备份导入的数据里都可能带任意协议的地址。
  * 这些值最终会进 <a href>、window.open()、background-image，只要其中一个协议是

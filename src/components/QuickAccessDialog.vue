@@ -11,13 +11,13 @@ import { toast } from '@/src/composables/useToast';
  * 「添加/编辑快捷方式」弹窗。
  *
  * markup 逐字迁移 entrypoints/newtab.html:256-314 的 #add-quick-access-panel；
- * 行为对齐 public/legacy-js/app.js:1680-1872 的 openAddQuickAccessModal /
+ * 行为对齐 v1.8.1:js/app.js:1113-1148 的 openAddQuickAccessModal /
  * refreshFolderSelect / openEditQuickAccessModal / validateQuickAccessForm /
  * renderQaIconPreview / saveQuickAccess，以及 :302-340 的 initQaIconHelpTip。
  * 数据层走 useQuickAccess() 模块级单例（与 QuickAccessGrid.vue 共用同一份状态）。
  */
 
-/** app.js:20-21 —— help tip 的文案与链接，逐字保留 */
+/** v1.8.1:js/app.js:20-21 —— help tip 的文案与链接，逐字保留 */
 const QA_ICON_HELP_URL = 'https://www.iconfont.cn/';
 const QA_ICON_HELP_MESSAGE = '推荐前往 iconfont.cn 获取SVG代码。';
 
@@ -66,7 +66,7 @@ function refreshGrid(): void {
     quickAccessBridge().refreshGrid?.();
 }
 
-/* ---------- 表单校验（app.js:1759-1801） ---------- */
+/* ---------- 表单校验（v1.8.1:js/app.js:1189-1233） ---------- */
 function validateQuickAccessForm(): void {
     const mgr = manager();
     const url = urlDraft.value.trim();
@@ -104,7 +104,7 @@ function validateQuickAccessForm(): void {
     saveDisabled.value = !(urlCheck.valid && nameCheck.valid);
 }
 
-/* ---------- 图标预览（app.js:1805-1823，走 createIconNode 安全管线） ---------- */
+/* ---------- 图标预览（v1.8.1:js/app.js:1234-1254，走 createIconNode 安全管线） ---------- */
 function renderQaIconPreview(): void {
     const host = iconPreviewEl.value;
     if (!host) {
@@ -123,7 +123,7 @@ function renderQaIconPreview(): void {
     }
 }
 
-/* ---------- 所属文件夹下拉（app.js:1717-1731） ---------- */
+/* ---------- 所属文件夹下拉（v1.8.1:js/app.js:1149-1165 refreshFolderSelect） ---------- */
 function refreshFolderSelect(preselect = -1): void {
     const mgr = manager();
     const list: FolderOption[] = Array.isArray(mgr?.getFolders?.()) ? mgr.getFolders() : [];
@@ -132,7 +132,7 @@ function refreshFolderSelect(preselect = -1): void {
     folderItemHidden.value = list.length === 0;
 }
 
-/* ---------- help tip（app.js:302-340） ---------- */
+/* ---------- help tip（v1.8.1:js/app.js:1033-1066 initQaIconHelpTip） ---------- */
 function dismissQaIconHelpTip(): void {
     const tip = qaIconHelpTip;
     qaIconHelpTip = null;
@@ -205,7 +205,7 @@ function closeDialog(): void {
     refreshGrid();
 }
 
-/* ---------- 保存（app.js:1827-1872） ---------- */
+/* ---------- 保存（v1.8.1:js/app.js:1255-1302 saveQuickAccess） ---------- */
 async function saveQuickAccess(): Promise<void> {
     const mgr = manager();
     let url = urlDraft.value.trim();
@@ -220,7 +220,7 @@ async function saveQuickAccess(): Promise<void> {
     };
     if (!urlCheck.valid || !nameCheck.valid) {
         validateQuickAccessForm();
-        // app.js:1847 —— 保存校验失败提示，文案/类型/时长逐字一致
+        // v1.8.1:js/app.js:1275 —— 保存校验失败提示，文案/类型/时长逐字一致
         toast(urlCheck.valid ? nameCheck.message : urlCheck.message, 'error', 2200);
         return;
     }

@@ -12,10 +12,10 @@ import { toast } from '@/src/composables/useToast';
  *   - 面板 markup：entrypoints/newtab.html #notes-panel 逐字搬入；仅许可改动：
  *     ①静态事件逻辑改 @click ②根元素 u-hidden 改由 usePanels 驱动；
  *     另将 bindNotesEvents 的背板点击关闭（e.target === notesPanel）等价移植为根元素 @click.self。
- *   - 列表条目：app.js renderNotesInto 的 DOM 构树 → v-for 模板（类名/文案/SVG 一字不动）。
+ *   - 列表条目：v1.8.1:js/app.js renderNotesInto 的 DOM 构树 → v-for 模板（类名/文案/SVG 一字不动）。
  *   - 渲染入口：renderNotesList → filteredNotes / emptyText / metaText 三个 computed。
  *   - 新建聚焦：notesList.querySelector(li[data-id] textarea).focus() → 模板 ref Map + nextTick。
- *   - 自动保存：app.js noteSaveTimers 的 500ms 防抖；commit 时读 textarea 实时值（与 legacy 闭包读法一致）。
+ *   - 自动保存：v1.8.1:js/app.js noteSaveTimers 的 500ms 防抖；commit 时读 textarea 实时值（与 legacy 闭包读法一致）。
  *   - 删除：无确认、直接删 + toast('便签已删除', 'success', 1500)（返回值判否与 legacy 一致地省略）。
  *   - legacy 对 notes 列表从未挂 Sortable（仅 todo/folder 有），此处同样不加拖拽。
  */
@@ -46,7 +46,7 @@ function setTextareaRef(id: string, el: unknown): void {
   else textareaRefs.delete(id);
 }
 
-// —— 500ms 防抖自动保存（等价 app.js noteSaveTimers：noteId -> timerId）——
+// —— 500ms 防抖自动保存（等价 v1.8.1:js/app.js noteSaveTimers：noteId -> timerId）——
 const saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 function onNoteInput(note: Note): void {
   const existing = saveTimers.get(note.id);

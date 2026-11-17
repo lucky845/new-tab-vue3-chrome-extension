@@ -1,5 +1,5 @@
 /**
- * 小工具面板状态机（Vue 版）——移植自 public/legacy-js/app.js 的小工具域：
+ * 小工具面板状态机（Vue 版）——移植自 v1.8.1:js/app.js 的小工具域：
  *   openToolsPanel / closeToolsPanel / showToolsGridView / showToolDetail /
  *   runActiveTool / copyToolResult（renderToolsGrid 由 ToolsPanel.vue 的 v-for 取代）。
  *
@@ -38,7 +38,7 @@ export function useTools() {
   const isGenerate = computed(() => activeTool.value?.kind === 'generate');
 
   /**
-   * legacy renderToolsCard（app.js:679-695）的数据源：
+   * legacy renderToolsCard（v1.8.1:js/app.js:2322-2339）的数据源：
    * QUICK_TOOLS_FEATURED 6 个 id 按 QUICK_TOOLS 定义顺序映射回工具对象（过滤不存在的 id）。
    * 侧卡组件用它渲染 tool-mini-btn，点击走 openPanel(tool.id)。
    */
@@ -48,14 +48,14 @@ export function useTools() {
     ),
   );
 
-  /** legacy showToolsGridView（app.js:2737-2748）：回宫格、清 activeToolId、标题复位由组件插值完成 */
+  /** legacy showToolsGridView（v1.8.1:js/app.js:2422-2434）：回宫格、清 activeToolId、标题复位由组件插值完成 */
   function showGridView(): void {
     view.value = 'grid';
     activeToolId.value = null;
   }
 
   /**
-   * legacy showToolDetail（app.js:2750-2783）：找不到工具直接返回（行为一致）；
+   * legacy showToolDetail（v1.8.1:js/app.js:2435-2469）：找不到工具直接返回（行为一致）；
    * 清输入/输出；generate 工具立即自动运行一次；transform 工具由组件层在
    * DOM 就绪后 focus 输入框（legacy 的 input.focus()）。
    */
@@ -70,7 +70,7 @@ export function useTools() {
   }
 
   /**
-   * legacy runActiveTool（app.js:2785-2807）：
+   * legacy runActiveTool（v1.8.1:js/app.js:2470-2493）：
    * generate → action()；transform → 空输入清空输出并返回，否则 run(input)（可 async）。
    * 任何异常输出「执行失败: {message}」。
    * 注：config/tools.ts 里所有 transform 都定义了 run、generate 都定义了 action，
@@ -99,7 +99,7 @@ export function useTools() {
   }
 
   /**
-   * legacy copyToolResult（app.js:2809-2832）：空结果 warning 提示；
+   * legacy copyToolResult（v1.8.1:js/app.js:2494-2519）：空结果 warning 提示；
    * navigator.clipboard.writeText 失败时降级 textarea + execCommand('copy')。
    */
   async function copyResult(): Promise<void> {
@@ -126,14 +126,14 @@ export function useTools() {
     }
   }
 
-  /** legacy bindToolsEvents 的清空按钮（app.js:715-721）：清输入 + 清输出 */
+  /** legacy bindToolsEvents（v1.8.1:js/app.js:2358-2402）里的清空按钮：清输入 + 清输出 */
   function clearAll(): void {
     input.value = '';
     output.value = '';
   }
 
   /**
-   * legacy openToolsPanel（app.js:2718-2729）。两条入口都归到这里：
+   * legacy openToolsPanel（v1.8.1:js/app.js:2403-2415）。两条入口都归到这里：
    *   - 侧卡展开按钮 #tools-card-expand（无参）→ 宫格视图；
    *   - 侧卡 mini 工具按钮（renderToolsCard 产出，带 tool.id）→ 直开详情。
    * renderToolsGrid 的重建由 ToolsPanel.vue 的 v-for 静态渲染取代（12 个工具是常量，无重建必要）。
@@ -144,7 +144,7 @@ export function useTools() {
     else showGridView();
   }
 
-  /** legacy closeToolsPanel（app.js:2731-2735）：关面板 + activeToolId 置空（视图不重置，与 legacy 一致） */
+  /** legacy closeToolsPanel（v1.8.1:js/app.js:2416-2421）：关面板 + activeToolId 置空（视图不重置，与 legacy 一致） */
   function closePanel(): void {
     panels.close('tools');
     activeToolId.value = null;

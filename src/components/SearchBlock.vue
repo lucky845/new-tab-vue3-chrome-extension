@@ -9,7 +9,7 @@ import { useSearch } from '@/src/composables/useSearch';
 /**
  * 搜索框。
  *
- * 这里接管的是旧 app.js 的 bindSearchEvents / renderSearchInterface / 历史下拉
+ * 这里接管的是旧 v1.8.1:js/app.js 的 bindSearchEvents / renderSearchInterface / 历史下拉
  * 三条链路。引擎下拉与历史列表的**视觉**仍由旧 app.css 描述（迁移期间不重画），
  * 但节点的创建、显示、隐藏、键盘交互全部在 Vue 里完成。
  *

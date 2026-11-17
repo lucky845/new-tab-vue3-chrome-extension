@@ -1,12 +1,12 @@
 /**
- * 主题状态机（Vue3 版）——逐字移植 public/legacy-js/theme-manager.js（356 行）。
+ * 主题状态机（Vue3 版）——逐字移植 v1.8.1:js/modules/theme-manager.js（356 行）。
  *
  * 四种模式 auto / light / dark / sun。首屏防白闪由 public/theme-preboot.js 同步读
  * localStorage 镜像完成（chrome.storage 异步抢不到首帧），本模块在 Vue 挂载后用
  * storage 真值校正，并启动 60s 复查 + matchMedia 跟随系统。
  *
  * 与 legacy 的差异：ThemeManager 全局构造器改为模块级 ESM 单例 + 三个响应式
- * 镜像 ref；预览态 preview()（只改内存不落盘）与持久化 save() 分离，语义与 app.js 的
+ * 镜像 ref；预览态 preview()（只改内存不落盘）与持久化 save() 分离，语义与 v1.8.1:js/app.js 的
  * previewThemeMode / previewThemeSunWindow / snapshotTheme / restoreThemeSnapshot 一致。
  */
 import { log } from '@/src/lib/log';

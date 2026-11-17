@@ -4,7 +4,7 @@ import { log } from '@/src/lib/log';
  * 设置面板（Vue3 移植）——markup 逐字来自 entrypoints/newtab.html:232-470。
  *
  * 移植映射（与 TodoPanel.vue / WallpaperPanel.vue 同款）：
- *   - legacy app.js bindSettingsEvents/bindThemeEvents/bindBackupEvents/
+ *   - legacy v1.8.1:js/app.js bindSettingsEvents/bindThemeEvents/bindBackupEvents/
  *     bindWallpaperAdjustmentEvents/bindCustomEngineEvents/bindSideWidgets：
  *     事件与响应式值以 Vue 指令/插值为主；壁纸滤镜、侧栏显隐等作用于
  *     HTML 静态节点的样式仍由组件内函数按 id 更新（见 applyWallpaperFilters）。

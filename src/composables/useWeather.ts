@@ -1,6 +1,6 @@
 /// <reference types="chrome" />
 /**
- * 天气模块（Vue3 版）——移植自 public/legacy-js/modules/weather-manager.js（1583 行，逐段读完）。
+ * 天气模块（Vue3 版）——移植自 v1.8.1:js/modules/weather-manager.js（1583 行，逐段读完）。
  *
  * 结构映射：
  * - WeatherManager 实例字段 → 模块级单例（useWeather() 返回同一份 api，面板与卡片共享数据 ref）
@@ -1525,7 +1525,7 @@ export interface WeatherApi {
   startAutoUpdate(): () => void;
 }
 
-/** legacy 设置面板保存后的联动桥（app.js saveSettings → weatherManager.setApiKey/setCity/useCurrentLocation）。
+/** legacy 设置面板保存后的联动桥（v1.8.1:js/app.js saveSettings → weatherManager.setApiKey/setCity/useCurrentLocation）。
  *  字段已由 settingsManager.saveFromPanel 写盘；onChanged 异步到达前响应式 settings 可能还是旧值，
  *  这里先同步 Key 再按 legacy 语义拉取：有城市走城市分支，否则走定位分支。 */
 export async function onWeatherSettingsSaved(city: string, apiKey: string): Promise<void> {

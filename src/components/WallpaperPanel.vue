@@ -11,9 +11,9 @@ import { log } from '@/src/lib/log';
  *    不挂 v-glass：库会接管背景与 backdrop-filter，把它改写成全屏折射玻璃盖住按钮
  *    （bug m00309-2）。遮罩层现在完全透明，层级只由 .settings-content 的磨砂玻璃提供。
  *
- * 打开时机：legacy openWallpaperPanel 在网格为空时首搜 'Nature'（app.js L1435-1441），
+ * 打开时机：legacy openWallpaperPanel 在网格为空时首搜 'Nature'（v1.8.1:js/app.js:636-646），
  * 这里用 watch(isOpen) 等价实现；面板按钮接线由主线程收口。
- * 401 处理：legacy onAuthError = () => openSettingsPanel()（app.js:123），挂载时注入
+ * 401 处理：legacy onAuthError = () => openSettingsPanel()（v1.8.1:js/app.js:123），挂载时注入
  * open('settings')、卸载时还原 null；legacy 还会回显 Key/天气输入，Vue 设置面板
  * 自持表单状态（回显降级）。
  */

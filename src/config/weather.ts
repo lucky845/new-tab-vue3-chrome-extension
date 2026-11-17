@@ -1,5 +1,5 @@
 /**
- * 天气配置（移植自 public/legacy-js/config/weather-config.js，数值逐字保留）
+ * 天气配置（移植自 v1.8.1:js/config/weather-config.js，数值逐字保留）
  */
 export interface WeatherConfig {
     API_KEY: string;

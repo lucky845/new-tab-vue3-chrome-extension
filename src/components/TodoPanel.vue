@@ -11,7 +11,7 @@ import { ICON_TRASH, ICON_CAT_WORK, ICON_CAT_LIFE, ICON_CAT_NORMAL } from '@/src
  * 待办事项面板。
  *
  * markup 从 entrypoints/newtab.html 234-272 逐字拷贝（id/class/中文文案/SVG/DOM 层级零改动），
- * 业务语义唯一权威是 public/legacy-js/modules/todo-manager.js + app.js 的
+ * 业务语义唯一权威是 v1.8.1:js/modules/todo-manager.js + v1.8.1:js/app.js 的
  * bindTodoEvents / renderTodoInto / renderTodoList，移植映射：
  *   - addEventListener        转为 @click / @change / @keydown.enter / @click.self
  *   - classList 操作          转为 :class
@@ -34,7 +34,7 @@ const importantActive = ref(false);
 const listEl = ref<HTMLElement | null>(null);
 const inputEl = ref<HTMLInputElement | null>(null);
 
-/** legacy AppIcons（public/legacy-js/app.js 第 6、10-12 行逐字拷贝，视觉零漂移） */
+/** legacy AppIcons（v1.8.1:js/app.js 第 6、10-12 行逐字拷贝，视觉零漂移） */
 const ICONS = {
   trash: ICON_TRASH,
   catWork: ICON_CAT_WORK,

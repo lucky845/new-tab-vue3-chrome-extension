@@ -2,7 +2,7 @@
 /**
  * 主页右翼便签迷你卡 —— markup 逐字来自 entrypoints/newtab.html:208-214（#side-card-notes）。
  *
- * legacy 映射（public/legacy-js/app.js）：
+ * legacy 映射（v1.8.1:js/app.js）：
  * - renderNotesCard（1122-1132）：全量 getNotes() + 徽标 getNotes().length、空态 '还没有便签'
  * - renderNotesInto（1044-1120，覆盖 966-1042 的同名定义）：note-card 结构 + 500ms 防抖自动保存
  * - 展开按钮：外壳 SideCard 记录 panelOrigin 后 toggle('notes')
@@ -31,7 +31,7 @@ function setTextareaRef(id: string, el: unknown): void {
   else textareaRefs.delete(id);
 }
 
-// —— 500ms 防抖自动保存（等价 app.js noteSaveTimers：noteId -> timerId）——
+// —— 500ms 防抖自动保存（等价 v1.8.1:js/app.js noteSaveTimers：noteId -> timerId）——
 const saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
 function onNoteInput(note: Note): void {
   const existing = saveTimers.get(note.id);

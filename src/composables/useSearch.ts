@@ -1,8 +1,8 @@
 /**
  * 搜索引擎 / 搜索历史 / 自定义引擎数据层（Vue 3 + ESM composable）。
  *
- * 移植自 public/legacy-js/modules/search-manager.js 与
- * public/legacy-js/modules/settings-manager.js 中 customEngines / searchEngine
+ * 移植自 v1.8.1:js/modules/search-manager.js 与
+ * v1.8.1:js/modules/settings-manager.js 中 customEngines / searchEngine
  * 相关逻辑；内置引擎清单（含 icon）、历史去重与 10 条上限、三条校验文案逐字保留。
  * 自定义引擎 URL 一律经 UrlSafe.isHttp 白名单（备份导入属于不可信输入）。
  */

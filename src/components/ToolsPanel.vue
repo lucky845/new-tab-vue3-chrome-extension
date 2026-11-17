@@ -10,7 +10,7 @@ import { useTools } from '@/src/composables/useTools';
  * 小工具面板（两层视图：12 工具宫格 + 单工具详情）。
  *
  * markup 从 entrypoints/newtab.html 470-502 逐字拷贝（id/class/中文文案/层级零改动），
- * 业务语义唯一权威是 public/legacy-js/app.js 的小工具域，移植映射：
+ * 业务语义唯一权威是 v1.8.1:js/app.js 的小工具域，移植映射：
  *   - renderToolsGrid 的 createElement 循环   → v-for + :key（12 个工具是常量，无需每次打开重建）
  *   - btn.addEventListener('click')           → @click
  *   - classList add/remove/toggle('u-hidden') → :class="{ 'u-hidden': ... }"
@@ -60,7 +60,7 @@ const vToolIcon: Directive<HTMLElement, string> = {
   },
 };
 
-// —— legacy bindToolsEvents（app.js:730-739）：点击面板遮罩（e.target === panel）关闭 ——
+// —— legacy bindToolsEvents（v1.8.1:js/app.js:2358-2402）里的遮罩分支：e.target === panel 时关闭 ——
 // —— legacy document keydown Escape（仅面板可见时）关闭 ——
 function onDocumentKeydown(e: KeyboardEvent): void {
   if (e.key === 'Escape' && isOpen('tools')) closePanel();
@@ -68,7 +68,7 @@ function onDocumentKeydown(e: KeyboardEvent): void {
 onMounted(() => document.addEventListener('keydown', onDocumentKeydown));
 onUnmounted(() => document.removeEventListener('keydown', onDocumentKeydown));
 
-// —— legacy showToolDetail 的 transform 分支：进入详情后聚焦输入框（app.js:2782）——
+// —— legacy showToolDetail 的 transform 分支：进入详情后聚焦输入框（v1.8.1:js/app.js:2467）——
 // 监听 [面板开合, 视图, 当前工具]，覆盖「从宫格点入」和「从侧卡带 toolId 直开」两条路径。
 watch(
   () => [isOpen('tools'), view.value, activeTool.value?.id] as const,

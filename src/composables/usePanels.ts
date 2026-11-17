@@ -1,5 +1,5 @@
 /**
- * 面板开合状态机（Vue 版）——替代 legacy app.js 里逐个 classList.add/remove('u-hidden')。
+ * 面板开合状态机（Vue 版）——替代 legacy v1.8.1:js/app.js 里逐个 classList.add/remove('u-hidden')。
  *
  * 语义与 legacy 一致：各面板相互独立，可以同时开（面板是独立浮层卡片）。
  * CSS 不变：面板可见 = 不带 u-hidden（display:flex），隐藏 = 带 u-hidden（display:none）。

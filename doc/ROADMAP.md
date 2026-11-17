@@ -132,12 +132,16 @@ C  有效人日 1–5        已含三浏览器回归与文档，单人负荷系
 
 - [x] **ESLint 全量化**（S=2.67，但阻断性）✅ PR #14
     - 已落地：flat config 全量接管 `src/**`（typescript-eslint recommended + eslint-plugin-vue flat/essential），脚本改 `eslint src && vue-tsc --noEmit`，源码 0 error 0 warning（5 处 any 已按真实类型修净）
-- [x] **Vitest 关键路径**（S=3.0）✅ 44 用例覆盖 5 模块
-    - 覆盖 `lib/storage.ts`、`lib/backup.ts`、`lib/urlSafe.ts`、`config/tools.ts` 纯函数、`useSearch` 历史增删
+- [x] **Vitest 关键路径**（S=3.0）✅ 6 文件 50 用例覆盖 6 模块
+    - 覆盖 `lib/storage.ts`、`lib/backup.ts`、`lib/urlSafe.ts`、`lib/wallpaper-tone.ts`、`config/tools.ts` 纯函数、`useSearch` 历史增删
     - 不测渲染，只测纯函数与 composable 行为
 - [x] **CI 接入 lint + test** ✅ `release.yml` compile 后加 Lint + Unit tests 两步
-- [ ] 陈旧注释清理 49 处（指向已删除的 1.x 文件）
-- [ ] `console.*` 77 → 约 10 处（保留 error/warn，其余走分级 log）
+- [x] 陈旧注释清理 ✅ 溯源路径与行号全部校正
+    - 45 处 `public/legacy-js/...`（目录已删除）→ `v1.8.1:js/...`，17 个路径 `git cat-file -e` 全存在，可用 `git show v1.8.1:js/app.js` 直取原文
+    - 41 处 `app.js:NNNN` 行号经 `git show v1.8.1:js/app.js` 逐条对齐，全部落在对应函数体内（原行号跨 tag 不可反查，属历史误记）
+- [x] `console.*` 收敛 ✅ 分级日志（v2.1.0 PR #28）
+    - 新增 `src/lib/log.ts`：debug/info 仅 DEV 或 `localStorage['ntce-verbose-log']==='1'`，生产只放 warn/error
+    - `src/` 下直调 `console.*` 0 处，78 处全部改走 `log.*`
 
 ### 4.5 发布里程碑（不计配额，前置门）
 

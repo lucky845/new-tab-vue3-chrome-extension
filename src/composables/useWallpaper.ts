@@ -2,9 +2,10 @@
  * 壁纸域唯一数据入口（单例 composable，useTodo 同范式）。
  *
  * 移植来源：
- *  - 数据层：public/legacy-js/modules/wallpaper-manager.js（660 行）
- *  - UI 层：public/legacy-js/app.js 壁纸段（L195-304 分类/事件绑定，
- *    L1435-1723 open/close/search/renderGrid/pagination）
+ *  - 数据层：v1.8.1:js/modules/wallpaper-manager.js（660 行）
+ *  - UI 层：v1.8.1:js/app.js 壁纸段（openWallpaperPanel 636-646 / closeWallpaperPanel 647-662 /
+ *    searchWallpapers 663-729 / renderWallpaperGrid 730-749 / renderWallpaperCategories 875-903 /
+ *    bindWallpaperEvents 580-635）
  *
  * 存储契约与 legacy 逐键兼容（见文末「存储契约」）；
  * 方法级差异与修正集中在文末「与 legacy 的差异」。
@@ -147,7 +148,7 @@ interface WallpaperApi {
   /** 从库里删除一张本地壁纸；若正是当前壁纸则一并撤回随机图。 */
   removeLocalWallpaper(entryId: string): Promise<void>;
   searchPhotos(query: string, page?: number): Promise<WallpaperSearchResult>;
-  // UI 状态（app.js 壁纸段对应物，全部响应式）
+  // UI 状态（v1.8.1:js/app.js 壁纸段对应物，全部响应式）
   photos: Ref<WallpaperPhoto[]>;
   isSearching: Ref<boolean>;
   loadFailed: Ref<boolean>;
@@ -160,7 +161,7 @@ interface WallpaperApi {
   totalWallpapers: Ref<number>;
   paginationItems: ComputedRef<PaginationItem[]>;
   totalResultsInfo: ComputedRef<string>;
-  // UI 行为（app.js 壁纸段对应物）
+  // UI 行为（v1.8.1:js/app.js 壁纸段对应物）
   searchWallpapers(
     query: string,
     page?: number,
@@ -186,7 +187,7 @@ function createWallpaperApi(): WallpaperApi {
   const totalPages = ref(1);
   const totalWallpapers = ref(0);
 
-  // ---------- UI 层状态（legacy app.js 壁纸段变量 / DOM 类） ----------
+  // ---------- UI 层状态（legacy v1.8.1:js/app.js 壁纸段变量 / DOM 类） ----------
   const photos = ref<WallpaperPhoto[]>([]);
   const isSearching = ref(false);
   /** 对应 legacy 空态提示（grid 内 .wallpaper-empty-hint，photos===null 时显示）。 */
@@ -197,7 +198,7 @@ function createWallpaperApi(): WallpaperApi {
   const activeCategory = ref('');
   /** 对应 #wallpaper-search-input 的值。 */
   const wallpaperSearchQuery = ref('');
-  /** legacy app.js:54 初始 'Nature'。 */
+  /** legacy v1.8.1:js/app.js:54 初始 'Nature'。 */
   const lastActiveCategoryQuery = ref('Nature');
   let onAuthError: AuthErrorHandler = null;
 
@@ -1009,7 +1010,7 @@ function createWallpaperApi(): WallpaperApi {
     };
   }
 
-  // ================= UI 层（app.js 壁纸段） =================
+  // ================= UI 层（v1.8.1:js/app.js 壁纸段） =================
 
   /** legacy getPaginationRange：delta=2 窗口 + 首尾页 + 省略号；[...new Set] 去重的强类型等价物。 */
   function getPaginationRange(current: number, total: number): PaginationItem[] {
@@ -1037,7 +1038,7 @@ function createWallpaperApi(): WallpaperApi {
   }
 
   /**
-   * legacy searchWallpapers（app.js L1560-1635 等价物）：
+   * legacy searchWallpapers（v1.8.1:js/app.js:663-729 等价物）：
    * 分类高亮 → loading + 清空网格 → searchPhotos → 空态/降级提示 → 渲染。
    */
   async function searchWallpapers(
@@ -1112,7 +1113,7 @@ function createWallpaperApi(): WallpaperApi {
   }
 
   /**
-   * legacy closeWallpaperPanel（app.js L1483-1490 等价物）：
+   * legacy closeWallpaperPanel（v1.8.1:js/app.js:647-662 等价物）：
    * 面板隐藏（usePanels）→ 清搜索框 → currentQuery 不是分类词时回落最近分类搜索。
    */
   function closeWallpaperPanel(): void {
@@ -1124,7 +1125,7 @@ function createWallpaperApi(): WallpaperApi {
     }
   }
 
-  /** Pexels 401 回调注入（legacy app.js:123 onAuthError = () => openSettingsPanel()）。 */
+  /** Pexels 401 回调注入（legacy v1.8.1:js/app.js:123 onAuthError = () => openSettingsPanel()）。 */
   function setAuthErrorHandler(handler: AuthErrorHandler): void {
     onAuthError = handler;
   }
