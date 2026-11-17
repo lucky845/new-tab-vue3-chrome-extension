@@ -37,6 +37,7 @@
 - **🧰 小工具**：时间戳、JSON、Base64、URL 编解码、SHA-256、进制转换、大小写、去重、字数统计、取色、JWT 解码、HTML 实体转换、密码、UUID —— 纯前端、零网络。
 - **🎨 主题**：亮色 / 暗色 / 跟随系统 / 日出日落四种模式，首屏由同步脚本预置，无白闪。
 - **💾 备份与恢复**：设置面板可导出 JSON 文件、复制到剪贴板，或粘贴文本导入；导入时校验应用标识与 schema 版本，不合法整体拒绝。
+- **⌨️ Esc 逐层退出**：任意面板、文件夹浮层、右键菜单、搜索下拉都可用 Esc 关闭，一次只关最上面那一层；对话框或拖拽进行中时 Esc 归它们，不会误关底下的面板。
 - **🔒 纯本地**：无后端、无账号、无埋点；设置、壁纸缓存、待办等全部存在 `chrome.storage.local`。
 
 玻璃与主题的量化验收（色度保留率、文字对比度、渲染耗时）沿用 1.x 的说明，见 [1.x README](https://github.com/lucky845/new-tab-chrome-extension#readme)。
@@ -89,7 +90,7 @@ npm run build        # 产物输出到 .output/chrome-mv3
 | `npm run lint` | ESLint（src 全量）+ 类型检查 |
 | `npm run lint:fix` | ESLint 自动修复 + 类型检查 |
 | `npm run format` | Prettier 格式化 `src/` |
-| `npm test` | Vitest 单元测试（一次性，98 用例） |
+| `npm test` | Vitest 单元测试（一次性，101 用例） |
 | `npm run test:watch` | Vitest 监听模式 |
 
 ## 项目结构

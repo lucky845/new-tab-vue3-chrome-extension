@@ -59,6 +59,7 @@ async function save(): Promise<void> {
     variant="settings"
     elementId="weather-settings-panel"
     :dismissable="false"
+    @dismiss="close('weather-settings')"
   >
     <div class="settings-content settings-content--fit">
       <button id="close-weather-settings-btn" class="close-panel-btn" type="button" title="关闭" @click="close('weather-settings')">✕</button>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, watch, type Directive } from 'vue';
+import { nextTick, ref, watch, type Directive } from 'vue';
 import { QUICK_TOOLS } from '@/src/config/tools';
 import { createIconNode } from '@/src/lib/iconSafe';
 import { usePanels } from '@/src/composables/usePanels';
@@ -16,7 +16,8 @@ import { useTools } from '@/src/composables/useTools';
  *   - classList add/remove/toggle('u-hidden') → :class="{ 'u-hidden': ... }"
  *   - title/desc/input.placeholder 赋值        → 插值 + :placeholder
  *   - #tool-input.value / #tool-output.textContent → v-model / 插值（共享状态在 useTools）
- *   - bindToolsEvents 的 meta/ctrl+Enter、点击遮罩关闭、Escape 关闭 → 模板修饰符 + 文档级 keydown
+ *   - bindToolsEvents 的 meta/ctrl+Enter → 模板修饰符；点击遮罩关闭 / Escape 关闭
+ *     → GlassPanel 的 @dismiss（Esc 的层级判定统一在 useEscapeClose，本组件不自己挂监听）
  * 数据层全部在 useTools()，本组件只做 UI 编排；开合状态走 usePanels('tools')。
  */
 const { isOpen } = usePanels();
@@ -59,14 +60,6 @@ const vToolIcon: Directive<HTMLElement, string> = {
     renderToolIcon(el, binding.value);
   },
 };
-
-// —— legacy bindToolsEvents（v1.8.1:js/app.js:2358-2402）里的遮罩分支：e.target === panel 时关闭 ——
-// —— legacy document keydown Escape（仅面板可见时）关闭 ——
-function onDocumentKeydown(e: KeyboardEvent): void {
-  if (e.key === 'Escape' && isOpen('tools')) closePanel();
-}
-onMounted(() => document.addEventListener('keydown', onDocumentKeydown));
-onUnmounted(() => document.removeEventListener('keydown', onDocumentKeydown));
 
 // —— legacy showToolDetail 的 transform 分支：进入详情后聚焦输入框（v1.8.1:js/app.js:2467）——
 // 监听 [面板开合, 视图, 当前工具]，覆盖「从宫格点入」和「从侧卡带 toolId 直开」两条路径。

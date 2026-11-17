@@ -5,6 +5,7 @@ import { applyGlass, releaseGlass } from '@/src/lib/glass';
 import EngineIcon from '@/src/components/EngineIcon.vue';
 import { UrlSafe } from '@/src/lib/urlSafe';
 import { useSearch, type HistoryEntry } from '@/src/composables/useSearch';
+import { registerEscapeTarget } from '@/src/composables/useEscapeClose';
 
 /**
  * 搜索框。
@@ -210,10 +211,34 @@ function onDocPointerDown(event: PointerEvent) {
     if (!barEl.value) return;
     const target = event.target as Node;
     if (!barEl.value.contains(target)) {
-        engineOpen.value = false;
-        historyOpen.value = false;
+        closeDropdowns();
     }
 }
+
+/** 两个下拉一次收干净（外部点击与 Esc 共用，避免两处各写一遍） */
+function closeDropdowns() {
+    engineOpen.value = false;
+    historyOpen.value = false;
+}
+
+/**
+ * Esc 收起下拉。
+ *
+ * 层级取 0：引擎/历史下拉是页面内的普通浮层，永远压在面板（--z-overlay）之下——
+ * 真同时开着时（几乎不会，点面板的 pointerdown 已经把下拉收掉了）也该先关面板。
+ * 只在有下拉开着时登记，否则空占一层会让「面板开着的 Esc」多绕一次判定。
+ */
+let unregisterDropdownEscape: (() => void) | null = null;
+watch(
+    () => engineOpen.value || historyOpen.value,
+    open => {
+        unregisterDropdownEscape?.();
+        unregisterDropdownEscape = null;
+        if (!open) return;
+        unregisterDropdownEscape = registerEscapeTarget('search-dropdown', 0, () => closeDropdowns());
+    },
+    { immediate: true }
+);
 
 onMounted(() => {
     syncFromManager();
@@ -237,6 +262,8 @@ onMounted(() => {
 });
 
 onBeforeUnmount(() => {
+    unregisterDropdownEscape?.();
+    unregisterDropdownEscape = null;
     document.removeEventListener('pointerdown', onDocPointerDown);
     try {
         chrome.storage.onChanged.removeListener(onStorageChanged);

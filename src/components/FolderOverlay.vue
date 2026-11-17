@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { log } from '@/src/lib/log';
-import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { safeOpen } from '@/src/lib/urlSafe';
 import { useQuickAccess } from '@/src/composables/useQuickAccess';
 import type { QuickAccessNode } from '@/src/lib/defaultSites';
 import { quickAccessBridge } from '@/src/composables/useQuickAccessBridge';
 import GlassPanel from '@/src/components/common/GlassPanel.vue';
+import { registerEscapeTarget } from '@/src/composables/useEscapeClose';
 import { useDialog } from '@/src/composables/useDialog';
 import { toast } from '@/src/composables/useToast';
 import AppIcon from '@/src/components/AppIcon.vue';
@@ -188,7 +189,38 @@ function closeFolder() {
   folderOpen.value = false;
   folderIndex.value = null;
   folderPage.value = 1;
+  // 浮层关了，右键菜单不能还飘在屏上（菜单是 Teleport 到 body 的，跟浮层不同生共死）
+  clearContextMenu();
 }
+
+/** 收起右键菜单并摘掉它的「点外部关闭」监听（三处调用点共用一份收尾） */
+function clearContextMenu() {
+  contextMenu.value = null;
+  if (menuCloseHandler) {
+    document.removeEventListener('click', menuCloseHandler);
+    menuCloseHandler = null;
+  }
+}
+
+/**
+ * Esc 的登记层级。
+ *
+ * 右键菜单是 Teleport 到 body 的独立浮层（z-index:10000，比文件夹浮层还高），
+ * 所以它自己也是一层：只登记在「菜单开着」时，吃 Esc 时先收菜单、不动浮层。
+ * 文件夹浮层的登记在下方 watch(folderOpen)。
+ */
+let unregisterMenuEscape: (() => void) | null = null;
+watch(
+  contextMenu,
+  menu => {
+    unregisterMenuEscape?.();
+    unregisterMenuEscape = null;
+    if (!menu) return;
+    unregisterMenuEscape = registerEscapeTarget('qa-context-menu', 10000, () => clearContextMenu());
+  },
+  { immediate: true }
+);
+
 function goToFolderPage(page: number) {
   folderPage.value = Math.min(Math.max(1, page), folderTotalPages.value);
 }
@@ -311,7 +343,10 @@ function cancelFolderDrag(): void {
 }
 
 function onFolderKeyDown(event: KeyboardEvent): void {
-  if (event.key === 'Escape') cancelFolderDrag();
+  if (event.key !== 'Escape') return;
+  // 同 useIconDrag：capture 层吃掉 Esc 并标记，避免冒泡阶段再把文件夹浮层关掉
+  event.preventDefault();
+  cancelFolderDrag();
 }
 
 function onFolderPointerUp(event: PointerEvent): void {
@@ -517,11 +552,7 @@ function onRowOut(e: Event, row: MenuRow) {
 }
 function onRowClick(row: MenuRow) {
   if (row.disabled) return;
-  contextMenu.value = null; // v1.8.1:js/app.js:1360 menu.remove()
-  if (menuCloseHandler) {
-    document.removeEventListener('click', menuCloseHandler);
-    menuCloseHandler = null;
-  }
+  clearContextMenu(); // v1.8.1:js/app.js:1360 menu.remove()
   row.action();
 }
 
@@ -532,15 +563,11 @@ function onAddSite() {
   // 预选文件夹由 openAdd(preselect) 经 QuickAccessDialog 的 v-model 完成，无需伪造 change 事件
   quickAccessBridge().openAdd?.(fi === null ? -1 : fi);
 }
-function onEscape(e: KeyboardEvent) {
-  if (e.key === 'Escape') closeFolder();
-}
 
 onMounted(() => {
   // 桥必须合并不能覆盖：弹窗注册 openAdd/openEdit/closeDialog，
   // 网格注册 refreshGrid；本组件只补自己这四个键。
   Object.assign(quickAccessBridge(), { openFolder, closeFolder, handleItemMerge, showContextMenu });
-  document.addEventListener('keydown', onEscape);
 });
 
 onUnmounted(() => {
@@ -553,9 +580,9 @@ onUnmounted(() => {
     delete bridge.showContextMenu;
   }
   cancelFolderDrag();
-  if (menuCloseHandler) document.removeEventListener('click', menuCloseHandler);
-  menuCloseHandler = null;
-  document.removeEventListener('keydown', onEscape);
+  clearContextMenu();
+  unregisterMenuEscape?.();
+  unregisterMenuEscape = null;
 });
 </script>
 

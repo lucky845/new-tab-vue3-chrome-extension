@@ -174,6 +174,7 @@ async function onJumpEnter(): Promise<void> {
     variant="settings"
     elementId="wallpaper-panel"
     :dismissable="false"
+    @dismiss="close('wallpaper')"
   >
     <div class="wallpaper-content settings-content">
       <button id="close-wallpaper-btn" class="close-panel-btn" type="button" title="关闭" @click="close('wallpaper')">✕</button>
