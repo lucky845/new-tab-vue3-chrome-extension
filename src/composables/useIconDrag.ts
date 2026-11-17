@@ -69,7 +69,12 @@ export function onIconHover(listener: (cell: HTMLElement | null) => void): void 
 }
 
 const onKeyDown = (event: KeyboardEvent): void => {
-  if (event.key === "Escape") cancel();
+  if (event.key !== "Escape") return;
+  // 吃掉这次 Esc：本层是 capture，先于 useEscapeClose 的冒泡监听。
+  // 不标记的话，cancel() 会同步摘掉 body 的 icon-dragging，
+  // 冒泡阶段的调度器就看不到「刚才是拖拽在吃 Esc」，转而把面板也关了。
+  event.preventDefault();
+  cancel();
 };
 const onBlur = (): void => cancel();
 
