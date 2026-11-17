@@ -2,7 +2,7 @@
 /**
  * 主页右翼小工具迷你卡 —— markup 逐字来自 entrypoints/newtab.html:216-222（#side-card-tools）。
  *
- * legacy 映射（public/legacy-js/app.js）：
+ * legacy 映射（v1.8.1:js/app.js）：
  * - renderToolsCard（669-686）：QUICK_TOOLS_FEATURED → tool-mini-btn（data-tool-id / title / 图标 + 名称）
  * - 交互由组件自持：mini 工具键 @click → openPanel(tool.id) 直开详情；
  *   展开键由外壳 SideCard 记录 panelOrigin 后 toggle('tools')（沿用 legacy 开合语义）。

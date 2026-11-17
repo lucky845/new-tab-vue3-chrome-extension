@@ -3,7 +3,7 @@ import { log } from '@/src/lib/log';
 /**
  * 天气设置面板 —— markup 逐字拷贝自 entrypoints/newtab.html:441-467（#weather-settings-panel）。
  *
- * legacy 行为映射（app.js bindWeatherEvents:600-663 + weather-manager.js setCity/useCurrentLocation/setTemperatureUnit）：
+ * legacy 行为映射（v1.8.1:js/app.js:2199-2262 bindWeatherEvents + weather-manager.js setCity/useCurrentLocation/setTemperatureUnit）：
  * - 打开面板时回填当前城市/单位到表单 → watch(isOpen)
  * - 保存：city 有值走 setCity，留空走 useCurrentLocation，再 setTemperatureUnit（legacy 同序）
  * - 成功后关面板并提示「天气设置已保存」；失败报错且面板保持打开（legacy 同款）

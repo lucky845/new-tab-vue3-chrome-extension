@@ -1,5 +1,5 @@
 /**
- * 数据备份与恢复（Vue3 版纯函数模块）——逐字移植 public/legacy-js/modules/backup-manager.js（583 行）。
+ * 数据备份与恢复（Vue3 版纯函数模块）——逐字移植 v1.8.1:js/modules/backup-manager.js（580 行）。
  *
  * 四层兼容机制不变：键注册表 / 全量减缓存 / 迁移链 / 未知键保留 + 向前兼容。
  * 差异：class → 命名导出纯函数；UrlSafe → ESM import urlSafe；不挂全局对象。

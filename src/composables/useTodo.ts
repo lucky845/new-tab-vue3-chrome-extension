@@ -1,5 +1,5 @@
 /**
- * 待办事项数据层（Vue 版）——业务语义唯一权威仍是 public/legacy-js/modules/todo-manager.js。
+ * 待办事项数据层（Vue 版）——业务语义唯一权威仍是 v1.8.1:js/modules/todo-manager.js。
  *
  * 这里做的是等价移植，不是重设计：
  * - 存储键 'todos' 一字不差，存裸对象数组（chrome.storage 结构化克隆），不是 JSON 字符串

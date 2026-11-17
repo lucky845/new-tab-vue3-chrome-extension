@@ -1,4 +1,4 @@
-// 移植自 public/legacy-js/config/tools.js —— 工具语义逐行等价，仅改 TS + 导出方式
+// 移植自 v1.8.1:js/config/tools.js —— 工具语义逐行等价，仅改 TS + 导出方式
 export interface QuickTool {
     id: string;
     name: string;
@@ -13,7 +13,7 @@ export interface QuickTool {
  * 小工具定义（纯前端、零依赖、零网络）
  * kind: 'transform' 输入 → 输出；'generate' 一键生成
  * run(input) 返回 string（transform 可为 async）
- * 由 app.js 渲染为工具宫格与工具面板，不持有 DOM。
+ * 由 v1.8.1:js/app.js 渲染为工具宫格与工具面板，不持有 DOM。
  */
     // ---------- 工具函数 ----------
 

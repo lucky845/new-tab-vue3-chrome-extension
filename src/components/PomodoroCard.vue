@@ -2,7 +2,7 @@
 /**
  * 主页左翼番茄钟迷你卡 —— markup 逐字来自 entrypoints/newtab.html:349-371（#side-card-pomodoro）。
  *
- * legacy 映射（app.js）：
+ * legacy 映射（v1.8.1:js/app.js）：
  * - renderPomodoroCard（1325-1350）：time/state/today 文本 + ring 进度 → 响应式绑定
  * - bindSideWidgets 番茄钟段（1388+）：开始/暂停/继续 + 跳过 → @click
  * - 展开按钮：外壳 SideCard 记录 panelOrigin 后 toggle('pomodoro')

@@ -8,7 +8,7 @@
  *   （legacy 用 innerHTML 直塞，这里走 IconSafe 白名单管线，DOM 产物一致：id="weather-svg" 保留）
  * - .loading/.is-stale ← showLoading/markStale（566-580/1368-1383）→ :class
  * - 点击卡片 500ms 后刷新、点设置按钮不触发刷新 ← bindWeatherWidgetEvents（169-191）→ @click
- * - weather-settings-btn 打开天气设置面板（app.js bindWeatherEvents 同款）→ @click.stop
+ * - weather-settings-btn 打开天气设置面板（v1.8.1:js/app.js bindWeatherEvents 同款）→ @click.stop
  */
 import { computed, onUnmounted, ref, watchEffect } from 'vue';
 import { setPanelOriginFromEvent, usePanels } from '@/src/composables/usePanels';

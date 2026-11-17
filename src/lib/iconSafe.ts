@@ -7,7 +7,7 @@
  *
  * 这里改用 DOMParser 解析到惰性文档中：解析期间不执行脚本、不加载图片，
  * 再逐节点按白名单重建，任何 on* 事件属性、<script>、<foreignObject> 一律丢弃。
- * （移植自 public/legacy-js/utils/icon-safe.js，语义逐行等价。）
+ * （移植自 v1.8.1:js/utils/icon-safe.js，语义逐行等价。）
  */
 
 // 允许保留的 SVG 元素

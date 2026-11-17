@@ -1,7 +1,7 @@
 /**
  * 对话框（Vue3 ESM 版）
  * --------------------------------------------------------------------
- * 逐字移植 public/legacy-js/utils/dsh-dialog.js（203 行）：
+ * 逐字移植 v1.8.1:js/utils/dsh-dialog.js（203 行）：
  * - .dsh-dialog / __panel / __title / __message / __input / __error / __actions
  * - .settings-btn.secondary.dsh-dialog__cancel 文案「取消」、.primary.dsh-dialog__confirm「确定」
  * - 校验提示内联展示、ESC / 遮罩关闭、Tab 囚禁、焦点复位、重复打开先 cancel

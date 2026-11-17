@@ -1,6 +1,6 @@
 /**
  * 快捷访问数据层（模块级单例）。
- * 逐字迁移自 public/legacy-js/modules/quick-access-manager.js：
+ * 逐字迁移自 v1.8.1:js/modules/quick-access-manager.js：
  * 方法名、分支、文案、返回结构、存储键 quickAccessSites 全部保留；
  * 默认站点改由 ESM 具名导出提供，不再挂全局对象；首装按界面语言选地区组（src/lib/region.ts）。
  * 用 ref 暴露 sites，供 Vue 侧响应式渲染。

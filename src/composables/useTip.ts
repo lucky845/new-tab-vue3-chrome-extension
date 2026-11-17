@@ -1,7 +1,7 @@
 /**
  * 提示浮层（Vue3 ESM 版）
  * --------------------------------------------------------------------
- * 逐字移植 public/legacy-js/utils/dsh-tip.js（504 行）：
+ * 逐字移植 v1.8.1:js/utils/dsh-tip.js（504 行）：
  * - .dsh-tip / .dsh-tip--visible / .dsh-tip__icon / .dsh-tip__text /
  *   .dsh-tip__action / .dsh-tip__close / .dsh-tip__arrow / .dsh-tip-toasts
  * - GAP=8 / MARGIN=8 / ARROW=6、above/below/auto 翻转、视口钳制、同 key 去重

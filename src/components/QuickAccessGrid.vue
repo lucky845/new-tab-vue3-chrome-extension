@@ -124,7 +124,7 @@ function nextPage(): void {
 
 const pageStart = (): number => (currentPage.value - 1) * itemsPerPage.value;
 
-// ---------- 事件桥委托（与 app.js:343-373 bindQuickAccessEvents 逐字同构） ----------
+// ---------- 事件桥委托（与 v1.8.1:js/app.js:930-1032 bindQuickAccessEvents 逐字同构） ----------
 function onGridClick(e: MouseEvent): void {
     const target = e.target as Element | null;
     if (!target) return;
@@ -354,7 +354,7 @@ function onItemPointerDown(node: QuickAccessNode, event: PointerEvent): void {
     startIconDrag(node, event);
 }
 
-// ---------- 事件桥委托（与 app.js:343-373 bindQuickAccessEvents 逐字同构） ----------
+// ---------- 事件桥委托（与 v1.8.1:js/app.js:930-1032 bindQuickAccessEvents 逐字同构） ----------
 // ---------- 桥方法：外部改完数据后强制按数据重绘 ----------
 function refreshGrid(): void {
     const max = totalPages.value;

@@ -13,7 +13,7 @@ import AppIcon from '@/src/components/AppIcon.vue';
 /**
  * 文件夹浮层 + 右键菜单 + 拖拽合并（经典脚本 → Vue3 组件）。
  *
- * 迁移边界：只搬 app.js 的「文件夹域」，数据层走 useQuickAccess() 模块级单例。
+ * 迁移边界：只搬 v1.8.1:js/app.js 的「文件夹域」，数据层走 useQuickAccess() 模块级单例。
  * 站点格子仍用命令式 DOM 构建：IconSafe.createIconNode 返回 DOM Node，且 Sortable
  * 直接操纵真实节点 —— 与 QuickAccessBlock.vue 保留分页 DOM 所有权同理，避免和
  * 第三方拖拽库抢节点所有权。Vue 自持外壳、标题/空态与右键菜单。
@@ -87,7 +87,7 @@ function openEditQuickAccessModal(index: number) {
   quickAccessBridge().openEdit?.(index);
 }
 
-// ---------- app.js:1645 handleItemMerge(draggedIndex, targetIndex) ----------
+// ---------- v1.8.1:js/app.js:1079-1112 handleItemMerge(draggedIndex, targetIndex) ----------
 async function handleItemMerge(draggedIndex: number, targetIndex: number): Promise<boolean> {
   const mgr = manager();
   const target = mgr?.getNodeByIndex?.(targetIndex);
@@ -117,7 +117,7 @@ async function handleItemMerge(draggedIndex: number, targetIndex: number): Promi
   return true;
 }
 
-// ---------- app.js:1984 createFolderAndMove(siteIndex = null) ----------
+// ---------- v1.8.1:js/app.js:1410-1429 createFolderAndMove(siteIndex = null) ----------
 async function createFolderAndMove(siteIndex: number | null = null) {
   const mgr = manager();
   const trimmed = await dialog()?.prompt?.('新建文件夹', '', {
@@ -137,7 +137,7 @@ async function createFolderAndMove(siteIndex: number | null = null) {
   toast(`已创建文件夹「${trimmed}」`, 'success', 1800);
 }
 
-// ---------- app.js:2005 renameQuickFolder(index) ----------
+// ---------- v1.8.1:js/app.js:1430-1447 renameQuickFolder(index) ----------
 async function renameQuickFolder(index: number) {
   const mgr = manager();
   const folder = mgr?.getSites?.()[index];
@@ -155,7 +155,7 @@ async function renameQuickFolder(index: number) {
   renderFolderOverlay();
 }
 
-// ---------- app.js:2024 dissolveQuickFolder(index) ----------
+// ---------- v1.8.1:js/app.js:1448-1457 dissolveQuickFolder(index) ----------
 async function dissolveQuickFolder(index: number) {
   const mgr = manager();
   const folder = mgr?.getSites?.()[index];
@@ -166,7 +166,7 @@ async function dissolveQuickFolder(index: number) {
   toast(`已解散文件夹，${items.length} 个站点已回到主面板`, 'success', 2200);
 }
 
-// ---------- app.js:2035 moveQuickItemToFolder(siteIndex, folderIndex) ----------
+// ---------- v1.8.1:js/app.js:1458-1467 moveQuickItemToFolder(siteIndex, folderIndex) ----------
 async function moveQuickItemToFolder(siteIndex: number, targetFolderIndex: number) {
   const mgr = manager();
   const ok = await mgr.moveSiteToFolder(siteIndex, targetFolderIndex);
@@ -177,7 +177,7 @@ async function moveQuickItemToFolder(siteIndex: number, targetFolderIndex: numbe
   }
 }
 
-// ---------- app.js:2046 openFolderOverlay / 2054 closeFolderOverlay ----------
+// ---------- v1.8.1:js/app.js:1468-1475 openFolderOverlay / 1476-1482 closeFolderOverlay ----------
 function openFolder(index: number) {
   folderIndex.value = index;
   folderPage.value = 1;
@@ -378,7 +378,7 @@ function initFolderSortable(grid: HTMLElement) {
   bindFolderGrid(grid);
 }
 
-// ---------- app.js:2246 dropItemOutOfFolder(name) ----------
+// ---------- v1.8.1:js/app.js:1665-1678 dropItemOutOfFolder(name) ----------
 async function dropItemOutOfFolder(name: string) {
   const mgr = manager();
   const fIndex = folderIndex.value;
@@ -394,7 +394,7 @@ async function dropItemOutOfFolder(name: string) {
   toast(`「${name}」已移到主面板`, 'success', 1800);
 }
 
-// ---------- app.js:2261 confirmDeleteQuickAccess(index, siteName) ----------
+// ---------- v1.8.1:js/app.js:1679-1693 confirmDeleteQuickAccess(index, siteName) ----------
 async function confirmDeleteQuickAccess(index: number, siteName: string) {
   const ok = await dialog()?.confirm?.(
     '确认删除',
@@ -406,7 +406,7 @@ async function confirmDeleteQuickAccess(index: number, siteName: string) {
   renderAndNotify();
 }
 
-// ---------- app.js:1876 showContextMenu(e, item) ----------
+// ---------- v1.8.1:js/app.js:1303-1409 showContextMenu(e, item) ----------
 function showContextMenu(e: MouseEvent, item: HTMLElement) {
   e.preventDefault();
 
@@ -449,7 +449,7 @@ function showContextMenu(e: MouseEvent, item: HTMLElement) {
     addMenuRow('删除', () => void confirmDeleteQuickAccess(index, site.name), { danger: true });
   }
 
-  // app.js:1890-1903 菜单容器 cssText + 1967-1968 定位，逐字保留令牌与视口钳制
+  // v1.8.1:js/app.js:1317-1330 菜单容器 cssText + 1394-1395 定位，逐字保留令牌与视口钳制
   const css = [
     'position: fixed',
     'background: var(--glass-popover-fill)',
@@ -471,7 +471,7 @@ function showContextMenu(e: MouseEvent, item: HTMLElement) {
   scheduleMenuClose();
 }
 
-// app.js:1971-1977 外部点击关闭（延迟 100ms 注册，避开本次 contextmenu）
+// v1.8.1:js/app.js:1398-1404 外部点击关闭（延迟 100ms 注册，避开本次 contextmenu）
 function scheduleMenuClose() {
   if (menuCloseHandler) document.removeEventListener('click', menuCloseHandler);
   const handler = (ev: MouseEvent) => {
@@ -490,7 +490,7 @@ function scheduleMenuClose() {
   }, 100);
 }
 
-// app.js:1912-1925 行内 cssText，逐字保留 danger/disabled/small 分支
+// v1.8.1:js/app.js:1339-1352 行内 cssText，逐字保留 danger/disabled/small 分支
 function rowCss(row: MenuRow): string {
   return [
     'padding: ' + (row.small ? '6px 16px 6px 28px' : '8px 16px'),
@@ -517,7 +517,7 @@ function onRowOut(e: Event, row: MenuRow) {
 }
 function onRowClick(row: MenuRow) {
   if (row.disabled) return;
-  contextMenu.value = null; // app.js:1933 menu.remove()
+  contextMenu.value = null; // v1.8.1:js/app.js:1360 menu.remove()
   if (menuCloseHandler) {
     document.removeEventListener('click', menuCloseHandler);
     menuCloseHandler = null;
@@ -525,7 +525,7 @@ function onRowClick(row: MenuRow) {
   row.action();
 }
 
-// ---------- app.js:411-433 bindQuickAccessEvents（浮层三键 + 遮罩 + Esc） ----------
+// ---------- v1.8.1:js/app.js:930-1032 bindQuickAccessEvents（浮层三键 + 遮罩 + Esc） ----------
 function onAddSite() {
   const fi = folderIndex.value;
   closeFolder();

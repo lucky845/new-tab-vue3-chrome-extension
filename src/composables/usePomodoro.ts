@@ -1,6 +1,6 @@
 /**
- * 番茄专注钟 composable（Vue3 版）——移植自 public/legacy-js/modules/pomodoro-manager.js
- * （业务语义唯一权威）+ public/legacy-js/app.js bindPomodoroEvents 的计时侧副作用。
+ * 番茄专注钟 composable（Vue3 版）——移植自 v1.8.1:js/modules/pomodoro-manager.js
+ * （业务语义唯一权威）+ v1.8.1:js/app.js bindPomodoroEvents 的计时侧副作用。
  *
  * 与 legacy 的对齐要点：
  * - 计时状态是【模块级单例】：面板关闭/组件卸载不停止计时（legacy 的 PomodoroManager
@@ -76,7 +76,7 @@ const DEFAULT_STATS: PomodoroStats = {
     totalAllTime: 0,
 };
 
-/** 阶段完成 toast 文案（legacy app.js onPhaseComplete） */
+/** 阶段完成 toast 文案（legacy v1.8.1:js/app.js:2986-2994 的 pm.onPhaseComplete 回调，文案逐字保留） */
 const PHASE_MESSAGES: Record<PomodoroPhaseType, string> = {
     break: '🍅 专注完成！休息一下',
     longBreak: '🎉 完成一整轮！进入长休息',

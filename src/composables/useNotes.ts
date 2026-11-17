@@ -1,5 +1,5 @@
 /**
- * 备忘录数据层（多便签）—— 自 public/legacy-js/modules/notes-manager.js 等价移植。
+ * 备忘录数据层（多便签）—— 自 v1.8.1:js/modules/notes-manager.js 等价移植。
  *
  * 业务语义唯一权威是 legacy NotesManager，逐字段对齐：
  *   - 存储 key：'notes'（裸数组，非 JSON 字符串）；旧版单条 key：'note' → 自动迁移
@@ -10,7 +10,7 @@
  *   - addNote / updateNote / togglePin / removeNote：与 legacy 同名方法语义一致
  *
  * 持久化：useStored 深度 watch 即时写（等价 legacy 每次操作后的 await save()）；
- * 文本输入的 500ms 防抖属 UI 语义，在 NotesPanel.vue 内实现（对应 app.js noteSaveTimers）。
+ * 文本输入的 500ms 防抖属 UI 语义，在 NotesPanel.vue 内实现（对应 v1.8.1:js/app.js noteSaveTimers）。
  *
  * 单例设计：'notes' 全应用只允许一份 useStored 实例 —— load 每次从 storage 返回新引用，
  * 多实例会在 storage.onChanged 回声上互相触发写入形成循环。

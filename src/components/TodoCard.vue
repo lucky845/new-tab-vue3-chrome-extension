@@ -2,7 +2,7 @@
 /**
  * 主页左翼待办迷你卡 —— markup 逐字来自 entrypoints/newtab.html:192-201（#side-card-todo）。
  *
- * legacy 映射（public/legacy-js/app.js）：
+ * legacy 映射（v1.8.1:js/app.js）：
  * - renderTodoCard（910-918）：全量 getTodos() + 徽标 getStats().active → todos / stats
  * - renderTodoInto（844-908）：li 结构（勾选/星标/分类/文本/截止日/删除）→ v-for 模板
  * - bindSideWidgets（1349-1362）：#todo-card-input Enter 快速添加、trim 后为空不添加

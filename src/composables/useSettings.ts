@@ -1,6 +1,6 @@
 import { log } from '@/src/lib/log';
 /**
- * 设置域数据层（Vue3 版）——逐字移植 public/legacy-js/modules/settings-manager.js（250 行）。
+ * 设置域数据层（Vue3 版）——逐字移植 v1.8.1:js/modules/settings-manager.js（250 行）。
  *
  * 关键决策：settings 是 useWeather.ts:360 通过普通 ref + onChanged 监听的共享键，
  * 这里同样走命令式 read-modify-write（get → merge → set），与 legacy SettingsManager 的
