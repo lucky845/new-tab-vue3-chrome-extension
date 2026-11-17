@@ -90,7 +90,7 @@ npm run build        # 产物输出到 .output/chrome-mv3
 | `npm run lint` | ESLint（src 全量）+ 类型检查 |
 | `npm run lint:fix` | ESLint 自动修复 + 类型检查 |
 | `npm run format` | Prettier 格式化 `src/` |
-| `npm test` | Vitest 单元测试（一次性，44 用例） |
+| `npm test` | Vitest 单元测试（一次性，98 用例） |
 | `npm run test:watch` | Vitest 监听模式 |
 
 ## 项目结构

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // useSearch 在模块顶层不直接访问 chrome（storageArea() 延迟到调用时读 globalThis），
 // 但模块级单例会跨测试文件共享；这里通过 vi.resetModules + 动态 import 拿到隔离实例。
@@ -29,48 +29,102 @@ async function fresh(seed?: Record<string, unknown>) {
   return api;
 }
 
+const texts = (api: { getSearchHistory(): string[] }) => api.getSearchHistory();
+
 describe('useSearch 历史管理', () => {
   it('init 从 storage 水合历史', async () => {
     const api = await fresh({ searchHistory: ['a', 'b'] });
-    expect(api.getSearchHistory()).toEqual(['a', 'b']);
+    expect(texts(api)).toEqual(['a', 'b']);
+    // 旧格式（纯字符串）水合后必须升级成对象结构再落盘
+    expect(api.history.value[0]).toEqual({ text: 'a', pinned: false, at: 0 });
   });
+
+  it('旧格式与新格式混合水合时都能吃，重复只留第一条', async () => {
+    const api = await fresh({
+      searchHistory: ['old', { text: 'new', pinned: true, at: 123 }, 'old'],
+    });
+    expect(texts(api)).toEqual(['new', 'old']);
+    expect(api.history.value[0].pinned).toBe(true);
+  });
+
   it('addHistory 去重并置顶', async () => {
     const api = await fresh();
     await api.addHistory('a');
     await api.addHistory('b');
     await api.addHistory('a');
-    expect(api.getSearchHistory()).toEqual(['a', 'b']);
+    expect(texts(api)).toEqual(['a', 'b']);
   });
-  it('历史上限 10 条（保留最新）', async () => {
+
+  it('addHistory 空白查询直接忽略，不落盘', async () => {
     const api = await fresh();
-    for (let i = 0; i < 12; i++) await api.addHistory('q' + i);
-    const h = api.getSearchHistory();
-    expect(h).toHaveLength(10);
-    expect(h[0]).toBe('q11');
-    expect(h[9]).toBe('q2');
-    expect(store.searchHistory).toEqual(h);
+    await api.addHistory('   ');
+    expect(texts(api)).toEqual([]);
+    expect(setMock).not.toHaveBeenCalled();
   });
+
+  it('未固定条目上限 20，且落盘结构与内存一致', async () => {
+    const api = await fresh();
+    for (let i = 0; i < 25; i++) await api.addHistory('q' + i);
+    const h = texts(api);
+    expect(h).toHaveLength(20);
+    expect(h[0]).toBe('q24');
+    expect(h[19]).toBe('q5');
+    expect(store.searchHistory).toEqual(api.history.value);
+  });
+
+  it('固定条目不参与上限淘汰，重复搜索不掉固定态', async () => {
+    const api = await fresh();
+    await api.addHistory('keep');
+    await api.setHistoryPinned(0, true);
+    for (let i = 0; i < 25; i++) await api.addHistory('q' + i);
+    const h = texts(api);
+    expect(h).toHaveLength(21);
+    expect(h[0]).toBe('keep');
+    expect(h[1]).toBe('q24');
+    // 再搜一次固定词：仍在固定区，pinned 不掉
+    await api.addHistory('keep');
+    expect(api.history.value[0]).toMatchObject({ text: 'keep', pinned: true });
+    expect(api.history.value.filter(e => e.text === 'keep')).toHaveLength(1);
+  });
+
+  it('setHistoryPinned 取消固定后回到未固定区，越界静默', async () => {
+    const api = await fresh();
+    await api.addHistory('a');
+    await api.addHistory('b');
+    await api.setHistoryPinned(0, true);
+    expect(texts(api)).toEqual(['b', 'a']);
+    await api.setHistoryPinned(0, false);
+    expect(texts(api)).toEqual(['b', 'a']);
+    expect(api.history.value[0].pinned).toBe(false);
+    const n = setMock.mock.calls.length;
+    await api.setHistoryPinned(99, true);
+    await api.setHistoryPinned(-1, true);
+    expect(setMock.mock.calls.length).toBe(n);
+  });
+
   it('clearHistory 清空并落盘', async () => {
     const api = await fresh();
     await api.addHistory('a');
     await api.clearHistory();
-    expect(api.getSearchHistory()).toEqual([]);
+    expect(texts(api)).toEqual([]);
     expect(store.searchHistory).toEqual([]);
   });
+
   it('removeFromHistory 按索引删，越界静默', async () => {
     const api = await fresh();
     await api.addHistory('a'); await api.addHistory('b'); await api.addHistory('c');
     await api.removeFromHistory(1);
-    expect(api.getSearchHistory()).toEqual(['c', 'a']);
+    expect(texts(api)).toEqual(['c', 'a']);
     const n = setMock.mock.calls.length;
     await api.removeFromHistory(99);
     await api.removeFromHistory(-1);
-    expect(api.getSearchHistory()).toEqual(['c', 'a']);
+    expect(texts(api)).toEqual(['c', 'a']);
     expect(setMock.mock.calls.length).toBe(n);
   });
+
   it('addToHistory 是 addHistory 别名', async () => {
     const api = await fresh();
     await api.addToHistory('x');
-    expect(api.getSearchHistory()).toEqual(['x']);
+    expect(texts(api)).toEqual(['x']);
   });
 });

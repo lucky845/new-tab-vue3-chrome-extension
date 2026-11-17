@@ -4,7 +4,7 @@ import { computed, onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import { applyGlass, releaseGlass } from '@/src/lib/glass';
 import EngineIcon from '@/src/components/EngineIcon.vue';
 import { UrlSafe } from '@/src/lib/urlSafe';
-import { useSearch } from '@/src/composables/useSearch';
+import { useSearch, type HistoryEntry } from '@/src/composables/useSearch';
 
 /**
  * 搜索框。
@@ -30,19 +30,20 @@ interface Engine {
 
 const keyword = ref('');
 const engines = ref<Engine[]>([]);
-const history = ref<string[]>([]);
+const history = ref<HistoryEntry[]>([]);
 const engineOpen = ref(false);
 const historyOpen = ref(false);
 
 /**
  * 历史内搜索：输入关键词时只显示包含关键词的记录（不区分大小写）。
- * 行对象带原始 index —— 过滤后数组的下标不能直接喂给 removeFromHistory。
+ * 行对象带原始 index —— 过滤后数组的下标不能直接喂给 removeFromHistory /
+ * setHistoryPinned（两者都按下标操作真数组）。
  */
 const historyRows = computed(() => {
     const kw = keyword.value.trim().toLowerCase();
     const rows = history.value.map((entry, index) => ({ entry, index }));
     if (!kw) return rows;
-    return rows.filter(row => row.entry.toLowerCase().includes(kw));
+    return rows.filter(row => row.entry.text.toLowerCase().includes(kw));
 });
 
 const barEl = ref<HTMLElement | null>(null);
@@ -97,7 +98,8 @@ function syncFromManager() {
 function refreshHistory() {
     const mgr = searchManager.value;
     if (!mgr) return;
-    const list = mgr.getSearchHistory?.() ?? [];
+    // 取行对象而不是纯文本：下拉要渲染固定态，纯文本视图会丢 pinned 标志
+    const list = mgr.getHistoryEntries?.() ?? [];
     history.value = Array.isArray(list) ? list : [];
 }
 
@@ -163,6 +165,19 @@ function removeHistory(index: number) {
     void searchManager.value.removeFromHistory(index).then(() => {
         // 历史内搜索视角下删到没有匹配（或删光）就收起，别让「没有匹配」挂在屏上
         if (historyRows.value.length === 0) historyOpen.value = false;
+        refreshHistory();
+    });
+}
+
+/**
+ * 固定 / 取消固定一条历史。
+ *
+ * 固定条目不参与上限淘汰，所以列表顺序会重排（固定区在前）。重排后原来的
+ * 下标就失效了，这里按文本重新对齐一次，再刷新一次本地快照。
+ */
+function togglePin(index: number, pinned: boolean) {
+    void searchManager.value.setHistoryPinned(index, pinned).then(() => {
+        refreshHistory();
     });
 }
 
@@ -364,14 +379,44 @@ watch(
                     </div>
                     <div
                         v-for="row in historyRows"
-                        :key="row.entry + '-' + row.index"
+                        :key="row.entry.text + '-' + row.index"
                         class="history-item"
+                        :class="{ pinned: row.entry.pinned }"
                     >
-                        <span class="history-text" @click="submit(row.entry)">{{ row.entry }}</span>
+                        <button
+                            class="pin-history-btn"
+                            type="button"
+                            :class="{ 'is-pinned': row.entry.pinned }"
+                            :title="row.entry.pinned ? '取消固定' : '固定到顶部'"
+                            :aria-pressed="row.entry.pinned ? 'true' : 'false'"
+                            :aria-label="
+                                (row.entry.pinned ? '取消固定搜索记录 ' : '固定搜索记录 ') +
+                                row.entry.text
+                            "
+                            @click.stop="togglePin(row.index, !row.entry.pinned)"
+                        >
+                            <svg
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <path d="M12 17v5"></path>
+                                <path
+                                    d="M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"
+                                ></path>
+                            </svg>
+                        </button>
+                        <span class="history-text" @click="submit(row.entry.text)">{{
+                            row.entry.text
+                        }}</span>
                         <button
                             class="delete-history-btn"
                             type="button"
-                            :aria-label="'删除搜索记录 ' + row.entry"
+                            :aria-label="'删除搜索记录 ' + row.entry.text"
                             @click.stop="removeHistory(row.index)"
                         >
                             ×

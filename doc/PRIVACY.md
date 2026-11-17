@@ -35,7 +35,7 @@ New Tab Pro（下称"本扩展"）是一个**纯本地**的新标签页扩展：
 | `settings` / `themeSettings`                                                                                     | 界面设置、主题色、字体等                                         |
 | `quickAccessSites`                                                                                               | 快捷访问的站点名、URL、自定义图标（`data:image`）                |
 | `todos` / `notes`                                                                                                | 待办与便签文本                                                   |
-| `pomodoroSettings` / `pomodoroStats`                                                                             | 番茄钟的设置与历史统计                                           |
+| `pomodoroSettings` / `pomodoroStats` / `pomodoroRuntime`                                                       | 番茄钟的设置、历史统计与运行态（关掉标签页后接着计时用，仅存绝对截止时间戳） |
 | `savedWallpaperId` / `savedWallpaperUrl` / `savedWallpaperData` / `savedWallpaperBlob` / `savedWallpaperBlobUrl` | 当前壁纸的元信息与图片缓存                                       |
 | `searchEngine` / `customEngines` / `searchHistory` / `engineIcons` / `engineLogos`                               | 搜索引擎选择、自定义引擎、搜索历史、引擎图标                     |
 | `om_weather_<纬度>_<经度>` / `ntce-sun-*` / `geo*`                                                               | 天气、日出日落、地理编码的缓存（坐标保留两位小数，约 1 km 精度） |

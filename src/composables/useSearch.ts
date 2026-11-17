@@ -3,12 +3,24 @@
  *
  * 移植自 v1.8.1:js/modules/search-manager.js 与
  * v1.8.1:js/modules/settings-manager.js 中 customEngines / searchEngine
- * 相关逻辑；内置引擎清单（含 icon）、历史去重与 10 条上限、三条校验文案逐字保留。
+ * 相关逻辑；内置引擎清单（含 icon）、三条校验文案逐字保留。
+ *
+ * 搜索历史的形态在 v2.2 升级：`string[]` → `HistoryEntry[]`（text / pinned / at）。
+ * 旧数据（纯字符串数组）在水合时自动迁移，落盘永远是新结构；归一化与截断规则
+ * 抽在 `lib/searchHistory.ts`，运行时与 `lib/backup.ts` 共用同一份实现。
  * 自定义引擎 URL 一律经 UrlSafe.isHttp 白名单（备份导入属于不可信输入）。
  */
 import { log } from '@/src/lib/log';
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import { UrlSafe } from '@/src/lib/urlSafe';
+import {
+    enforceHistoryLimits,
+    normalizeHistory,
+    type HistoryEntry,
+} from '@/src/lib/searchHistory';
+
+/** 类型对外仍从本模块取：调用点（SearchBlock / 测试）无需知道它搬去了 lib */
+export type { HistoryEntry } from '@/src/lib/searchHistory';
 
 export interface Engine {
     name: string;
@@ -40,7 +52,7 @@ export interface SearchApi {
     engines: Ref<Engine[]>;
     currentName: Ref<string>;
     currentEngine: ComputedRef<Engine | null>;
-    history: Ref<string[]>;
+    history: Ref<HistoryEntry[]>;
     customEngines: Ref<Engine[]>;
     init(): Promise<void>;
     setEngine(name: string): Promise<void>;
@@ -56,9 +68,14 @@ export interface SearchApi {
     getSearchEngines(): Engine[];
     getCurrentSearchEngine(): Engine;
     setCurrentSearchEngine(engineName: string): boolean;
+    /** 纯文本视图（只读快照，给备份/兼容旧调用点用） */
     getSearchHistory(): string[];
+    /** 行对象视图：带 pinned / at，SearchBlock 用它渲染固定态 */
+    getHistoryEntries(): HistoryEntry[];
     addToHistory(query: string): Promise<void>;
     removeFromHistory(index: number): Promise<void>;
+    /** 固定/取消固定单条（按数组下标，越界静默，与 removeFromHistory 同语义） */
+    setHistoryPinned(index: number, pinned: boolean): Promise<void>;
 }
 
 const STORAGE_KEYS = {
@@ -70,7 +87,6 @@ const STORAGE_KEYS = {
     engineIcons: 'engineIcons',
 } as const;
 
-const MAX_HISTORY_ITEMS = 10;
 const DEFAULT_SEARCH_ENGINE = 'Bing';
 
 interface StorageArea {
@@ -122,7 +138,7 @@ function createSearch(): SearchApi {
     const currentEngine: ComputedRef<Engine | null> = computed(
         () => engines.value.find(e => e.name === currentName.value) || null
     );
-    const history = ref<string[]>([]);
+    const history = ref<HistoryEntry[]>([]);
     const customEngines = ref<Engine[]>([]);
     /** 用户给引擎换的图标，按引擎名存（内置引擎也能换）。与 customEngines 分开存，
       这样删掉再重建同名引擎时图标还在，且内置引擎不必进「自定义」列表。 */
@@ -262,7 +278,7 @@ function createSearch(): SearchApi {
         try {
             // chrome.storage 走结构化克隆：直接写 Vue Proxy 数组会被序列化成 {"0":...} 字典丢数据
             // （与 useStored 的修复同源），必须先转纯数据数组再落盘。
-            const plain = JSON.parse(JSON.stringify(history.value ?? [])) as string[];
+            const plain = JSON.parse(JSON.stringify(history.value ?? [])) as HistoryEntry[];
             await storageArea().set({ [STORAGE_KEYS.searchHistory]: plain });
         } catch (error) {
             log.error('保存搜索历史失败:', error);
@@ -285,10 +301,8 @@ function createSearch(): SearchApi {
         }
         // 搜索历史（legacy loadHistory）
         try {
-            const stored = data[STORAGE_KEYS.searchHistory];
-            history.value = Array.isArray(stored)
-                ? (stored as unknown[]).filter((x): x is string => typeof x === 'string')
-                : [];
+            // 旧版本存的是纯字符串数组，normalizeHistory 顺手完成迁移（v2.2 起落盘结构为对象数组）
+            history.value = normalizeHistory(data[STORAGE_KEYS.searchHistory]);
         } catch (error) {
             log.error('加载搜索历史失败:', error);
             history.value = [];
@@ -321,9 +335,15 @@ function createSearch(): SearchApi {
     }
 
     async function addHistory(query: string): Promise<void> {
-        const next = history.value.filter(item => item !== query);
-        next.unshift(query);
-        history.value = next.length > MAX_HISTORY_ITEMS ? next.slice(0, MAX_HISTORY_ITEMS) : next;
+        const text = query.trim();
+        if (!text) return;
+        // 重复搜索一个已固定的词不掉固定态：只把 at 刷新到最新，位置仍在固定区
+        const prev = history.value.find(item => item.text === text);
+        const entry: HistoryEntry = { text, pinned: prev?.pinned === true, at: Date.now() };
+        history.value = enforceHistoryLimits([
+            entry,
+            ...history.value.filter(item => item.text !== text),
+        ]);
         await persistHistory();
     }
 
@@ -338,6 +358,21 @@ function createSearch(): SearchApi {
             history.value.splice(index, 1);
             await persistHistory();
         }
+    }
+
+    /**
+     * 固定 / 取消固定（v2.2 新增）。
+     *
+     * 下标语义与 removeFromHistory 一致：SearchBlock 传的是未过滤数组里的原始下标。
+     * 固定后条目不参与上限淘汰，只是位置被归到固定区；取消固定则回到未固定区末尾。
+     */
+    async function setHistoryPinned(index: number, pinned: boolean): Promise<void> {
+        const target = history.value[index];
+        if (!target || target.pinned === pinned) return;
+        history.value = enforceHistoryLimits(
+            history.value.map((item, i) => (i === index ? { ...item, pinned } : item))
+        );
+        await persistHistory();
     }
 
     async function setCustomEngines(list: Engine[]): Promise<void> {
@@ -439,6 +474,10 @@ function createSearch(): SearchApi {
     }
 
     function getSearchHistory(): string[] {
+        return history.value.map(item => item.text);
+    }
+
+    function getHistoryEntries(): HistoryEntry[] {
         return history.value;
     }
 
@@ -466,8 +505,10 @@ function createSearch(): SearchApi {
         getCurrentSearchEngine,
         setCurrentSearchEngine,
         getSearchHistory,
+        getHistoryEntries,
         addToHistory,
         removeFromHistory,
+        setHistoryPinned,
     };
 }
 

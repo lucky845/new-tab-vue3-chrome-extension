@@ -112,7 +112,7 @@ describe('backup.validate', () => {
     expect(r.droppedLinks).toBe(1);
     expect((r.data.quickAccessSites as unknown[])).toHaveLength(1);
   });
-  it('搜索历史去重并截到 20 条，todo 字段归一化', () => {
+  it('搜索历史去重、去空并升级为对象结构，todo 字段归一化', () => {
     const r = validate({
       app: APP_ID,
       data: {
@@ -120,7 +120,11 @@ describe('backup.validate', () => {
         todos: [{ content: 'x', category: 'weird', done: 1 }],
       },
     });
-    expect(r.data.searchHistory).toEqual(['a', 'b', 'c']);
+    expect(r.data.searchHistory).toEqual([
+      { text: 'a', pinned: false, at: 0 },
+      { text: 'b', pinned: false, at: 0 },
+      { text: 'c', pinned: false, at: 0 },
+    ]);
     const todo = (r.data.todos as Record<string, unknown>[])[0];
     expect(todo.category).toBe('normal');
     expect(todo.done).toBe(false);
