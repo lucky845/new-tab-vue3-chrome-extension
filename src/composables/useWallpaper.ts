@@ -16,6 +16,11 @@ import { useStored } from '@/src/lib/storage';
 import { fetchJSON, resolveFetchUrl, type FetchJSONError } from '@/src/lib/http';
 import { syncGlassScene } from '@/src/lib/glass';
 import { isImageSource } from '@/src/lib/urlSafe';
+import {
+  onPhotoInkForTone,
+  toneFromLuminance,
+  type WallpaperTone,
+} from '@/src/lib/wallpaper-tone';
 import { toast as showToast } from '@/src/composables/useToast';
 
 /** 每页壁纸数量（legacy WallpaperManager.WALLPAPERS_PER_PAGE，供分页计算引用）。 */
@@ -663,16 +668,18 @@ function createWallpaperApi(): WallpaperApi {
    * 反向组合才需要加码：亮壁纸配深色主题（白字）、暗壁纸配浅色主题（墨字），
    * 11px 的站点名会掉到 3:1 以下；同向组合默认值已经够。
    */
-  type WallpaperTone = 'bright' | 'normal' | 'dark';
-
-  /** 0-255 的 Rec.601 感知亮度阈值，实测取值：白纸≈236、灰蓝天空≈150、森林≈70。 */
-  const TONE_BRIGHT_ABOVE = 150;
-  const TONE_DARK_BELOW = 80;
-
+  /**
+   * 把分档结果写进 <html>：data-wallpaper-tone 控制蒙版厚度，
+   * data-photo-ink 控制浮字字色（bright 壁纸用墨字、dark 壁纸用白字、其余跟随主题）。
+   * 两个属性成对写入、成对清除，避免只翻一半导致「白字落在白壁纸」上。
+   */
   function applyWallpaperTone(tone: WallpaperTone | null): void {
     const root = document.documentElement;
     if (tone) root.dataset.wallpaperTone = tone;
     else delete root.dataset.wallpaperTone;
+    const ink = onPhotoInkForTone(tone);
+    if (ink) root.dataset.photoInk = ink;
+    else delete root.dataset.photoInk;
   }
 
   /** 从已解码的源图缩到 16×16 采样平均亮度；跨域图污染画布时抛错，返回 null 表示量不出。 */
@@ -691,9 +698,7 @@ function createWallpaperApi(): WallpaperApi {
         sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
       }
       const avg = sum / (data.length / 4);
-      if (avg >= TONE_BRIGHT_ABOVE) return 'bright';
-      if (avg <= TONE_DARK_BELOW) return 'dark';
-      return 'normal';
+      return toneFromLuminance(avg);
     } catch {
       // SecurityError：图床没给 CORS 头，读不到像素。放弃分档，蒙版退回默认值。
       return null;

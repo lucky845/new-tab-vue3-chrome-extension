@@ -81,6 +81,9 @@
     /* 弹窗面板底：半透明白。太低会透出背景排版（时钟数字、快捷访问图标、分页条），
        与面板文字重影 —— 那不是毛玻璃而是脏玻璃；0.62 是「背景只剩模糊色」与「玻璃还能透色」的交点。 */
     --panel-glass-fill: rgb(255 255 255 / 0.62);
+    /* 面板底衬（叠加在库的折射层之下），比 --panel-glass-fill 更实一点：
+       0.62 铺在 500x600 的大面上仍会让背后的时钟大字透出来。 */
+    --panel-glass-scrim: rgb(250 251 253 / 0.82);
     --shadow: 0 0 0;
     --text-k: 1;
     --wash-k: 0.55;
@@ -236,13 +239,19 @@
     --accent-ink: 255 255 255;
 
     /* --- 悬浮在壁纸上的文字（时钟 / 日期 / 标语）---
-       这些元素没有玻璃底板，壁纸亮度直接决定可读性：壁纸一亮，浅墨就糊；
-       壁纸一暗，深墨就消失。所以给它们两层「随主题翻面」的托底：
-         --on-photo-scrim 远场椭圆晕（压掉壁纸纹理，给文字一块局部稳定底色）
-         --on-photo-halo  近场字形光晕（沿字形描一圈，让笔画边界始终成立）
-       浅色主题 = 白光托深墨；深色主题 = 暗光托白字。两套都只是"补光"，不改文字本色。 */
-    --on-photo-scrim: rgb(var(--spec) / 0.55);
+       这些元素没有玻璃底板，壁纸亮度直接决定可读性。托底只有沿字形走的光晕
+       --on-photo-halo（不做整块椭圆托底：那圈白蒙版已按用户要求移除）。
+       光晕颜色随壁纸亮度翻面由 html[data-photo-ink] 决定（见 src/styles/shell.css），
+       这里给的是浅色主题的默认值：白光托深墨。 */
     --on-photo-halo: rgb(var(--spec) / 0.85);
+
+    /* --- 壁纸上的标签文字（站点名 / 「添加」字样）---
+       与时钟同一套翻面逻辑：壁纸亮度极端时由 html[data-photo-ink] 覆盖成墨/白，
+       中间亮度保持主题色。分开一组而不是复用 --text-primary，是因为这两类文字的
+       底不是玻璃而是壁纸本身，翻面规则跟玻璃里的文字不一样。 */
+    --on-photo-label: rgb(var(--ink));
+    --on-photo-label-secondary: rgb(var(--ink) / calc(0.85 * var(--text-k)));
+    --on-photo-label-shadow: rgb(var(--spec) / 0.6);
 
     /* --- 画布 / 凹陷字段 / 原生下拉 / 反色墨 --- */
     --canvas: #eef1f4;
@@ -868,6 +877,15 @@ body {
     color: var(--text-primary);
     box-sizing: border-box;
     margin: 0 auto;
+}
+
+/* 内容本来就短的设置页（天气）：不继承定高，按内容收口。
+   .settings-content 的 88vh 是为了避免「切 tab 时面板上下跳」，但天气页只有
+   城市 + 单位 + 保存三块，撑满 88vh 会在保存按钮下方留出一大块空玻璃。
+   上限仍是 88vh，内容超长时行为与其它面板一致。 */
+.settings-content--fit {
+    height: auto;
+    max-height: 88vh;
 }
 
 .settings-scroll {
@@ -1959,7 +1977,9 @@ body {
 .quick-access-item .name {
     /* 卡片是定高正方形，flex 子项会被压缩：名字必须声明不参与收缩，否则下伸部被切 */
     flex: 0 0 auto;
-    color: var(--text-primary);
+    /* 字色与阴影都走 --on-photo-label*：它们直接压在壁纸上，壁纸一亮一暗就要翻面，
+       不能用玻璃里的 --text-primary（那条永远跟着主题走，会跟壁纸撞色）。 */
+    color: var(--on-photo-label);
     font-size: 11px;
     line-height: 1.25;
     text-align: center;
@@ -1968,8 +1988,8 @@ body {
     text-overflow: ellipsis;
     width: 100%;
     font-weight: 500;
-    /* 亮壁纸上 11px 小字的可读性靠细阴影，而不是加粗变黑 */
-    text-shadow: 0 1px 2px rgb(var(--shadow) / 0.3);
+    /* 11px 小字的可读性靠细阴影，而不是加粗变黑 */
+    text-shadow: 0 1px 2px var(--on-photo-label-shadow);
 }
 
 .add-quick-access-btn {
@@ -1999,7 +2019,7 @@ body {
 /* 添加按钮的名称，与快捷访问项目保持一致 */
 .add-quick-access-btn .name {
     flex: 0 0 auto;
-    color: var(--text-secondary);
+    color: var(--on-photo-label-secondary);
     font-size: 11px;
     line-height: 1.25;
     text-align: center;
@@ -2011,7 +2031,7 @@ body {
 }
 
 .add-quick-access-btn:hover {
-    color: var(--text-primary);
+    color: var(--on-photo-label);
 }
 
 .add-quick-access-btn:hover .icon-wrapper {
@@ -2228,75 +2248,10 @@ body.icon-dragging .quick-access-item * {
     }
 }
 
-/* ==================== 时钟 / 问候 / 标语 ==================== */
-/* 位于 main-container 文档流内、搜索框上方，随内容自然排列（不用 fixed，避免与搜索框重叠） */
-.clock-container {
-    margin-top: 6vh;
-    text-align: center;
-    /* 悬浮在壁纸上，没有玻璃底板：远场椭圆晕压住壁纸纹理，近场字形光晕让笔画边界清晰。
-       关键改动：托底从「0.62 一路平到 46% 再断崖收边」改成多段柔和衰减——不会再有
-       一块带硬边的实心矩形。白字方案在亮壁纸下实测不可读（整块时间隐形），所以仍然
-       按主题翻面：浅色白光托深墨 / 深色暗光托白字，文字本色不动。 */
-    background: none;
-    position: relative;
-    text-shadow:
-        0 1px 2px var(--on-photo-halo),
-        0 2px 12px var(--on-photo-halo),
-        0 0 26px var(--on-photo-halo);
-    pointer-events: none;
-    user-select: none;
-    flex-shrink: 0;
-}
-
-/* 托底光晕挂在伪元素上：inset 撑出比文字大一圈的盒子，椭圆刚好在这个更大的盒子里
-   衰减到 0 —— 渐变不会被文字盒裁掉，所以不会出现「一块带硬边的白矩形」。 */
-.clock-container::before {
-    content: '';
-    position: absolute;
-    inset: -40px -72px;
-    z-index: -1;
-    border-radius: 50%;
-    background: radial-gradient(
-        50% 50% at 50% 50%,
-        var(--on-photo-scrim) 0%,
-        transparent 100%
-    );
-    pointer-events: none;
-}
-
-.clock-time {
-    font-size: 64px;
-    /* 300 → 600：极细字在玻璃质感里显得单薄，和卡片的实心边框不在一个重量级上。
-       600 让时钟成为页面真正的视觉锚点，同时保持等宽数字（不会因为 1 比 8 窄而跳动）。 */
-    font-weight: 600;
-    /* 字距 4px → 1px：600 字重下 4px 会把数字拆得太散，读起来像四个独立字符。 */
-    letter-spacing: 1px;
-    line-height: 1.1;
-    font-variant-numeric: tabular-nums;
-}
-
-/* 层级靠字号与字重，不靠 opacity：
-   opacity 会把字形连同它的托底光晕一起按比例溶进背景，越淡越糊、越糊越要淡。
-   这里改成给墨色加 alpha —— 光晕保持满强度，字仍然分出主次。 */
-.clock-date {
-    margin-top: 6px;
-    font-size: 16px;
-    color: rgb(var(--ink) / calc(0.96 * var(--text-k)));
-}
-
-.clock-greeting {
-    margin-top: 4px;
-    font-size: 15px;
-    color: rgb(var(--ink) / calc(0.9 * var(--text-k)));
-}
-
-.tagline {
-    margin-top: 10px;
-    font-size: 14px;
-    color: rgb(var(--ink) / calc(0.86 * var(--text-k)));
-    font-style: italic;
-}
-
+/* ==================== 时钟 / 问候 / 标语 ====================
+   样式真源在 src/styles/shell.css（Vue 侧外壳样式，随打包 CSS 后加载，
+   这里再写一份会被它整段覆盖 —— 两份并存时只有后者生效，之前就在这里出过
+   「改了 app.css 但页面没变」的坑）。本文件只保留浮字光晕令牌 --on-photo-halo。 */
 /* ==================== 小组件面板（待办 / 便签 / 番茄钟） ==================== */
 .widget-panel {
     position: fixed;
@@ -3864,14 +3819,17 @@ body:not([data-wings='none']) #quick-access-grid .quick-access-grid {
 }
 
 .folder-item .name {
-    color: var(--text-primary);
+    /* 走 --on-photo-label 而不是 --text-primary：文件夹格子同时带 .quick-access-item
+       与 .folder-item 两个类，本规则写在后面会盖掉上面那条的 color —— 用同一组
+       令牌才不会「主页图标翻成墨字、文件夹名还是白字」。 */
+    color: var(--on-photo-label);
     /* 文件夹名与单图标名必须同档：文件夹只是「里面装着东西的图标」，
        字号大一号会让网格里的名字参差不齐 */
     font-size: 11px;
     line-height: 1.25;
     /* 与 .quick-access-item .name 同档（500）：文件夹名和单图标名是同级对象 */
     font-weight: 500;
-    text-shadow: 0 1px 2px rgb(var(--shadow) / 0.3);
+    text-shadow: 0 1px 2px var(--on-photo-label-shadow);
     text-align: center;
     max-width: 100%;
     overflow: hidden;
@@ -4325,8 +4283,14 @@ html[data-theme='light'] {
     --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%230f151a' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
 }
 
-/* 深色：壁纸压暗，玻璃是冷黑 */
-html[data-theme='dark'] {
+/* 深色：壁纸压暗，玻璃是冷黑。
+
+   「浅色主题 + 暗壁纸」也走这一套（m12969：浮字翻面之后玻璃没跟着翻）：
+   壁纸暗到必须用深玻璃才压得住字，白玻璃在暗底上只会糊成一片灰。
+   选择器并入这里而不是复制一份，是为了让材质只有一份真源 ——
+   将来调深色玻璃时，反色组合自动跟上。 */
+html[data-theme='dark'],
+html[data-theme='light'][data-photo-ink='light'] {
     --cs: dark;
     /* 蒙版数值按「纯白壁纸」实测定档（Playwright 渲染后取整块采样，非公式估算）：
        无蒙版 1.00:1（白字完全消失）
@@ -4338,9 +4302,10 @@ html[data-theme='dark'] {
        0.38 是「白字仍过 AA」与「玻璃能透出壁纸色」两条曲线的交点，见 REPORT 的实测表。 */
     --wallpaper-veil: rgb(var(--shadow) / 0.38);
     /* 悬浮文字的托底翻面：暗晕托白字。白光晕放在白字下面只会把笔画边缘糊成灰边 */
-    --on-photo-scrim: rgb(var(--shadow) / 0.62);
     /* 深色遮罩：冷黑压一层，模糊与浅色一致（同一套遮罩令牌，只是颜色翻面） */
     --on-photo-halo: rgb(var(--shadow) / 0.72);
+    /* 壁纸上的标签文字：深色主题默认白字 + 暗阴影（与浅色主题的墨字 + 白光晕对称） */
+    --on-photo-label-shadow: rgb(var(--shadow) / 0.6);
     /* 深色下墨是白的，三个补偿系数恢复 1：与改造前的深色视觉逐像素等价。 */
     --ink: 255 255 255;
     --paper: 40 45 50;
@@ -4377,6 +4342,7 @@ html[data-theme='dark'] {
     --glass-popover-fill: rgb(8 12 18 / 0.66);
     /* 弹窗面板底：深色下墨是白的，白底会让字消失；用与侧卡同级的冷黑 0.58（白字 6.4:1） */
     --panel-glass-fill: rgb(8 12 18 / 0.58);
+    --panel-glass-scrim: rgb(10 14 20 / 0.82);
     /* 深色的高光不能给白（白 = 塑料抛光），给一点冷灰蓝，像玻璃棱上反的天光 */
     --glass-sheen:
         radial-gradient(
@@ -4466,6 +4432,40 @@ html[data-theme='dark'][data-wallpaper-tone='bright'] {
 html[data-theme='light'][data-wallpaper-tone='dark'] {
     --wallpaper-veil: transparent;
     --on-photo-halo: rgb(var(--spec) / 0.9);
+}
+
+/* 反色组合（浅色主题 + 暗壁纸）只翻玻璃，不连壁纸一起压暗：
+   黑纱是深色主题的配色（--wallpaper-veil 0.38），浅色主题的壁纸永远原样。
+   壁纸容器的底色同理留在浅色，否则壁纸加载前会先黑一下（loading 底是浅色渐变，
+   容器底变深就成了闪烁）。 */
+html[data-theme='light'][data-photo-ink='light'] {
+    --wallpaper-veil: transparent;
+    --canvas: #eef1f4;
+}
+
+/* 浮字翻面的最终裁决：比主题默认值优先，比 tone 覆盖块也优先（放在最后）。
+   只翻「字色 + 阴影」，不动 --wallpaper-veil —— 蒙版厚度由上面两块按
+   「主题 ↔ 壁纸是否反向」决定，这里再插手会把两套策略搅在一起。 */
+html[data-photo-ink='dark'] {
+    --on-photo-label: rgb(15 21 26);
+    --on-photo-label-secondary: rgb(15 21 26 / calc(0.85 * var(--text-k)));
+    --on-photo-label-shadow: rgb(var(--spec) / 0.6);
+}
+
+html[data-photo-ink='light'] {
+    --on-photo-label: rgb(255 255 255);
+    --on-photo-label-secondary: rgb(255 255 255 / calc(0.85 * var(--text-k)));
+    --on-photo-label-shadow: rgb(var(--shadow) / 0.6);
+}
+
+/* 深色主题下壁纸永远被 --wallpaper-veil 压暗（0.38，浅壁纸加厚到 0.52），
+   实测亮度 236 的亮壁纸压完只剩 ~113 的中灰 —— 这时配墨字对比度只有 4:1 出头。
+   所以深色主题不参与亮度翻面，一律用浅色浮字；这条比 data-photo-ink 更靠后，
+   主题切换（auto 昼夜）时自动生效，不需要重新采样壁纸。 */
+html[data-theme='dark'] {
+    --on-photo-label: rgb(255 255 255);
+    --on-photo-label-secondary: rgb(255 255 255 / calc(0.85 * var(--text-k)));
+    --on-photo-label-shadow: rgb(var(--shadow) / 0.6);
 }
 
 /* 玻璃折射滤镜的宿主 SVG：常驻但不占布局、不可交互 */
@@ -4868,6 +4868,84 @@ html[data-theme='light'] .folder-preview .folder-cell .icon.mono-light {
     opacity: 0.86;
 }
 
+/* ------------------- 反色组合：浅色主题 + 暗壁纸 -------------------
+   浮字（时钟、站点名）已经按 data-photo-ink 翻面，但「装字的玻璃」没翻：
+   白玻璃压在暗壁纸上 = 灰糊，玻璃里的深墨字跟着一起糊。
+   下面三组分别处置三种载体，缺一组就会有元素掉队：
+   1. 挂了液态玻璃的宿主 —— 材质是库写在内联 style 上的，只能 !important 打掉；
+   2. 图标方块 —— 主屏图标挂了玻璃走 1，文件夹预览格不挂玻璃走 AppIcon 的 scoped 样式，
+      两边都要覆盖；
+   3. 单色近白图标 —— 浅色主题把它们反相压成深墨（见上一条规则），暗壁纸上等于消失，
+      必须取消反相。 */
+
+/* 1. 库宿主：只换底色和内阴影，折射/bezel 层留给库（它们跟着库自己的 tone 走） */
+html[data-theme='light'][data-photo-ink='light'] [data-glass='lib'] {
+    background-color: var(--glass-card-fill) !important;
+    /* 库的 specular 内阴影是写死的白色（glassInnerShadowCss），暗底上一圈白光边
+       会把「深色玻璃」打回浅色观感，这里换成深浅两档的边框光 */
+    box-shadow:
+        inset 0 1px 0 rgb(var(--spec) / 0.18),
+        inset 0 -1px 0 rgb(var(--shadow) / 0.35),
+        0 8px 24px rgb(var(--shadow) / 0.26) !important;
+}
+
+/* 顶栏控制按钮比侧卡薄一档，搜索框再薄一档 —— 与浅色主题里的分档关系保持一致 */
+html[data-theme='light'][data-photo-ink='light'] .control-btn[data-glass='lib'] {
+    background-color: var(--glass-fill) !important;
+}
+
+html[data-theme='light'][data-photo-ink='light'] .search-bar[data-glass='lib'] {
+    background-color: var(--glass-field-fill) !important;
+}
+
+/* 2. 图标方块：比面板再薄一点，让 favicon 本身的颜色透出来 */
+html[data-theme='light'][data-photo-ink='light'] [data-glass='lib']:is(.icon-square, .icon-wrapper, .folder-preview) {
+    background-color: rgb(8 12 18 / 0.34) !important;
+}
+
+/* 「添加」格与图标方块共用同一套材质（见下方 .add-quick-access-btn .icon-wrapper），
+   文件夹里的那一份没挂玻璃，所以这里连 .icon-wrapper 一起覆盖，不能只列 .icon-square */
+html[data-theme='light'][data-photo-ink='light'] .icon-square,
+html[data-theme='light'][data-photo-ink='light'] .icon-wrapper,
+html[data-theme='light'][data-photo-ink='light'] .folder-preview {
+    background-color: rgb(8 12 18 / 0.34);
+    background-image: linear-gradient(
+        160deg,
+        rgb(var(--spec) / 0.16) 0%,
+        rgb(var(--spec) / 0.02) 100%
+    );
+}
+
+/* 悬停时提亮一档（与浅色主题里 rgb(spec / 0.24 → 0.32) 的抬升量对齐）。
+   必须带 !important：挂玻璃的方块靠上面那条 !important 压住库的内联样式，
+   普通声明赢不了它，hover 会看起来毫无反应。 */
+html[data-theme='light'][data-photo-ink='light'] .quick-access-item:hover .icon-square,
+html[data-theme='light'][data-photo-ink='light'] .folder-site:hover > .icon-square,
+html[data-theme='light'][data-photo-ink='light'] .add-quick-access-btn:hover .icon-wrapper,
+html[data-theme='light'][data-photo-ink='light'] .quick-access-item:hover .icon-wrapper,
+html[data-theme='light'][data-photo-ink='light'] .folder-preview:hover {
+    background-color: rgb(8 12 18 / 0.46) !important;
+}
+
+/* 空文件夹预览格：没有子格撑场面，底色再淡一点，避免看起来像一块实心砖 */
+html[data-theme='light'][data-photo-ink='light'] .folder-preview:not(:has(.folder-cell)) {
+    background-color: rgb(8 12 18 / 0.2);
+}
+
+/* 文件夹里的「移除」小圆钮用 --ink 的低透明度做底（浅色 = 墨色半透明，深色 = 白色半透明）。
+   反色组合下 --ink 已经是白色，白底 + 白叉等于没有按钮，这里换成暗底配白叉。 */
+html[data-theme='light'][data-photo-ink='light'] .folder-site-remove {
+    background: rgb(var(--shadow) / 0.45);
+    color: rgb(var(--spec) / 0.92);
+}
+
+/* 3. 单色近白图标：取消浅色主题的深墨反相，回到近白（深玻璃上才看得见） */
+html[data-theme='light'][data-photo-ink='light'] .icon.mono-light,
+html[data-theme='light'][data-photo-ink='light'] .folder-preview .folder-cell .icon.mono-light {
+    filter: none;
+    opacity: 0.92;
+}
+
 /* --- 玻璃透明后，浅色主题的文字托底 ---
    先说结论：**不要给文字加白雾光晕**。上一版用三层 text-shadow 托底，实测有两个坏处：
      1) 6px/12px 的模糊白边把笔画整体外扩一圈，14px 的字读起来粗了一档（用户直接反馈
@@ -4882,8 +4960,17 @@ html[data-theme='light'] .folder-preview .folder-cell .icon.mono-light {
    统一到 400（与页脚、副标题的常规字重同一档）。 */
 html[data-theme='light'] .quick-access-item .name,
 html[data-theme='light'] .folder-item .name {
-    /* 只压一条极窄的暗边：白底看不见，深底给出笔画边界 */
+    /* 只压一条极窄的暗边：白底看不见，深底给出笔画边界。
+       壁纸亮度极端时这条要让位给 --on-photo-label-shadow —— 墨字压在暗壁纸上，
+       一条墨边等于没有边界，得换成白光晕。 */
     text-shadow: 0 1px 1px rgb(var(--ink) / 0.18);
+}
+
+html[data-photo-ink='dark'] .quick-access-item .name,
+html[data-photo-ink='light'] .quick-access-item .name,
+html[data-photo-ink='dark'] .folder-item .name,
+html[data-photo-ink='light'] .folder-item .name {
+    text-shadow: 0 1px 2px var(--on-photo-label-shadow);
 }
 
 /* 图标：不再加 drop-shadow。单色图标已经用 filter 压成深墨，
@@ -4937,7 +5024,12 @@ html[data-theme='dark'] {
 .side-card[data-glass='lib'],
 .settings-panel[data-glass='lib'],
 .widget-panel[data-glass='lib'],
-.control-btn[data-glass='lib'] {
+.control-btn[data-glass='lib'],
+/* 面板内容层现在也是玻璃宿主（见 styles/glass.css 材质档），同样要能点 */
+.settings-content[data-glass='lib'],
+.widget-content[data-glass='lib'],
+.folder-popover[data-glass='lib'],
+.dsh-dialog__panel[data-glass='lib'] {
     pointer-events: auto;
 }
 
