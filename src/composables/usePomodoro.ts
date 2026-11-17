@@ -15,14 +15,25 @@
 import { log } from '@/src/lib/log';
 import { computed, ref, watch } from 'vue';
 import type { ComputedRef, Ref } from 'vue';
-import { useStored } from '@/src/lib/storage';
+import { useStored, whenStoredHydrated } from '@/src/lib/storage';
+import {
+    POMODORO_RUNTIME_KEY,
+    makeRuntimeRecord,
+    normalizeRuntime,
+    phaseSeconds,
+    recoverRuntime,
+    type PomodoroActiveState,
+    type PomodoroPhaseType,
+    type PomodoroRecoveryConfig,
+    type PomodoroRuntimeRecord,
+    type PomodoroState,
+} from '@/src/lib/pomodoroRuntime';
 import { toast as showToast } from '@/src/composables/useToast';
 export { showToast };
+// 状态的类型真源在 lib/pomodoroRuntime（纯函数模块），这里只做对外再导出
+export type { PomodoroActiveState, PomodoroPhaseType, PomodoroState };
 
 // ---------- 类型 ----------
-
-export type PomodoroState = 'idle' | 'working' | 'resting' | 'paused';
-export type PomodoroPhaseType = 'work' | 'break' | 'longBreak';
 
 export interface PomodoroSettings {
     workMinutes: number;
@@ -179,8 +190,68 @@ const stats = useStored<PomodoroStats>(
 const state = ref<PomodoroState>('idle'); // idle | working | resting | paused
 const phaseType = ref<PomodoroPhaseType>('work'); // work | break | longBreak
 const remainingSeconds = ref(DEFAULT_SETTINGS.workMinutes * 60);
-let pausedFrom: PomodoroState = 'working';
+let pausedFrom: PomodoroActiveState = 'working';
 let timerId: ReturnType<typeof setInterval> | undefined = undefined;
+
+// ---------- 运行态持久化（v2.2：跨标签页 / 跨重启接着走，零新权限） ----------
+//
+// 只写四个时机（start / pause / reset / skip / 阶段完成），**不按秒写盘**：
+// 每秒写 chrome.storage 会把配额和 IO 打满，而恢复所需的信息其实只有
+// 「绝对截止时间」一个数。运行中的剩余秒数由 deadline 现算（见 tick）。
+
+/** 本上下文的身份，用来忽略自己写入触发的 onChanged 回声 */
+const RUNTIME_OWNER = `pm-${Math.random().toString(36).slice(2, 10)}`;
+
+/** 运行中阶段的绝对截止时间（毫秒）；暂停/空闲/未起表的休息阶段为 null */
+let currentDeadline: number | null = null;
+
+/** 首次水合 + 恢复完成前一律不写盘，否则默认帧会覆盖掉真实记录 */
+let runtimeReady = false;
+let runtimeListenerBound = false;
+
+/**
+ * 用户在恢复完成前就点了开始/暂停/重置。
+ *
+ * 那种情况下内存状态才是最新的，恢复逻辑必须让位——否则异步读回来的旧记录
+ * 会把用户刚做的操作覆盖掉（首屏几百毫秒内点到按钮完全可能发生）。
+ */
+let userTouchedRuntime = false;
+
+function writeRuntime(): void {
+    if (!runtimeReady) return;
+    const payload = makeRuntimeRecord({
+        state: state.value,
+        phaseType: phaseType.value,
+        pausedFrom,
+        remainingSeconds: remainingSeconds.value,
+        // 用「计时器是否真的在跑」而不是 state：legacy 里休息阶段进入后 state 已是
+        // resting 但计时器没起（要手动 暂停→继续 才走），按 state 判断会凭空算掉时间
+        running: timerId !== undefined && currentDeadline !== null,
+        now: Date.now(),
+        deadline: currentDeadline,
+        owner: RUNTIME_OWNER,
+    });
+    try {
+        void Promise.resolve(chrome.storage.local.set({ [POMODORO_RUNTIME_KEY]: payload })).catch(
+            (error: unknown) => {
+                log.warn('[pomodoro] 运行态写入失败:', (error as Error)?.message ?? error);
+            }
+        );
+    } catch (error) {
+        log.warn('[pomodoro] 运行态写入失败:', (error as Error)?.message ?? error);
+    }
+}
+
+function clearTimer(): void {
+    clearInterval(timerId);
+    timerId = undefined;
+}
+
+/** 按当前 remainingSeconds 起表（恢复路径不调用 tick，避免又白扣一秒） */
+function armTimer(): void {
+    clearTimer();
+    timerId = setInterval(tick, 1000);
+}
 
 // ---------- 计时侧副作用（legacy 在 bindPomodoroEvents 里绑定的 onTick/onPhaseComplete） ----------
 
@@ -243,7 +314,14 @@ watch(settings, value => {
 // ---------- 状态机（逐方法对齐 PomodoroManager） ----------
 
 function tick(): void {
-    remainingSeconds.value -= 1;
+    if (currentDeadline !== null) {
+        // 以绝对截止时间为唯一真源：setInterval 在后台标签页会被节流到秒级甚至分钟级，
+        // 逐秒自减只会越走越慢，而 deadline 现算能把整段时间一次性追平
+        remainingSeconds.value = Math.max(0, Math.ceil((currentDeadline - Date.now()) / 1000));
+    } else {
+        // start() 的首次调用没有 deadline（legacy 立即扣一秒的行为），暂按时长自减
+        remainingSeconds.value -= 1;
+    }
     if (remainingSeconds.value <= 0) {
         completePhase();
         return;
@@ -253,6 +331,7 @@ function tick(): void {
 function completePhase(): void {
     clearInterval(timerId);
     timerId = undefined;
+    currentDeadline = null;
     if (phaseType.value === 'work') {
         stats.value.cycleCount = (stats.value.cycleCount || 0) + 1;
         stats.value.completedToday = (stats.value.completedToday || 0) + 1;
@@ -264,6 +343,7 @@ function completePhase(): void {
         remainingSeconds.value = settings.value.workMinutes * 60;
         notifyComplete('work');
     }
+    writeRuntime();
 }
 
 /** 进入休息阶段（counted 表示是否为完整专注轮；legacy enterBreak） */
@@ -279,6 +359,7 @@ function enterBreak(counted: boolean): void {
 
 /** 开始 / 继续（legacy start：立即 tick 一秒后再建 interval） */
 function start(): void {
+    userTouchedRuntime = true;
     if (state.value === 'working' || state.value === 'resting') return;
     if (state.value === 'paused') {
         state.value = pausedFrom; // 恢复到暂停前的阶段
@@ -287,33 +368,49 @@ function start(): void {
         state.value = 'working';
         remainingSeconds.value = settings.value.workMinutes * 60;
     }
+    const stateBeforeTick = state.value;
     tick();
+    // tick 恰好把阶段跑完时 completePhase 已经接管（自己摆好休息/空闲态）：
+    // 这里再起表会把「进入休息」的阶段也逐秒扣掉，破坏 legacy 的休息不自动计时
+    if (state.value !== stateBeforeTick) return;
+    // deadline 在 tick 之后按剩余秒数重算，保证「恢复出来的 23:40」不会被
+    // 写盘路径上的旧 deadline 拉回去
+    currentDeadline = Date.now() + Math.max(1, remainingSeconds.value) * 1000;
     timerId = setInterval(tick, 1000);
+    writeRuntime();
 }
 
 /** 暂停（legacy pause） */
 function pause(): void {
+    userTouchedRuntime = true;
     if (state.value !== 'working' && state.value !== 'resting') return;
     pausedFrom = state.value;
     state.value = 'paused';
     clearInterval(timerId);
     timerId = undefined;
+    currentDeadline = null;
+    writeRuntime();
 }
 
 /** 重置回初始专注阶段（legacy reset） */
 function reset(): void {
+    userTouchedRuntime = true;
     clearInterval(timerId);
     timerId = undefined;
+    currentDeadline = null;
     state.value = 'idle';
     phaseType.value = 'work';
     remainingSeconds.value = settings.value.workMinutes * 60;
+    writeRuntime();
 }
 
 /** 跳过当前阶段（不计数，直接进入下一阶段；legacy skipPhase） */
 function skipPhase(): void {
+    userTouchedRuntime = true;
     if (state.value === 'idle') return;
     clearInterval(timerId);
     timerId = undefined;
+    currentDeadline = null;
     if (phaseType.value === 'work') {
         enterBreak(false); // 跳过专注不计数，进短休
     } else {
@@ -322,6 +419,7 @@ function skipPhase(): void {
         remainingSeconds.value = settings.value.workMinutes * 60;
         notifyComplete('work');
     }
+    writeRuntime();
 }
 
 /** 面板/卡片的开始按钮状态机：运行中→暂停，否则开始（legacy 两处按钮的共用逻辑） */
@@ -364,14 +462,97 @@ function getCurrentState(): PomodoroCurrentState {
     };
 }
 
+// ---------- 冷启动恢复与跨标签页同步 ----------
+
+/**
+ * 把一帧记录摆到状态机上。
+ *
+ * 与 completePhase 的差异：这里不重放声音以外的副作用链，而是直接采纳
+ * recoverRuntime 算好的结果——因为恢复时可能已经跨了多个阶段，重放会乱。
+ */
+function applyRuntime(record: PomodoroRuntimeRecord, announce: boolean): void {
+    const config: PomodoroRecoveryConfig = {
+        workMinutes: settings.value.workMinutes,
+        breakMinutes: settings.value.breakMinutes,
+        longBreakMinutes: settings.value.longBreakMinutes,
+        roundsBeforeLongBreak: settings.value.roundsBeforeLongBreak,
+        cycleCount: stats.value.cycleCount || 0,
+    };
+    const plan = recoverRuntime(record, config, Date.now());
+
+    clearTimer();
+    state.value = plan.state;
+    phaseType.value = plan.phaseType;
+    pausedFrom = plan.pausedFrom;
+    remainingSeconds.value = plan.remainingSeconds;
+
+    if (plan.completedWork) {
+        // 离开期间到点的那次专注要补记，否则统计口径会默默少算一轮
+        stats.value.cycleCount = (stats.value.cycleCount || 0) + 1;
+        stats.value.completedToday = (stats.value.completedToday || 0) + 1;
+        stats.value.totalAllTime = (stats.value.totalAllTime || 0) + 1;
+    }
+
+    if (plan.keepRunning && typeof record.deadline === 'number') {
+        // 沿用原来的截止时间：新的标签页不该把 deadline 往后推
+        currentDeadline = record.deadline;
+        armTimer();
+    } else {
+        currentDeadline = null;
+    }
+
+    if (announce && plan.advancedTo) {
+        showToast(PHASE_MESSAGES[plan.advancedTo], 'success', 4000);
+    }
+}
+
+async function readRuntime(): Promise<PomodoroRuntimeRecord | null> {
+    try {
+        const result = await chrome.storage.local.get([POMODORO_RUNTIME_KEY]);
+        return normalizeRuntime(result?.[POMODORO_RUNTIME_KEY]);
+    } catch (error) {
+        log.warn('[pomodoro] 运行态读取失败:', (error as Error)?.message ?? error);
+        return null;
+    }
+}
+
+function bindRuntimeSync(): void {
+    if (runtimeListenerBound) return;
+    runtimeListenerBound = true;
+    try {
+        chrome.storage.onChanged.addListener((changes, area) => {
+            if (area !== 'local' || !changes[POMODORO_RUNTIME_KEY]) return;
+            const record = normalizeRuntime(changes[POMODORO_RUNTIME_KEY].newValue);
+            if (!record) return;
+            // 自己写的回声不处理：否则每次落盘都会把正在跑的计时器重建一次
+            if (record.owner && record.owner === RUNTIME_OWNER) return;
+            applyRuntime(record, true);
+        });
+    } catch (error) {
+        log.warn('[pomodoro] 跨标签页同步绑定失败:', (error as Error)?.message ?? error);
+    }
+}
+
+/**
+ * 冷启动入口：等 settings/stats 水合 → 读运行态 → 摆状态 → 放开写盘闸门。
+ *
+ * 顺序不能反：先水合再恢复，否则算出来的阶段时长和长休息判定都是默认值。
+ */
+async function initRuntime(): Promise<void> {
+    await Promise.all([whenStoredHydrated(settings), whenStoredHydrated(stats)]);
+    bindRuntimeSync();
+    const record = await readRuntime();
+    // 用户在异步窗口里已经操作过：内存状态优先，不拿旧记录回滚
+    if (record && !userTouchedRuntime) applyRuntime(record, true);
+    runtimeReady = true;
+    // 恢复完立刻落一帧：首次安装建立基线，跨阶段恢复后把结算结果写回去
+    writeRuntime();
+}
+
 // ---------- 派生状态（legacy render/getProgress/getStateLabel 的响应式版） ----------
 
 /** 阶段总时长（秒）（legacy getPhaseTotalSeconds） */
-const phaseTotalSeconds = computed<number>(() => {
-    if (phaseType.value === 'break') return settings.value.breakMinutes * 60;
-    if (phaseType.value === 'longBreak') return settings.value.longBreakMinutes * 60;
-    return settings.value.workMinutes * 60;
-});
+const phaseTotalSeconds = computed<number>(() => phaseSeconds(phaseType.value, settings.value));
 
 /** 阶段进度信息（legacy getProgress） */
 const progress = computed<PomodoroProgress>(() => {
@@ -411,6 +592,21 @@ const cycleInRound = computed<number>(
     () => (stats.value.cycleCount || 0) % settings.value.roundsBeforeLongBreak
 );
 
+// 冻结标签页回来时按 deadline 一次性补算：后台定时器被浏览器节流/冻结期间
+// 一秒都没走，这里把它「追平」，而不是让用户看到停在 12:00 的假象。
+if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible') return;
+        if (timerId === undefined || currentDeadline === null) return;
+        const remaining = Math.ceil((currentDeadline - Date.now()) / 1000);
+        if (remaining <= 0) {
+            completePhase();
+            return;
+        }
+        remainingSeconds.value = remaining;
+    });
+}
+
 // ---------- 对外 API ----------
 
 export interface PomodoroApi {
@@ -434,6 +630,11 @@ export interface PomodoroApi {
     getSettings: () => PomodoroSettings;
     getStats: () => PomodoroStats;
     getCurrentState: () => PomodoroCurrentState;
+    /**
+     * 冷启动恢复入口。单例创建时已自动调用一次；只有需要「等恢复完成后再读状态」
+     * 的调用方（例如测试或首屏骨架）才需要显式 await。
+     */
+    initRuntime: () => Promise<void>;
 }
 
 let api: PomodoroApi | null = null;
@@ -462,7 +663,10 @@ export function usePomodoro(): PomodoroApi {
             getSettings,
             getStats,
             getCurrentState,
+            initRuntime,
         };
+        // 单例一建立就恢复：面板/卡片拿到的是接续过的状态，而不是默认 25:00
+        void initRuntime();
     }
     return api;
 }

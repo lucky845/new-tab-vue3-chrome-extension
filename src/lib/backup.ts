@@ -6,6 +6,7 @@
  * 边界：除 exportToFile 的下载锚点外不碰 DOM，不渲染 UI（UI 在 SettingsPanel.vue）。
  */
 import { isHttp, isImageSource } from '@/src/lib/urlSafe';
+import { normalizeHistory } from '@/src/lib/searchHistory';
 
 export const APP_ID = 'new-tab-pro';
 export const SCHEMA_VERSION = 2;
@@ -34,6 +35,9 @@ const registry: Record<string, RegistryEntry> = {
     notes: { type: 'array', label: '便签', since: 1 },
     pomodoroSettings: { type: 'object', label: '番茄钟设置', since: 1 },
     pomodoroStats: { type: 'object', label: '番茄钟统计', since: 1 },
+    // 运行态存的是绝对截止时间戳，跨设备/隔天恢复只会得到一个立刻到期的假计时器，
+    // 因此归为缓存：导出时排除，恢复后由 usePomodoro 首次启动自建基线
+    pomodoroRuntime: { type: 'object', label: '番茄钟运行态', since: 2, cache: true },
     searchHistory: { type: 'array', label: '搜索历史', since: 1 },
     engineIcons: { type: 'array', label: '搜索引擎图标缓存', since: 2 },
     themeSettings: { type: 'object', label: '主题设置', since: 2 },
@@ -419,23 +423,15 @@ function sanitizeValues(accepted: Record<string, unknown>): number {
             });
     }
 
-    // searchHistory：字符串数组，去重并限制长度
+    // searchHistory：v2.1 是纯字符串数组，v2.2 起是 { text, pinned, at } 对象数组。
+    // 导入必须三种输入都吃（旧备份 / 新备份 / 手改过的混合数组），归一化规则
+    // 与运行时 `composables/useSearch` 共用 lib/searchHistory 的实现，不再各写一套。
     if (Array.isArray(accepted.searchHistory)) {
-        const seen: Record<string, boolean> = Object.create(null);
-        const kept: string[] = [];
-        for (const word of accepted.searchHistory) {
-            if (typeof word !== 'string' || !word) {
-                dropped++;
-                continue;
-            }
-            if (seen[word]) {
-                dropped++;
-                continue;
-            }
-            seen[word] = true;
-            kept.push(word);
-        }
-        accepted.searchHistory = kept.slice(0, 20);
+        const before = accepted.searchHistory.length;
+        const normalized = normalizeHistory(accepted.searchHistory);
+        // 归一会去空、去重、截断；丢了多少条记在 dropped 里，恢复报告要如实报数
+        dropped += Math.max(0, before - normalized.length);
+        accepted.searchHistory = normalized;
     }
     return dropped;
 }

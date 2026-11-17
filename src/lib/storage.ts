@@ -37,6 +37,19 @@ export interface StoredOptions<T> {
   save?: (value: T) => unknown;
 }
 
+/**
+ * 每个 useStored 实例的「首次水合完成」Promise。
+ *
+ * 存在的理由：番茄钟运行态的恢复要用到已水合的 stats（判断长休息）与 settings
+ * （阶段时长），而 useStored 的水合是异步的、此前没有任何可等待的出口。
+ */
+const hydrationPromises = new WeakMap<object, Promise<void>>();
+
+/** 等待某个 useStored 的首次水合完成（已水合则立即 resolve） */
+export function whenStoredHydrated<T>(state: Ref<T>): Promise<void> {
+  return hydrationPromises.get(state as unknown as object) ?? Promise.resolve();
+}
+
 export function useStored<T>(key: string, initial: T, options: StoredOptions<T> = {}): Ref<T> {
   ensureOnChange();
   const load = options.load ?? ((raw: unknown) => raw as T);
@@ -53,10 +66,11 @@ export function useStored<T>(key: string, initial: T, options: StoredOptions<T> 
     if (stableStringify(state.value) !== stableStringify(next)) state.value = next;
   };
 
-  void chrome.storage.local.get([key]).then((result) => {
+  const hydration = chrome.storage.local.get([key]).then((result) => {
     apply(result[key]);
     hydrated = true;
   });
+  hydrationPromises.set(state as unknown as object, hydration);
 
   const listener = (changed: string): void => {
     if (changed !== key || !hydrated) return;

@@ -712,6 +712,52 @@ body {
     cursor: pointer;
 }
 
+/* 固定按钮（v2.2）：与删除按钮同尺寸同基线，未固定时低对比度，固定后吃品牌色 */
+.pin-history-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    margin-right: 6px;
+    border-radius: 50%;
+    transition:
+        color 0.2s ease,
+        background-color 0.2s ease,
+        opacity 0.2s ease;
+    flex-shrink: 0;
+    opacity: 0.55;
+}
+
+.pin-history-btn svg {
+    width: 15px;
+    height: 15px;
+}
+
+.pin-history-btn:hover {
+    opacity: 1;
+    color: var(--text-primary);
+    background-color: rgb(var(--ink) / calc(0.2 * var(--wash-k)));
+}
+
+.pin-history-btn.is-pinned {
+    opacity: 1;
+    color: rgb(var(--accent));
+}
+
+/* 固定条目标识：左侧色条 + 悬停底色稍强，扫一眼就知道哪几条不会被淘汰 */
+.history-item.pinned {
+    box-shadow: inset 3px 0 0 rgb(var(--accent) / 0.85);
+}
+
+.history-item.pinned .history-text {
+    font-weight: 600;
+}
+
 .delete-history-btn {
     display: flex;
     align-items: center;
