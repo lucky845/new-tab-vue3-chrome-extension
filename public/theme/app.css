@@ -1321,49 +1321,6 @@ body {
     align-self: flex-start;
 }
 
-/* 键盘快捷键清单：kbd 走控件同族玻璃，避免在设置页里像纯文本 */
-.shortcut-list {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-}
-
-.shortcut-row {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    font-size: 13px;
-}
-
-.shortcut-keys {
-    display: inline-flex;
-    gap: 4px;
-    flex-shrink: 0;
-}
-
-.shortcut-keys kbd {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 22px;
-    height: 22px;
-    padding: 0 6px;
-    border-radius: 6px;
-    border: 1px solid var(--glass-edge);
-    background: rgb(var(--ink) / calc(0.06 * var(--wash-k)));
-    color: var(--text-primary);
-    font-family: inherit;
-    font-size: 12px;
-    line-height: 1;
-}
-
-.shortcut-label {
-    color: var(--text-secondary, var(--text-primary));
-}
-
 .settings-btn.primary {
     background-color: rgb(var(--btn-blue));
     color: rgb(var(--on-accent));

@@ -34,7 +34,6 @@ export interface PanelsApi {
   open: (id: PanelId) => void;
   close: (id: PanelId) => void;
   toggle: (id: PanelId) => void;
-  closeAll: () => void;
 }
 
 /**
@@ -122,11 +121,6 @@ export function usePanels(): PanelsApi {
     toggle: (id) => {
       if (!state[id]) seedPanelOriginFromTrigger(id);
       state[id] = !state[id];
-    },
-    closeAll: () => {
-      (Object.keys(state) as PanelId[]).forEach((k) => {
-        state[k] = false;
-      });
     },
   };
 }
