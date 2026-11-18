@@ -1,5 +1,22 @@
 # New Tab Pro
 
+[![Release](https://img.shields.io/github/v/release/lucky845/new-tab-vue3-chrome-extension?style=flat-square&label=release&color=2f81f7)](https://github.com/lucky845/new-tab-vue3-chrome-extension/releases/latest)
+[![Release Workflow](https://img.shields.io/github/actions/workflow/status/lucky845/new-tab-vue3-chrome-extension/release.yml?style=flat-square&label=build)](https://github.com/lucky845/new-tab-vue3-chrome-extension/actions/workflows/release.yml)
+[![License](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![Manifest V3](https://img.shields.io/badge/manifest-v3-4285f4?style=flat-square&logo=googlechrome&logoColor=white)](#技术栈)
+[![Chrome](https://img.shields.io/badge/Chrome-支持-4285f4?style=flat-square&logo=googlechrome&logoColor=white)](#界面预览)
+[![Edge](https://img.shields.io/badge/Edge-支持-0078d7?style=flat-square&logo=microsoftedge&logoColor=white)](#界面预览)
+[![Firefox](https://img.shields.io/badge/Firefox-MV2-ff7139?style=flat-square&logo=firefoxbrowser&logoColor=white)](#界面预览)
+
+[![Vue 3](https://img.shields.io/badge/Vue-3.5-42b883?style=flat-square&logo=vuedotjs&logoColor=white)](#技术栈)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6?style=flat-square&logo=typescript&logoColor=white)](#技术栈)
+[![Vite](https://img.shields.io/badge/Vite-8-646cff?style=flat-square&logo=vite&logoColor=white)](#技术栈)
+[![WXT](https://img.shields.io/badge/WXT-0.21-67d55e?style=flat-square)](https://wxt.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-06b6d4?style=flat-square&logo=tailwindcss&logoColor=white)](#技术栈)
+[![Vitest](https://img.shields.io/badge/tests-205_passing-6e9f18?style=flat-square&logo=vitest&logoColor=white)](#常用脚本)
+[![Node](https://img.shields.io/badge/Node.js-%E2%89%A522.12-339933?style=flat-square&logo=nodedotjs&logoColor=white)](#快速开始)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](#贡献)
+
 一个纯本地的 Chrome / Edge 新标签页扩展：液态玻璃视觉、可自定义的快捷访问、壁纸、天气、待办、便签、番茄钟与小工具，全部数据只存在本机。
 
 > [!NOTE]
@@ -46,13 +63,16 @@
 
 ## 技术栈
 
-| 层       | 选型                                                                       |
-| -------- | -------------------------------------------------------------------------- |
-| 扩展框架 | [WXT](https://wxt.dev/) 0.21（Manifest V3，`chrome_url_overrides.newtab`） |
-| 视图     | Vue 3.5 `<script setup lang="ts">` + TypeScript 5.7                        |
-| 玻璃渲染 | @surdeddd/liquidglass（css-svg 后端，CSP 下自动降级到主线程位移贴图）      |
-| 样式     | 原生 CSS 主题令牌 + Tailwind CSS v3（shadcn-vue 约定，reka-ui）            |
-| 拖拽     | 指针事件自研（`src/composables/useIconDrag.ts`）；待办列表使用 SortableJS  |
+| 层       | 选型                                                                         | 版本    |
+| -------- | ---------------------------------------------------------------------------- | ------- |
+| 扩展框架 | [WXT](https://wxt.dev/)（Manifest V3，`chrome_url_overrides.newtab`）        | 0.21.5  |
+| 视图     | Vue `<script setup lang="ts">` + TypeScript                                 | 3.5.45 / 5.7.3 |
+| 构建     | [Vite](https://vite.dev/)（由 WXT 驱动）                                     | 8.3.8   |
+| 玻璃渲染 | [@surdeddd/liquidglass](https://www.npmjs.com/package/@surdeddd/liquidglass)（css-svg 后端，CSP 下自动降级到主线程位移贴图） | 0.12.0 |
+| 样式     | 原生 CSS 主题令牌 + [Tailwind CSS](https://tailwindcss.com/)（shadcn-vue 约定，reka-ui） | 3.4.19 |
+| 拖拽     | 指针事件自研（`src/composables/useIconDrag.ts`）；待办列表使用 SortableJS  | —       |
+| 测试     | [Vitest](https://vitest.dev/)（node 环境，21 文件 205 用例）+ vue-tsc 类型检查 | 5.1.0 / 3.3.14 |
+| 运行时   | Node.js                                                                      | ≥ 22.12 |
 
 ## 快速开始
 
@@ -86,14 +106,15 @@ npm run build        # 产物输出到 .output/chrome-mv3
 | `npm run build:firefox`        | 构建 Firefox 版本                       |
 | `npm run zip`                  | 打包当前浏览器产物，用于商店提交        |
 | `npx wxt zip -b firefox --mv2` | 打 Firefox（Manifest V2）包             |
+| `npm run check:remote-code`    | 扫描构建产物里的远程 script / 动态 import |
+| `npm run compile`              | `vue-tsc --noEmit` 类型检查             |
+| `npm run lint`                 | ESLint（src 全量）+ 类型检查            |
+| `npm run lint:fix`             | ESLint 自动修复 + 类型检查              |
+| `npm run format`               | Prettier 格式化 `src/`                 |
+| `npm test`                     | Vitest 单元测试（一次性，21 文件 205 用例） |
+| `npm run test:watch`           | Vitest 监听模式                         |
 
 三种浏览器的成品包由 CI 在打 tag 时自动构建，见下方「发布流程」。
-| `npm run compile` | `vue-tsc --noEmit` 类型检查 |
-| `npm run lint` | ESLint（src 全量）+ 类型检查 |
-| `npm run lint:fix` | ESLint 自动修复 + 类型检查 |
-| `npm run format` | Prettier 格式化 `src/` |
-| `npm test` | Vitest 单元测试（一次性，115 用例） |
-| `npm run test:watch` | Vitest 监听模式 |
 
 ## 项目结构
 
