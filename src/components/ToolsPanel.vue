@@ -81,13 +81,14 @@ watch(
             :open="isOpen('tools')"
             variant="settings"
             elementId="tools-panel"
+            labelled-by="tools-panel-title"
             @dismiss="closePanel()"
           >
             <div class="settings-content tools-content">
                 <div class="tools-panel-header">
                     <h2 id="tools-panel-title">{{ activeTool?.name ?? '小工具' }}</h2>
                     <div class="tools-panel-header-actions">
-                        <button id="close-tools-btn" class="close-panel-btn close-btn" title="关闭" @click="closePanel()">✕</button>
+                        <button id="close-tools-btn" class="close-panel-btn close-btn" title="关闭" aria-label="关闭" @click="closePanel()">✕</button>
                     </div>
                 </div>
 

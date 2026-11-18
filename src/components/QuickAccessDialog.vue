@@ -265,6 +265,7 @@ onUnmounted(() => {
         :open="dialogOpen"
         variant="settings"
         elementId="add-quick-access-panel"
+        labelled-by="qa-panel-title"
         @dismiss="closeDialog"
       >
         <div class="settings-content">
@@ -273,6 +274,7 @@ onUnmounted(() => {
                 class="close-panel-btn"
                 type="button"
                 title="关闭"
+                aria-label="关闭"
                 @click="closeDialog"
             >
                 ✕

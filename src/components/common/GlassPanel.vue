@@ -10,10 +10,11 @@
  * 调用方写在 slot 里，DOM 结构与抽离前完全等价——不打断 popoverEl / scrollEl 测量。
  * 玻璃材质本身由 app.css:801-820 一处统一，本组件不重复写 backdrop-filter。
  */
-import { computed, onUnmounted, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { panelOriginStyle, type PanelId } from '@/src/composables/usePanels';
 import { registerEscapeTarget } from '@/src/composables/useEscapeClose';
 import { ESCAPE_Z_BY_VARIANT } from '@/src/lib/escapeClose';
+import { registerFocusTrap } from '@/src/composables/useFocusTrap';
 
 const props = withDefaults(
   defineProps<{
@@ -27,6 +28,8 @@ const props = withDefaults(
     elementId?: string;
     /** 点击遮罩是否触发 dismiss（壁纸/天气面板原本就不关，传 false） */
     dismissable?: boolean;
+    /** 面板标题元素的 id：提供后根节点用 aria-labelledby 指过去，屏幕阅读器念得出面板名 */
+    labelledBy?: string;
   }>(),
   { variant: 'settings', dismissable: true },
 );
@@ -64,9 +67,36 @@ watch(
   },
   { immediate: true },
 );
+/** 面板根节点：焦点陷阱的兜底容器（面板内没有可聚焦元素时落在这里） */
+const rootEl = ref<HTMLElement | null>(null);
+
+/** 焦点陷阱：打开时把焦点收进面板、Tab 在面板内循环，关闭时把焦点还给触发元素。
+ * 层级与打开顺序复用 Esc 那套登记模型，保证 Tab 和 Esc 关掉的是同一层。 */
+let unregisterTrap: (() => void) | null = null;
+watch(
+  () => props.open,
+  open => {
+    unregisterTrap?.();
+    unregisterTrap = null;
+    if (!open || !rootEl.value) return;
+    unregisterTrap = registerFocusTrap(props.panelId, ESCAPE_Z_BY_VARIANT[props.variant], rootEl.value);
+  },
+  { immediate: true },
+);
+/**
+ * 兜底：若组件挂载时 open 已经为 true，setup 阶段的 immediate watch 拿不到 rootEl，
+ * 焦点陷阱不会登记。onMounted 时补一次，保证「打开态挂载」也能收焦点。
+ */
+onMounted(() => {
+  if (props.open && rootEl.value) {
+    unregisterTrap = registerFocusTrap(props.panelId, ESCAPE_Z_BY_VARIANT[props.variant], rootEl.value);
+  }
+});
 onUnmounted(() => {
   unregisterEscape?.();
   unregisterEscape = null;
+  unregisterTrap?.();
+  unregisterTrap = null;
 });
 </script>
 
@@ -75,6 +105,11 @@ onUnmounted(() => {
     :id="elementId"
     :style="panelOriginStyle(panelId)"
     :class="[rootClass, { 'u-hidden': !open }]"
+    role="dialog"
+    aria-modal="true"
+    :aria-labelledby="labelledBy || undefined"
+    ref="rootEl"
+    tabindex="-1"
     @click.self="dismissable && emit('dismiss')"
   >
     <slot />

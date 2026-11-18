@@ -543,6 +543,7 @@ onBeforeUnmount(() => {
                 <button
                     class="page-btn prev-btn"
                     :disabled="currentPage === 1"
+                    aria-label="上一页"
                     @click="previousPage"
                 >
                     ‹
@@ -559,6 +560,7 @@ onBeforeUnmount(() => {
                 <button
                     class="page-btn next-btn"
                     :disabled="currentPage === totalPages"
+                    aria-label="下一页"
                     @click="nextPage"
                 >
                     ›

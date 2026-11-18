@@ -83,15 +83,17 @@ async function applySettings(): Promise<void> {
         :open="isOpen('pomodoro')"
         variant="widget"
         elementId="pomodoro-panel"
+        labelled-by="pomodoro-panel-title"
         @dismiss="close('pomodoro')"
       >
         <div class="widget-content">
             <div class="widget-header">
-                <h2>番茄专注钟</h2>
+                <h2 id="pomodoro-panel-title">番茄专注钟</h2>
                 <button
                     id="close-pomodoro-btn"
                     class="control-btn widget-close-btn"
                     title="关闭"
+                    aria-label="关闭"
                     @click="close('pomodoro')"
                 >
                     <svg

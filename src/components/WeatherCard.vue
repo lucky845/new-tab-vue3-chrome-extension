@@ -152,6 +152,7 @@ onUnmounted(() => stopAutoUpdate());
         id="weather-settings-btn"
         class="weather-settings-btn"
         title="天气设置"
+        aria-label="天气设置"
         @click.stop="openWeatherSettings($event)"
       >
         <svg
