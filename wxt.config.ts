@@ -72,7 +72,7 @@ export default defineConfig({
         name: '__MSG_appName__',
         description: '__MSG_appDescription__',
         default_locale: 'zh_CN',
-        version: '2.2.2',
+        version: '2.2.3',
 
         // 新标签页是唯一入口，不需要后台脚本，也不需要 content script。
         // storage：壁纸 / 快捷访问 / 待办 / 便签 / 设置全部落在这里。

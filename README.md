@@ -13,7 +13,7 @@
 [![Vite](https://img.shields.io/badge/Vite-8-646cff?style=flat-square&logo=vite&logoColor=white)](#技术栈)
 [![WXT](https://img.shields.io/badge/WXT-0.21-67d55e?style=flat-square)](https://wxt.dev/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-06b6d4?style=flat-square&logo=tailwindcss&logoColor=white)](#技术栈)
-[![Vitest](https://img.shields.io/badge/tests-205_passing-6e9f18?style=flat-square&logo=vitest&logoColor=white)](#常用脚本)
+[![Vitest](https://img.shields.io/badge/tests-210_passing-6e9f18?style=flat-square&logo=vitest&logoColor=white)](#常用脚本)
 [![Node](https://img.shields.io/badge/Node.js-%E2%89%A522.12-339933?style=flat-square&logo=nodedotjs&logoColor=white)](#快速开始)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen?style=flat-square)](#贡献)
 
@@ -71,7 +71,7 @@
 | 玻璃渲染 | [@surdeddd/liquidglass](https://www.npmjs.com/package/@surdeddd/liquidglass)（css-svg 后端，CSP 下自动降级到主线程位移贴图） | 0.12.0 |
 | 样式     | 原生 CSS 主题令牌 + [Tailwind CSS](https://tailwindcss.com/)（shadcn-vue 约定，reka-ui） | 3.4.19 |
 | 拖拽     | 指针事件自研（`src/composables/useIconDrag.ts`）；待办列表使用 SortableJS  | —       |
-| 测试     | [Vitest](https://vitest.dev/)（node 环境，21 文件 205 用例）+ vue-tsc 类型检查 | 5.1.0 / 3.3.14 |
+| 测试     | [Vitest](https://vitest.dev/)（node 环境，22 文件 210 用例）+ vue-tsc 类型检查 | 5.1.0 / 3.3.14 |
 | 运行时   | Node.js                                                                      | ≥ 22.12 |
 
 ## 快速开始
@@ -111,7 +111,7 @@ npm run build        # 产物输出到 .output/chrome-mv3
 | `npm run lint`                 | ESLint（src 全量）+ 类型检查            |
 | `npm run lint:fix`             | ESLint 自动修复 + 类型检查              |
 | `npm run format`               | Prettier 格式化 `src/`                 |
-| `npm test`                     | Vitest 单元测试（一次性，21 文件 205 用例） |
+| `npm test`                     | Vitest 单元测试（一次性，22 文件 210 用例） |
 | `npm run test:watch`           | Vitest 监听模式                         |
 
 三种浏览器的成品包由 CI 在打 tag 时自动构建，见下方「发布流程」。
