@@ -1,14 +1,17 @@
 /**
- * 对话框（Vue3 ESM 版）
+ * 对话框（原生 <dialog> 版）
  * --------------------------------------------------------------------
- * 逐字移植 v1.8.1:js/utils/dsh-dialog.js（203 行）：
- * - .dsh-dialog / __panel / __title / __message / __input / __error / __actions
- * - .settings-btn.secondary.dsh-dialog__cancel 文案「取消」、.primary.dsh-dialog__confirm「确定」
- * - 校验提示内联展示、ESC / 遮罩关闭、Tab 囚禁、焦点复位、重复打开先 cancel
- * - prompt 取消返回 null、confirm 取消返回 false、submit 用 raw.trim()
- * - 经典 dshDialog 全局挂载 → 纯 ESM export，零全局对象挂载
+ * API 与经典 dshDialog 一致：prompt / confirm / alert，返回语义不变。
+ *
+ * 迁移说明（现代 Web 指南 · dialog）：旧实现用 div + role=dialog + aria-modal 手搓模态框，
+ * 自己维护 Tab 焦点囚禁 / Esc / 遮罩点击 / 焦点复位。原生 <dialog>.showModal() 免费提供
+ * top-layer、浏览器级 inert、焦点管理、Esc（cancel）、::backdrop。这里保留 .dsh-dialog
+ * class 与全部 __panel/__title/... 结构和 CSS（视觉零回归），只把手搓逻辑换成原生语义，
+ * 且保留 click-outside fallback —— closedby=any 在 Safari 不支持（Limited availability）。
+ *
+ * 与 useEscapeClose 的契约：那个模块靠 .dsh-dialog 选择器判断对话框是否开着并让路；
+ * 原生 dialog 挂 body 且保留该 class，契约不变。
  */
-
 import { PANEL_GLASS, applyGlass } from '@/src/lib/glass';
 
 interface PromptOptions {
@@ -18,19 +21,15 @@ interface PromptOptions {
   danger?: boolean;
   validate?: (value: string) => string | null;
 }
-
 interface ConfirmOptions {
   confirmText?: string;
   cancelText?: string;
   danger?: boolean;
 }
-
 interface AlertOptions {
   confirmText?: string;
 }
-
 type DialogKind = 'prompt' | 'confirm' | 'alert';
-
 interface DialogSpec {
   type: DialogKind;
   title: string;
@@ -41,21 +40,27 @@ interface DialogSpec {
   danger?: boolean;
   validate?: (value: string) => string | null;
 }
-
 interface ActiveDialog {
   cancel(): void;
 }
-
 let activeDialog: ActiveDialog | null = null;
 
-function createOverlay() {
-  const overlay = document.createElement('div');
-  overlay.className = 'dsh-dialog';
-  overlay.setAttribute('role', 'dialog');
-  overlay.setAttribute('aria-modal', 'true');
-  overlay.innerHTML = [
+interface DialogUI {
+  titleEl: HTMLElement;
+  messageEl: HTMLElement;
+  inputEl: HTMLInputElement;
+  errorEl: HTMLElement;
+  cancelBtn: HTMLButtonElement;
+  confirmBtn: HTMLButtonElement;
+}
+function createDialog(): { dialog: HTMLDialogElement; panel: HTMLElement; ui: DialogUI } {
+  const dialog = document.createElement('dialog');
+  dialog.className = 'dsh-dialog';
+  // 指南 MANDATORY：aria-labelledby 指向可见标题，不手写 role/aria-modal
+  dialog.setAttribute('aria-labelledby', 'dsh-dialog-title');
+  dialog.innerHTML = [
     '<div class="dsh-dialog__panel">',
-    '  <div class="dsh-dialog__title"></div>',
+    '  <div class="dsh-dialog__title" id="dsh-dialog-title"></div>',
     '  <div class="dsh-dialog__message"></div>',
     '  <input class="dsh-dialog__input" type="text" />',
     '  <div class="dsh-dialog__error" aria-live="polite"></div>',
@@ -65,33 +70,33 @@ function createOverlay() {
     '  </div>',
     '</div>',
   ].join('');
-  document.body.appendChild(overlay);
-  // 对话框不在 #legacy-panels-root 里（直接挂 body），玻璃挂载中心的 MutationObserver
-  // 扫不到，这里显式补一次：面板档材质，与设置/壁纸面板同一套光学参数。
-  const panel = overlay.querySelector<HTMLElement>('.dsh-dialog__panel');
+  document.body.appendChild(dialog);
+  const panel = dialog.querySelector<HTMLElement>('.dsh-dialog__panel');
   if (panel) applyGlass(panel, PANEL_GLASS);
   function q<TNode extends Element>(selector: string): TNode {
-    const node = overlay.querySelector<TNode>(selector);
+    const node = dialog.querySelector<TNode>(selector);
     if (!node) throw new Error('[dialog] 缺少节点: ' + selector);
     return node;
   }
   return {
-    overlay,
-    titleEl: q<HTMLElement>('.dsh-dialog__title'),
-    messageEl: q<HTMLElement>('.dsh-dialog__message'),
-    inputEl: q<HTMLInputElement>('.dsh-dialog__input'),
-    errorEl: q<HTMLElement>('.dsh-dialog__error'),
-    cancelBtn: q<HTMLButtonElement>('.dsh-dialog__cancel'),
-    confirmBtn: q<HTMLButtonElement>('.dsh-dialog__confirm'),
+    dialog,
+    panel: panel as HTMLElement,
+    ui: {
+      titleEl: q<HTMLElement>('.dsh-dialog__title'),
+      messageEl: q<HTMLElement>('.dsh-dialog__message'),
+      inputEl: q<HTMLInputElement>('.dsh-dialog__input'),
+      errorEl: q<HTMLElement>('.dsh-dialog__error'),
+      cancelBtn: q<HTMLButtonElement>('.dsh-dialog__cancel'),
+      confirmBtn: q<HTMLButtonElement>('.dsh-dialog__confirm'),
+    },
   };
 }
 
 function open<T>(opt: DialogSpec): Promise<T> {
   return new Promise<T>((resolve) => {
     if (activeDialog) activeDialog.cancel();
-    const previousFocus = document.activeElement as HTMLElement | null;
-    const ui = createOverlay();
-    const { overlay, titleEl, messageEl, inputEl, errorEl, cancelBtn, confirmBtn } = ui;
+    const { dialog, panel, ui } = createDialog();
+    const { titleEl, messageEl, inputEl, errorEl, cancelBtn, confirmBtn } = ui;
 
     titleEl.textContent = opt.title || '请确认';
     if (opt.message) messageEl.textContent = opt.message;
@@ -106,143 +111,101 @@ function open<T>(opt: DialogSpec): Promise<T> {
     let settled = false;
 
     function cleanup(): void {
-      document.removeEventListener('keydown', onKeyDown, true);
-      overlay.removeEventListener('click', onOverlayClick);
-      overlay.remove();
+      dialog.removeEventListener('cancel', onCancel);
+      dialog.removeEventListener('close', onClose);
+      dialog.removeEventListener('click', onDialogClick);
+      confirmBtn.removeEventListener('click', onConfirmClick);
+      cancelBtn.removeEventListener('click', onCancelClick);
+      inputEl.removeEventListener('keydown', onInputKeyDown);
+      if (dialog.open) dialog.close();
+      dialog.remove();
       activeDialog = null;
-      if (previousFocus && typeof previousFocus.focus === 'function') previousFocus.focus();
+      // 不手写焦点复位：原生 showModal 会把焦点还给 invoker（指南 DON'T）。
     }
-
     function finish(value: T): void {
       if (settled) return;
       settled = true;
       cleanup();
       resolve(value);
     }
-
     function cancel(): void {
       if (opt.type === 'prompt') finish(null as T);
       else if (opt.type === 'alert') finish(undefined as T);
       else finish(false as T);
     }
-
     function submit(): void {
-      if (opt.type === 'confirm') {
-        finish(true as T);
-        return;
-      }
-      if (opt.type === 'alert') {
-        finish(undefined as T);
-        return;
-      }
-      const raw = inputEl.value;
-      const trimmed = raw.trim();
+      if (opt.type === 'confirm') { finish(true as T); return; }
+      if (opt.type === 'alert') { finish(undefined as T); return; }
+      const trimmed = inputEl.value.trim();
       if (opt.validate) {
         const message = opt.validate(trimmed);
-        if (message) {
-          errorEl.textContent = message;
-          inputEl.focus();
-          return;
-        }
+        if (message) { errorEl.textContent = message; inputEl.focus(); return; }
       }
       finish(trimmed as T);
     }
-
-    function onKeyDown(e: KeyboardEvent): void {
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        cancel();
-        return;
-      }
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        submit();
-        return;
-      }
-      if (e.key !== 'Tab') return;
-      const focusables: HTMLElement[] = [inputEl, cancelBtn, confirmBtn].filter(
-        (node) => !node.classList.contains('u-hidden'),
-      );
-      if (focusables.length === 0) return;
-      const first = focusables[0];
-      const last = focusables[focusables.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last?.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first?.focus();
-      }
+    function onCancel(e: Event): void { e.preventDefault(); cancel(); }
+    function onClose(): void { if (!settled) cancel(); }
+    function onConfirmClick(): void { submit(); }
+    function onCancelClick(): void { cancel(); }
+    function onInputKeyDown(e: KeyboardEvent): void {
+      if (e.key === 'Enter') { e.preventDefault(); submit(); }
+    }
+    // 遮罩点击 fallback：closedby=any 在 Safari 不支持。dialog 是 inset:0 全屏容器，
+    // 必须用 panel 的 rect 判断「点在内容区外」，否则 click-outside 永不生效。
+    function onDialogClick(e: MouseEvent): void {
+      if (e.target !== dialog) return;
+      const rect = panel.getBoundingClientRect();
+      const inside =
+        e.clientX >= rect.left && e.clientX <= rect.right &&
+        e.clientY >= rect.top && e.clientY <= rect.bottom;
+      if (!inside) cancel();
+    }
+    function show(): void {
+      // closedby=any 是渐进增强（Chrome134+/Edge134+/Firefox141+）；Safari 靠 click fallback。
+      dialog.setAttribute('closedby', 'any');
+      if (typeof dialog.showModal === 'function') dialog.showModal();
+      else dialog.setAttribute('open', '');
+      requestAnimationFrame(() => {
+        if (opt.type === 'prompt') { inputEl.focus(); inputEl.select(); }
+        else if (opt.danger && opt.type === 'confirm') cancelBtn.focus(); // 危险项焦点给取消
+        else confirmBtn.focus();
+      });
     }
 
-    function onOverlayClick(e: MouseEvent): void {
-      if (e.target === overlay) cancel();
-    }
-
-    cancelBtn.addEventListener('click', cancel);
-    confirmBtn.addEventListener('click', submit);
-    document.addEventListener('keydown', onKeyDown, true);
-    overlay.addEventListener('click', onOverlayClick);
+    dialog.addEventListener('cancel', onCancel);
+    dialog.addEventListener('close', onClose);
+    dialog.addEventListener('click', onDialogClick);
+    confirmBtn.addEventListener('click', onConfirmClick);
+    cancelBtn.addEventListener('click', onCancelClick);
+    inputEl.addEventListener('keydown', onInputKeyDown);
     activeDialog = { cancel };
-    requestAnimationFrame(() => {
-      if (opt.type === 'prompt') {
-        inputEl.focus();
-        inputEl.select();
-      } else {
-        confirmBtn.focus();
-      }
-    });
+    show();
   });
 }
 
 /** 经典 dshDialog.prompt：确认返回 trim 后的字符串，取消/ESC/遮罩返回 null。 */
 function promptDialog(
-  title: string,
-  defaultValue: string,
-  opts?: PromptOptions,
+  title: string, defaultValue: string, opts?: PromptOptions,
 ): Promise<string | null> {
   return open<string | null>({
-    type: 'prompt',
-    title,
-    defaultValue,
-    message: opts?.message,
-    confirmText: opts?.confirmText,
-    cancelText: opts?.cancelText,
-    danger: opts?.danger,
-    validate: opts?.validate,
+    type: 'prompt', title, defaultValue,
+    message: opts?.message, confirmText: opts?.confirmText, cancelText: opts?.cancelText,
+    danger: opts?.danger, validate: opts?.validate,
   });
 }
-
 /** 经典 dshDialog.confirm：确定 true，取消/ESC/遮罩 false。 */
 function confirmDialog(
-  title: string,
-  message: string,
-  opts?: ConfirmOptions,
+  title: string, message: string, opts?: ConfirmOptions,
 ): Promise<boolean> {
   return open<boolean>({
-    type: 'confirm',
-    title,
-    message,
-    confirmText: opts?.confirmText,
-    cancelText: opts?.cancelText,
-    danger: opts?.danger,
+    type: 'confirm', title, message,
+    confirmText: opts?.confirmText, cancelText: opts?.cancelText, danger: opts?.danger,
   });
 }
-
-/** Vue3 新增：单按钮告警（复用同一套 .dsh-dialog class 与 ESC/遮罩关闭）。 */
-function alertDialog(
-  title: string,
-  message: string,
-  opts?: AlertOptions,
-): Promise<void> {
-  return open<void>({
-    type: 'alert',
-    title,
-    message,
-    confirmText: opts?.confirmText,
-  });
+/** 单按钮告警（复用同一套 .dsh-dialog class 与 Esc/遮罩关闭）。 */
+function alertDialog(title: string, message: string, opts?: AlertOptions): Promise<void> {
+  return open<void>({ type: 'alert', title, message, confirmText: opts?.confirmText });
 }
-
 export function useDialog() {
   return { prompt: promptDialog, confirm: confirmDialog, alert: alertDialog } as const;
 }

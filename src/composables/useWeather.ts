@@ -20,6 +20,10 @@ import { log } from '@/src/lib/log';
 import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import { WEATHER_CONFIG } from '@/src/config/weather';
 import { fetchJSON } from '@/src/lib/http';
+import { classifyWeatherError, type WeatherErrorInfo } from '@/src/lib/weather-error';
+
+// re-export：既有 import { classifyWeatherError/WeatherErrorInfo } from useWeather 的消费者不破
+export { classifyWeatherError, type WeatherErrorInfo } from '@/src/lib/weather-error';
 
 
 export type TemperatureUnit = 'celsius' | 'fahrenheit';
@@ -42,17 +46,11 @@ export interface WeatherData {
   __fromCache?: boolean;
 }
 
-/** 带分类标记的错误（legacy assertAmapOk 把 info/fatal 抬到错误对象上） */
+/** 带分类标记的错误（legacy assertAmapOk 把 info/fatal 抬到错误对象上；fetchJSON 带 code） */
 interface WeatherErrorLike extends Error {
   fatal?: boolean;
   amapInfo?: string;
-}
-
-/** legacy showError 归并出的卡面文案（短句 + 位置行指引 + 完整原因） */
-export interface WeatherErrorInfo {
-  message: string;
-  short: string;
-  locationHint: string;
+  code?: string;
 }
 
 /** settings 键里与天气相关的字段（其余字段原样保留，settings 是全模块共享对象） */
@@ -634,29 +632,16 @@ function createWeatherApi(): WeatherApi {
   }
 
   /**
-   * 错误文案归并（legacy showError 逐字移植）：
+   * 错误文案归并：
    * 卡面只放一句短语（整句错误在 360px 卡片里只能靠省略号截断），位置行给可执行的下一步。
+   *
+   * 历史教训：原版只认「权限/超时/位置/城市」，把高德已经明确返回的错误码
+   * （INVALID_USER_KEY / USERKEY_PLAT_NOMATCH / 配额类，assertAmapOk 已抬到 err.amapInfo）
+   * 一律吞成「天气获取失败」，用户卡面上根本看不出是 key 配错还是网络不通。
+   * 这里把 message 与 amapInfo 一起送进纯分类器，让四类原因各自说人话。
    */
-  function showError(message: string): void {
-    const short = /权限被拒绝|NotAllowed|Permission/.test(message)
-      ? '定位未授权'
-      : /超时|timeout/.test(message)
-        ? '定位超时'
-        : /位置信息不可用|未找到可用/.test(message)
-          ? '无法定位'
-          : /城市/.test(message)
-            ? '城市无效'
-            : '天气获取失败';
-    const locationHint = /城市/.test(message)
-      ? '打开右上角 ⚙️ 设置可修改天气城市'
-      : /权限被拒绝|NotAllowed/.test(message)
-        ? '点 ⚙️ 设置天气城市即可显示'
-        : /位置信息不可用|未找到可用/.test(message)
-          ? '点 ⚙️ 设置天气城市即可显示'
-          : /超时/.test(message)
-            ? '定位超时，点 ⚙️ 可手动设城市'
-            : '获取失败';
-    errorInfo.value = { message, short, locationHint };
+  function showError(message: string, amapInfo?: string, code?: string): void {
+    errorInfo.value = classifyWeatherError(message, amapInfo, code);
     isLoading.value = false;
   }
 
@@ -1382,7 +1367,9 @@ function createWeatherApi(): WeatherApi {
         // legacy 这里还会挂一条 dsh-tip warning（「天气更新失败…显示 N 分钟前的数据」）；
         // dsh-tip 尚未 Vue 化，该提示暂缺，卡片上的「· 缓存」标记照常生效。
       } else {
-        showError(msg);
+        // 把 assertAmapOk 抬到 error 上的高德错误码传进分类器——原版这里只传 msg，
+        // INVALID_USER_KEY 等结构化信息被「天气获取失败」吞掉，用户无从自助排障。
+        showError(msg, err?.amapInfo, err?.code);
       }
     } finally {
       isLoading.value = false;

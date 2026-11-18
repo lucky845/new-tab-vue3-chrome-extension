@@ -1,6 +1,6 @@
 {
   "name": "new-tab-vue3-chrome-extension",
-  "version": "2.2.0",
+  "version": "2.2.1",
   "private": true,
   "type": "module",
   "description": "Custom new tab Chrome/Edge extension (WXT + Vue 3 + Tailwind v3 + shadcn-vue + liquidglass)",
@@ -16,7 +16,8 @@
     "lint:fix": "eslint eslint.config.js --fix && vue-tsc --noEmit",
     "format": "prettier --write src",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "check:remote-code": "node scripts/check-remote-code.mjs"
   },
   "dependencies": {
     "@surdeddd/liquidglass": "^0.12.0",

@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { nextTick, ref, watch, type Directive } from 'vue';
+import { nextTick, ref, watch } from 'vue';
 import { QUICK_TOOLS } from '@/src/config/tools';
-import { createIconNode } from '@/src/lib/iconSafe';
+import { vToolIcon } from '@/src/directives/toolIcon';
 import { usePanels } from '@/src/composables/usePanels';
 import GlassPanel from '@/src/components/common/GlassPanel.vue';
 import { useTools } from '@/src/composables/useTools';
@@ -38,28 +38,7 @@ const {
 // —— 模板 ref（组件内禁止 document.querySelector；legacy 的 input.focus() 用 ref 落地）——
 const inputEl = ref<HTMLTextAreaElement | null>(null);
 
-/**
- * 工具图标：走 iconSafe.createIconNode（内嵌 SVG → 白名单重建的安全节点）。
- * QUICK_TOOLS 的 icon 目前全是 emoji/文本（'⏱'、'{}'、'Aa'…），createIconNode 对
- * 非 SVG/非 URL 返回 null —— 此时回退 textContent 渲染，与 legacy
- * innerHTML 塞文本节点的产出完全一致；若未来换成 SVG 字符串无需改这里。
- */
-function renderToolIcon(el: HTMLElement, icon: string): void {
-  el.replaceChildren();
-  const node = createIconNode(icon);
-  if (node) el.appendChild(node);
-  else el.textContent = icon;
-}
-
-const vToolIcon: Directive<HTMLElement, string> = {
-  mounted(el, binding) {
-    renderToolIcon(el, binding.value);
-  },
-  updated(el, binding) {
-    if (binding.value === binding.oldValue) return;
-    renderToolIcon(el, binding.value);
-  },
-};
+/** 图标指令 v-tool-icon 由 @/src/directives/toolIcon 提供（与 ToolsCard 共享） */
 
 // —— legacy showToolDetail 的 transform 分支：进入详情后聚焦输入框（v1.8.1:js/app.js:2467）——
 // 监听 [面板开合, 视图, 当前工具]，覆盖「从宫格点入」和「从侧卡带 toolId 直开」两条路径。

@@ -31,6 +31,59 @@ async function fresh(seed?: Record<string, unknown>) {
 
 const texts = (api: { getSearchHistory(): string[] }) => api.getSearchHistory();
 
+describe('useSearch 引擎去重', () => {
+  it('存储里已有与内置重名的引擎时，水合只保留一个 Bing', async () => {
+    const api = await fresh({
+      customEngines: [
+        { name: 'Bing', url: 'https://www.bing.com/search?q=' },
+        { name: 'Mine', url: 'https://mine.test/?q=' },
+      ],
+    });
+    const names = api.engines.value.map(e => e.name);
+    expect(names.filter(n => n === 'Bing')).toHaveLength(1);
+    expect(names).toContain('Mine');
+  });
+
+  it('清洗后回写 storage，避免每次打开都重复过滤', async () => {
+    await fresh({ customEngines: [{ name: 'Bing', url: 'https://www.bing.com/search?q=' }] });
+    expect(setMock).toHaveBeenCalled();
+    const written = setMock.mock.calls.map(c => c[0]).find(o => 'customEngines' in o);
+    expect(written).toBeTruthy();
+    expect((written as { customEngines: unknown[] }).customEngines).toEqual([]);
+  });
+
+  it('addCustomEngine 拒绝与内置引擎同名', async () => {
+    const api = await fresh();
+    const r = await api.addCustomEngine('Bing', 'https://www.bing.com/search?q=%s');
+    expect(r.ok).toBe(false);
+    expect(r.message).toContain('Bing');
+  });
+
+  it('addCustomEngine 拒绝与内置引擎同名但大小写不同', async () => {
+    const api = await fresh();
+    const r = await api.addCustomEngine('bAiDu', 'https://www.baidu.com/s?wd=%s');
+    expect(r.ok).toBe(false);
+  });
+
+  it('addCustomEngine 允许不重名的新引擎', async () => {
+    const api = await fresh();
+    const r = await api.addCustomEngine('MyEngine', 'https://my.test/?q=%s');
+    expect(r.ok).toBe(true);
+    expect(api.engines.value.map(e => e.name)).toContain('MyEngine');
+  });
+
+  it('引擎名全表无重复', async () => {
+    const api = await fresh({
+      customEngines: [
+        { name: 'Dup', url: 'https://a.test/?q=' },
+        { name: 'DUP', url: 'https://b.test/?q=' },
+      ],
+    });
+    const names = api.engines.value.map(e => e.name);
+    expect(new Set(names).size).toBe(names.length);
+  });
+});
+
 describe('useSearch 历史管理', () => {
   it('init 从 storage 水合历史', async () => {
     const api = await fresh({ searchHistory: ['a', 'b'] });

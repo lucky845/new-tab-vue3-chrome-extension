@@ -60,6 +60,9 @@ jobs:
                   npx wxt zip -b firefox --mv2
                   ls -lh .output/*.zip
 
+            - name: Check built artifacts for remote code (R6)
+              run: npm run check:remote-code
+
             - name: Collect artifacts
               run: |
                   VERSION="$(node -p "require('./package.json').version")"

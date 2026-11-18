@@ -50,7 +50,9 @@ function measureColumns(): void {
     const gap = parseFloat(cs.columnGap || cs.gap) || ICON_GAP_FALLBACK;
     const fit = Math.floor((width + gap) / (icon + gap));
     // 3 列是下限：再窄也比「图标缩成一团」好读；5 列是上限，与桌面布局一致
-    const columns = Math.min(5, Math.max(3, fit));
+    // 手机视口（≤700px，与 app.css 断点一致）固定 3 列：CSS 把图标缩到 60px 后，
+    // 按 86px 算出来的 fit 会偏小，和断点不一致就会渲染成 2 列的巨型卡片（评审 S2）。
+    const columns = window.innerWidth <= 700 ? 3 : Math.min(5, Math.max(3, fit));
     if (columns === gridColumns.value && host.style.getPropertyValue('--qa-cols')) return;
     gridColumns.value = columns;
     host.style.setProperty('--qa-cols', String(columns));

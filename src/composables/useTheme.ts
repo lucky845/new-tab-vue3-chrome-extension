@@ -125,10 +125,15 @@ export function applyTheme(): ResolvedTheme {
   const resolved = resolve();
   currentResolved = resolved;
   const root = document.documentElement;
-  root.setAttribute('data-theme', resolved);
-  root.setAttribute('data-theme-mode', settings.mode);
-  root.style.colorScheme = resolved;
-  resolvedRef.value = resolved;
+  // 性能：本函数被 60s 定时器与多处状态变更反复触发。DOM 属性写入会让浏览器标记
+  // 样式重算，即使值没变；常驻标签页一天空转几百次。写前读比对，值相同就不写——
+  // 读 getAttribute 远比写便宜，且用 DOM 现值判断保留了「外部改动能被自愈」的能力。
+  if (root.getAttribute('data-theme') !== resolved) root.setAttribute('data-theme', resolved);
+  if (root.getAttribute('data-theme-mode') !== settings.mode) {
+    root.setAttribute('data-theme-mode', settings.mode);
+  }
+  if (root.style.colorScheme !== resolved) root.style.colorScheme = resolved;
+  if (resolvedRef.value !== resolved) resolvedRef.value = resolved;
   return resolved;
 }
 

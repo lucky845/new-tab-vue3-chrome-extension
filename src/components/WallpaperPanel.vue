@@ -198,15 +198,14 @@ async function onJumpEnter(): Promise<void> {
             class="wallpaper-local-entry"
             :class="{ active: viewMode === 'local' }"
             type="button"
+            :disabled="categoryUnsupported"
+            :title="categoryUnsupported ? '当前图源不支持按分类筛选，分类入口暂不可用' : undefined"
             @click="switchToLocal"
           >
             本地壁纸
             <span class="wallpaper-local-entry-count">{{ localLibrary.length }}/{{ LOCAL_LIBRARY_MAX_ENTRIES }}</span>
           </button>
         </div>
-        <p v-if="categoryUnsupported" class="wallpaper-category-hint">
-          提示：当前图源不支持按分类筛选，分类将改为浏览模式。到设置里切换为 Wallhaven 可按分类出图。
-        </p>
       </div>
       <div class="wallpaper-main">
         <div class="wallpaper-header">
@@ -225,6 +224,9 @@ async function onJumpEnter(): Promise<void> {
           </div>
           <div v-if="localMsg && viewMode === 'local'" class="wallpaper-local-msg">{{ localMsg }}</div>
         </div>
+        <p v-if="categoryUnsupported" class="wallpaper-category-hint">
+          当前图源不支持按分类筛选，已切换为浏览模式；分类入口暂不可用。需要按分类浏览请到设置里切换到 Wallhaven 图源。
+        </p>
 
         <!-- 本地壁纸视图：主屏式网格 + + 占位上传，删除靠缩略图 hover 的 × -->
         <div v-show="viewMode === 'local'" class="wallpaper-local-view">

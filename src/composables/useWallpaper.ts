@@ -1066,11 +1066,8 @@ function createWallpaperApi(): WallpaperApi {
         return;
       }
       if (result.categorySupported === false && result.requestedCategory) {
-        showToast(
-          '当前图源不支持按分类筛选，已改为浏览模式。\n想看「分类」结果请在设置里切换到 Wallhaven 图源。',
-          'warning',
-          4200
-        );
+        // 分类降级的解释统一由面板内 .wallpaper-category-hint 常驻展示（评审 S6）：
+        // 这里不再弹短命 toast，避免和面板内提示重复、又飘在标题/搜索框上方遮挡主操作。
         categoryUnsupported.value = true;
       } else {
         categoryUnsupported.value = false;

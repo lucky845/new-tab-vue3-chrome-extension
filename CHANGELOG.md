@@ -1,3 +1,33 @@
+# Unreleased
+
+# 2.2.1 (2026-11-18)
+
+工程收尾与上架准备：搜索引擎去重、商店材料补齐、代码审查修复与全套工程门禁。零新权限、零新依赖。
+
+## 修复
+
+- **中间宽度缩放网格重叠 + 文件夹预览溢出**：①700–920px 视口（含浏览器缩放后的 CSS 宽度）下，`data-wings=both` 的「给两翼让 560px」规则仍生效，但两翼早已 display:none，实测 810px 屏网格只剩 250px、86px 图标塞进 3 列互相重叠；把同特异性让位豁免从 ≤700px 上提到 ≤920px 真断点，裸选择器覆盖因特异性不足无效是前次漏修的原因。②手机 60px 图标下，主页文件夹的 2×2 缩略预览仍用固定 30px 子格 + 10px 内边距，实测溢出预览框；改成外层固化 `--preview-size`、padding 按 8% 缩放、子格用绝对 calc 取尺寸（直接写百分比会因 CSS 变量循环依赖缩成 5px）。CDP 探针量 390/768/810/900/1024/1280 六视口 + 1.1/1.25/1.5 三档 zoom 均无重叠无溢出
+- **UI 评审三项高优先级修复**：①手机布局——天气卡与顶栏不再叠压（截图工具实测 `#todo-btn` 曾被 `div#temperature` 挡住），快捷方式恢复 3 列；根因是 `data-wings=both` 的「给两翼让 560px」规则在 390px 屏算出 `max-width:0px` 把网格塌成 0 列，手机断点显式覆盖让位规则。②玻璃面板过透——`--panel-glass-scrim` 浅色 0.82→0.94、深色 0.82→0.9，番茄钟 25:00 不再与背景时钟重影。③壁纸库分类降级提示——去掉遮挡搜索框的短命 toast 与侧栏底部重复提示，改为面板内常驻提示 + 不可用分类入口置灰。改动仅 CSS/模板/文案，无业务逻辑变更
+- **天气失败原因被吞**：高德返回的 `INVALID_USER_KEY` / `USERKEY_PLAT_NOMATCH` / 配额类等错误码虽已抬到 `err.amapInfo`，但卡面一律显示「天气获取失败」，用户无法自助判断是 key、网络还是限频。抽出可测纯函数 `classifyWeatherError`，把高德码 / 定位权限 / 网络超时 / 城市四类分别给可执行提示；新增 14 用例（累计 16 文件 162 用例）
+- **文件夹弹层图标「两层圆角」**：根因是「探测 favicon 是否铺满画布」在扩展约束下恒失败（faviconV2 无 ACAO，fetch/Canvas 均被拦），自带方形底的图标走了无蒙版分支，内层方形与外层玻璃圆角不同心。删除失效探测，远程图统一 70% + squircle 蒙版
+
+## 工程保障
+
+- **搜索引擎去重重构**：新增 `src/lib/engineDedup.ts`（`engineKey` 归一化 + `dedupeEngines` 去重，大小写不敏感、保留先出现者、空名丢弃）。修掉自定义引擎可与内置重名导致下拉出现两个 Bing 的问题：水合时清洗脏数据并回写 storage、新增时对内置+自定义两侧查重。新增 17 用例（累计 20 文件 198 用例）
+- **商店上架材料补齐**：`doc/STORE_LISTING.md` 更新至 v2.2.1（zip 清单、实测 manifest、提审状态核对）；新增 440x280 宣传图 `doc/store-screenshots/06-promo-440x280.png`；128x128 图标留白实测 L29/T19/R30/B23 合规；构建 `.output/new-tab-vue3-chrome-extension-2.2.0-chrome.zip`（233.01 kB，12 文件过远程代码门禁）
+- **对话框迁原生 <dialog>**：`useDialog` 原来是手搓模态框（`role=dialog` + `aria-modal` + 自己维护 Tab 焦点囚禁 / Esc / 遮罩 / 焦点复位），正是官方 dialog 指南 DON'T 清单里点名的写法。改用 `showModal()` 拿到 top-layer、浏览器级 inert、焦点管理与 Esc；保留 `.dsh-dialog` class 与全部 DOM/CSS 结构，调用方（FolderOverlay 的 prompt/confirm）与 `useEscapeClose` 的让路判定零改动。遮罩点击改按 `panel` 的 rect 判定（dialog 自身是 `inset:0` 全屏容器，用它判永远算「在内部」）。代价补一课：清 UA 默认样式时顺手清掉了 `margin:auto`，而它正是 dialog 默认居中的来源，真机截图复现面板贴左上角——补 `width/height:100%` 让 `inset:0 + flex` 重新居中后，桌面与 390px 移动端截图均居中。新增 `tests/dialog.test.ts` 8 用例（累计 19 文件 181 用例）
+- **移动端缩放后顶栏压时钟修复**：≤700px 断点下顶栏被改成整行居中（top:108~176），时钟在文档流里从顶部排，缩放/窄窗口下相撞；把时钟下移写进唯一真源 `src/styles/shell.css`，用 `padding-top:150px`（不用 margin——短视口下会被 `.content-wrapper{margin-top:1vh}` 折叠吞掉）。实测 360/375/390/414 宽 × 740/800/844/896 高 + 1.1/1.25/1.5 倍缩放，可见时钟数字全部在顶栏下方、零重叠
+- **代码审查修复**：独立审查发现 3 项 P2 并处置——TodoPanel 两处手写 `cat-${category}` 改复用共享 `categoryClass`（消除归一遗漏）；`classifyWeatherError` 网络分类改为 code 严格优先、仅 code 缺失时回退 message（修注释与实现不符 + 补冲突回归用例）；R6 窄口径扫描保留并在文档确认设计边界。新增 1 用例（累计 18 文件 173 用例）
+- **主题写入幂等优化**：`useTheme.applyTheme` 写 DOM 属性前先读比对，值相同不写，避免 60s 定时器 + 8 处状态调用反复触发样式重算（新增 4 用例量化 setAttribute 调用次数）；累计 18 文件 172 用例
+- **工具图标指令归一**：ToolsCard / ToolsPanel 逐字重复的 `renderToolIcon` + `vToolIcon` 抽到 `src/directives/toolIcon.ts`，两组件各删 ~18 行，行为零变化
+- **重复展示逻辑归一**：Todo 卡/面板的 `categoryIcon`/`categoryTitle`/`categoryClass`/`dueText` 与图标映射抽到 `src/lib/todo-display.ts`（6 用例）；Notes 卡/面板逐字重复的 textarea 引用与 500ms 防抖保存抽到 `src/composables/useNoteCardActions.ts`（顺带补卸载 timer 清理）；累计 17 文件 168 用例
+- **天气错误分类抽离**：把零依赖纯函数 `classifyWeatherError` 从 1590 行的 `useWeather.ts` 抽到 `src/lib/weather-error.ts`（composable 减 60 行），测试改为直接 import 纯函数模块、不再拖 chrome/vue 依赖；原 composable 保留 re-export 兼容，外部 API 不破
+- **请求封装补测**：新增 `tests/http.test.ts`（11 用例），钉死 `fetchJSON` 的 JSON/文本解析、网络错误/429/5xx 重试与 4xx 不重试、超时 `ABORT_ERROR`、错误结构化与 `retryOn` 覆盖（该模块被天气/壁纸全量依赖却零覆盖）；累计 15 文件 148 用例
+- **图标分类闸门补测**：新增 `tests/iconSafe.test.ts`（11 用例），钉死 `isDataImage` / `siteIconUrl` / `isRemoteIcon` / `firstCharOf` 的分类语义——这几个纯函数是 AppIcon 蒙版分支的闸门，防止「两层图标」回归；累计 14 文件 137 用例
+- **R6 远程代码门禁**：新增 `npm run check:remote-code`，构建后扫描三浏览器产物，发现远程 `script src` / `import()` 立即失败；Vitest 11 用例覆盖 fetch/CSP/SVG 命名空间等放行边界（总 126 用例）
+
+---
+
 # 2.2.0 (2026-11-18)
 
 体验打磨与无障碍版本：液态玻璃面板、番茄钟跨标签页存活、搜索历史固定、
