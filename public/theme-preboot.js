@@ -53,6 +53,26 @@
     document.documentElement.setAttribute('data-theme', resolved);
     document.documentElement.setAttribute('data-theme-mode', mode);
 
+    // 动效降级：用户开关（localStorage 镜像 'ntce-motion'）或系统偏好任一成立即降级，
+    // 真值由 src/composables/useMotion.ts 在 Vue 挂载后校正
+    var reduceMotion = false;
+    try {
+        var motionMirror = JSON.parse(localStorage.getItem('ntce-motion') || 'null');
+        reduceMotion = !!(motionMirror && motionMirror.reduceMotion === true);
+    } catch (e) {
+        reduceMotion = false;
+    }
+    var systemReduced = false;
+    try {
+        systemReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    } catch (e) {
+        systemReduced = false;
+    }
+    document.documentElement.setAttribute(
+        'data-motion',
+        reduceMotion || systemReduced ? 'reduced' : 'full'
+    );
+
     // 时钟预填：与 ClockBlock 同一格式（HH:MM，24 小时制），抢在首帧前填掉占位符
     function pad(n) {
         return n < 10 ? '0' + n : String(n);

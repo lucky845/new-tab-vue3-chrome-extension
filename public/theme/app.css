@@ -5318,3 +5318,20 @@ select,
     outline-offset: 3px;
     background-color: rgb(var(--accent) / 0.22);
 }
+
+/* ===== 动效降级：html[data-motion="reduced"]（用户开关或系统 prefers-reduced-motion）=====
+   唯一真源是 <html data-motion>：preboot 首帧预置，useMotion 用 settings 真值校正。
+   不要另写 @media (prefers-reduced-motion) 分散规则，避免两处真源打架。 */
+html[data-motion='reduced'] {
+    scroll-behavior: auto;
+}
+html[data-motion='reduced'] *,
+html[data-motion='reduced'] *::before,
+html[data-motion='reduced'] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
+}

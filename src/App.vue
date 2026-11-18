@@ -20,6 +20,7 @@ import FolderOverlay from '@/src/components/FolderOverlay.vue';
 import { setPanelOriginFromEvent, usePanels, type PanelId } from '@/src/composables/usePanels';
 import { useWallpaper } from '@/src/composables/useWallpaper';
 import { useTheme } from '@/src/composables/useTheme';
+import { useMotion } from '@/src/composables/useMotion';
 import { bindWingsAttribute } from '@/src/composables/useSideCards';
 import ToastHost from '@/src/components/common/ToastHost.vue';
 import TipHost from '@/src/components/common/TipHost.vue';
@@ -59,6 +60,9 @@ onMounted(() => {
   // 主题状态机（useTheme 单例幂等 init）：head 的 theme-preboot 只做首屏防白闪，
   // 这里用 chrome.storage 真值校正 + 60s 复查 + 跟随系统。
   void useTheme().init();
+
+  // 动效降级：preboot 用 localStorage 镜像抢首帧，这里用 settings 真值校正
+  void useMotion().init();
 
   // 启动壁纸：blob 命中零请求 → URL 校验 → 随机链
   // （legacy wallpaper-manager 的启动路径由 Vue 域接管）

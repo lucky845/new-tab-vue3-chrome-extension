@@ -70,6 +70,7 @@ const brightness = ref(1);
 const blur = ref(0);
 const wallpaperSource = ref<'picsum' | 'wallhaven'>('picsum');
 const showSideWidgets = ref(true);
+const reduceMotion = ref(false);
 
 const engineName = ref('');
 const engineUrl = ref('');
@@ -201,6 +202,12 @@ async function onShowSideWidgetsChange(): Promise<void> {
     await patchSettings({ showSideWidgets: showSideWidgets.value });
     applySideWidgetsVisibility();
     showToast(showSideWidgets.value ? '主页小组件已显示' : '主页小组件已隐藏', 'success', 1500);
+}
+
+/** 减少动效：落盘后经 useMotion 的 storage.onChanged 统一应用并写首屏镜像 */
+async function onReduceMotionChange(): Promise<void> {
+    await patchSettings({ reduceMotion: reduceMotion.value });
+    showToast(reduceMotion.value ? '已减少动效' : '已恢复完整动效', 'success', 1500);
 }
 
 /* ---------- 自定义引擎（legacy refreshCustomEngines / bindCustomEngineEvents） ---------- */
@@ -455,6 +462,7 @@ async function hydrate(): Promise<void> {
         blur.value = adj.blur;
         wallpaperSource.value = getWallpaperSource(s);
         showSideWidgets.value = s.showSideWidgets !== false;
+        reduceMotion.value = s.reduceMotion === true;
         applyWallpaperFilters(adj.brightness, adj.blur);
         applySideWidgetsVisibility(showSideWidgets.value);
         await refreshCustomEngines();
@@ -945,6 +953,25 @@ watch(
                             >已改为预览态，停手 3 秒自动保存</span
                         >
                     </p>
+                </div>
+
+                <div class="setting-item" v-show="activeTab === 'theme'">
+                    <label>动效</label>
+                    <div class="side-card-modes">
+                        <div class="side-card-mode side-card-mode-master">
+                            <span class="side-card-mode-label">减少动效</span>
+                            <input
+                                type="checkbox"
+                                id="reduce-motion-toggle"
+                                aria-label="减少动效"
+                                v-model="reduceMotion"
+                                @change="onReduceMotionChange"
+                            />
+                            <small class="side-card-mode-hint">
+                                关闭面板过渡、悬浮位移等动画，降低视觉干扰与重绘开销；系统开启「减少动态效果」时会自动降级，无需打开此开关
+                            </small>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="setting-item" v-show="activeTab === 'theme'">

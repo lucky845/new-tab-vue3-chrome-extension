@@ -39,6 +39,7 @@
 - **💾 备份与恢复**：设置面板可导出 JSON 文件、复制到剪贴板，或粘贴文本导入；导入时校验应用标识与 schema 版本，不合法整体拒绝。
 - **⌨️ Esc 逐层退出**：任意面板、文件夹浮层、右键菜单、搜索下拉都可用 Esc 关闭，一次只关最上面那一层；对话框或拖拽进行中时 Esc 归它们，不会误关底下的面板。
 - **♿ 键盘与读屏可用**：面板统一 dialog 语义并带焦点陷阱，Tab 只在面板内循环、关闭后焦点回到触发元素；图标按钮与分页控件均有可访问名称，读屏可识别。
+- **🎞️ 减少动效**：设置 · 主题页一键降级面板过渡与悬浮动画；系统开启「减少动态效果」时自动生效，无需手动打开。
 - **🔒 纯本地**：无后端、无账号、无埋点；设置、壁纸缓存、待办等全部存在 `chrome.storage.local`。
 
 玻璃与主题的量化验收（色度保留率、文字对比度、渲染耗时）沿用 1.x 的说明，见 [1.x README](https://github.com/lucky845/new-tab-chrome-extension#readme)。
@@ -91,7 +92,7 @@ npm run build        # 产物输出到 .output/chrome-mv3
 | `npm run lint` | ESLint（src 全量）+ 类型检查 |
 | `npm run lint:fix` | ESLint 自动修复 + 类型检查 |
 | `npm run format` | Prettier 格式化 `src/` |
-| `npm test` | Vitest 单元测试（一次性，108 用例） |
+| `npm test` | Vitest 单元测试（一次性，115 用例） |
 | `npm run test:watch` | Vitest 监听模式 |
 
 ## 项目结构
