@@ -5234,6 +5234,23 @@ select,
     pointer-events: auto;
 }
 
+/* 搜索框的两个下拉是独立浮层交互面，容器和后代都要吃光标。
+   ------------------------------------------------------------
+   上面那条 [data-glass='lib'] 的 pointer-events:none 是「玻璃不接管光标」的统一闸门，
+   而 pointer-events 是继承属性 —— 它会把整棵子树一起关掉，只有白名单里的
+   a/button/input 之类能靠自己的 auto 重新打开。
+   历史行偏偏是 .history-item(div) / .history-text(span)，一个都不在白名单里：
+   于是「固定」和「删除」两个 button 能点，点正文却穿透到下面的快捷访问格子
+   （实测 elementFromPoint 在历史词中心命中的是 .quick-access-grid 里的节点）。
+   这里按「下拉整体是可交互面」收口，用后代通配把整棵子树要回来，
+   免得以后往下拉里加非按钮节点又漏一次。 */
+.search-engine-dropdown,
+.search-history-dropdown,
+.search-engine-dropdown *,
+.search-history-dropdown * {
+    pointer-events: auto;
+}
+
 
 /* ============================================================
    弹窗展开式进场：从「被点击的位置」长出来
