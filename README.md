@@ -232,6 +232,16 @@ git push && git push --tags
 - [@surdeddd/liquidglass](https://www.npmjs.com/package/@surdeddd/liquidglass) 提供液态玻璃渲染
 - [Open-Meteo](https://open-meteo.com/)、[Wallhaven](https://wallhaven.cc/)、[Picsum](https://picsum.photos/) 提供公开数据服务
 
+## 依赖安全说明
+
+GitHub Dependabot 会在本仓库报一条 `picomatch` 的 **high** 告警（ReDoS，影响 `<= 4.0.7`）。已核实并记录判定如下：
+
+- **不进运行产物**：对 `.output/chrome-mv3` 全量文件 grep `picomatch` / `extglob` / `minimatch` / `micromatch` 均零匹配；`dependencies` 中没有任何 glob 类库。它只存在于 `vitest` / `vite` / `vue-tsc` / `tailwindcss` 等**开发期**工具链。
+- **无补丁可升**：npm registry 上 `picomatch` 最高版本即 4.0.7，告警的 `first_patched_version` 为 `null`，升级路径不存在。
+- **触发条件**：需要攻击者能控制传给开发工具的 glob 模式，即已具备本地开发环境控制权。扩展运行时（浏览器内）不加载该代码，不受影响。
+
+结论：如实记录、不谎称已修复；上游发布补丁版本后再升级。
+
 ## License
 
 [MIT](LICENSE) © 2025 lucky845
