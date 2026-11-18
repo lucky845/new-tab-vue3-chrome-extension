@@ -58,12 +58,13 @@ async function save(): Promise<void> {
     :open="isOpen('weather-settings')"
     variant="settings"
     elementId="weather-settings-panel"
+    labelled-by="weather-panel-title"
     :dismissable="false"
     @dismiss="close('weather-settings')"
   >
     <div class="settings-content settings-content--fit">
-      <button id="close-weather-settings-btn" class="close-panel-btn" type="button" title="关闭" @click="close('weather-settings')">✕</button>
-      <h2>天气设置</h2>
+      <button id="close-weather-settings-btn" class="close-panel-btn" type="button" title="关闭" aria-label="关闭" @click="close('weather-settings')">✕</button>
+      <h2 id="weather-panel-title">天气设置</h2>
       <div class="setting-item">
         <label for="weather-city-input-panel">城市名称</label>
         <input

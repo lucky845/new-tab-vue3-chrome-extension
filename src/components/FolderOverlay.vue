@@ -592,6 +592,7 @@ onUnmounted(() => {
         :open="folderOpen"
         variant="folder"
         elementId="folder-overlay"
+        labelled-by="folder-overlay-title"
         @dismiss="closeFolder"
       >
         <div class="folder-popover" ref="popoverEl" :class="{ 'drag-out': dragOut }">
@@ -613,6 +614,7 @@ onUnmounted(() => {
                         type="button"
                         class="folder-site-remove"
                         title="移出文件夹（回到主面板）"
+                        aria-label="移出文件夹"
                         @click.stop="removeFromFolder((folderPage - 1) * 9 + i)"
                     >{{ CLOSE_BTN_TEXT }}</button>
                 </div>
@@ -628,7 +630,7 @@ onUnmounted(() => {
                 </div>
             </div>
             <div v-if="folderTotalPages > 1" class="folder-pager">
-                <button class="page-btn prev-btn" :disabled="folderPage === 1" @click="goToFolderPage(folderPage - 1)">‹</button>
+                <button class="page-btn prev-btn" :disabled="folderPage === 1" aria-label="上一页" @click="goToFolderPage(folderPage - 1)">‹</button>
                 <button
                     v-for="p in folderTotalPages"
                     :key="p"
@@ -636,7 +638,7 @@ onUnmounted(() => {
                     :class="{ active: p === folderPage }"
                     @click="goToFolderPage(p)"
                 >{{ p }}</button>
-                <button class="page-btn next-btn" :disabled="folderPage === folderTotalPages" @click="goToFolderPage(folderPage + 1)">›</button>
+                <button class="page-btn next-btn" :disabled="folderPage === folderTotalPages" aria-label="下一页" @click="goToFolderPage(folderPage + 1)">›</button>
             </div>
             <p id="folder-empty-hint" class="folder-empty-hint" :class="{ 'u-hidden': emptyHintHidden }">{{ EMPTY_HINT_TEXT }}</p>
         </div>

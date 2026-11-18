@@ -173,11 +173,12 @@ async function onJumpEnter(): Promise<void> {
     :open="isOpen('wallpaper')"
     variant="settings"
     elementId="wallpaper-panel"
+    labelled-by="wallpaper-panel-title"
     :dismissable="false"
     @dismiss="close('wallpaper')"
   >
     <div class="wallpaper-content settings-content">
-      <button id="close-wallpaper-btn" class="close-panel-btn" type="button" title="关闭" @click="close('wallpaper')">✕</button>
+      <button id="close-wallpaper-btn" class="close-panel-btn" type="button" title="关闭" aria-label="关闭" @click="close('wallpaper')">✕</button>
       <div id="wallpaper-categories-sidebar" class="wallpaper-categories-sidebar">
         <div class="wallpaper-categories-scroll">
           <h4>推荐分类</h4>
@@ -210,7 +211,7 @@ async function onJumpEnter(): Promise<void> {
       <div class="wallpaper-main">
         <div class="wallpaper-header">
           <div class="wallpaper-header-row">
-            <h2>壁纸库</h2>
+            <h2 id="wallpaper-panel-title">壁纸库</h2>
             <div class="wallpaper-search-box">
               <input
                 type="text"
@@ -246,6 +247,7 @@ async function onJumpEnter(): Promise<void> {
                 class="wallpaper-local-tile-remove"
                 type="button"
                 title="移除此壁纸"
+                aria-label="移除此壁纸"
                 @click.stop="onRemoveLocal(item.id)"
               >
                 ×

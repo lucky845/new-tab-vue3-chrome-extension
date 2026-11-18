@@ -155,12 +155,13 @@ onUnmounted(() => {
     :open="isOpen('todo')"
     variant="widget"
     elementId="todo-panel"
+    labelled-by="todo-panel-title"
     @dismiss="close('todo')"
   >
     <div class="widget-content">
       <div class="widget-header">
-        <h2>待办事项</h2>
-        <button id="close-todo-btn" class="control-btn widget-close-btn" title="关闭" @click="close('todo')">
+        <h2 id="todo-panel-title">待办事项</h2>
+        <button id="close-todo-btn" class="control-btn widget-close-btn" title="关闭" aria-label="关闭" @click="close('todo')">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -174,7 +175,7 @@ onUnmounted(() => {
         <button class="todo-filter-tab" :class="{ active: filter === 'normal' }" @click="setFilter('normal')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8M8 17h5"></path></svg> 普通</button>
       </div>
       <div class="todo-input-row">
-        <button id="todo-important-btn" class="todo-important-btn" :class="{ active: importantActive }" title="重要标记" @click="importantActive = !importantActive">
+        <button id="todo-important-btn" class="todo-important-btn" :class="{ active: importantActive }" title="重要标记" aria-label="重要标记" :aria-pressed="importantActive" @click="importantActive = !importantActive">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
           </svg>

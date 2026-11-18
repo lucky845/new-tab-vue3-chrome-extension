@@ -610,6 +610,7 @@ watch(
         :open="panels.isOpen('settings')"
         variant="settings"
         elementId="settings-panel"
+        labelled-by="settings-panel-title"
         @dismiss="closePanel"
       >
         <div class="settings-content">
@@ -618,12 +619,13 @@ watch(
                 class="close-panel-btn"
                 type="button"
                 title="关闭"
+                aria-label="关闭"
                 @click="closePanel"
             >
                 ✕
             </button>
             <div class="settings-head">
-                <h2>设置</h2>
+                <h2 id="settings-panel-title">设置</h2>
                 <p class="settings-autosave" role="status">静置 3s 自动保存</p>
             </div>
             <div class="settings-tabs" role="tablist">
@@ -712,6 +714,7 @@ watch(
                                 <button
                                     class="engine-remove"
                                     title="删除"
+                                    aria-label="删除引擎"
                                     @click="removeEngine(engine.name)"
                                 >
                                     ×
