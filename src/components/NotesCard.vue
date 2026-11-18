@@ -11,11 +11,11 @@
  * 显隐 / 展开按钮 / 头部由 SideCard 外壳统一承载，本组件只管卡片主体。
  */
 import SideCard from '@/src/components/common/SideCard.vue';
-import { useNotes, formatNoteTime, type Note } from '@/src/composables/useNotes';
-import { toast } from '@/src/composables/useToast';
+import { useNotes, formatNoteTime } from '@/src/composables/useNotes';
+import { useNoteCardActions } from '@/src/composables/useNoteCardActions';
 import { ICON_TRASH } from '@/src/lib/icons';
 
-const { sortedNotes, stats, updateNote, togglePin, removeNote } = useNotes();
+const { sortedNotes, stats, togglePin } = useNotes();
 
 /** legacy AppIcons —— pin 仅本卡用（留在本地），trash 抽到共享 */
 const ICONS = {
@@ -23,35 +23,8 @@ const ICONS = {
   trash: ICON_TRASH,
 } as const;
 
-// —— textarea 模板 ref：对应 legacy 的 notesList.querySelector(li[data-id] textarea) ——
-const textareaRefs = new Map<string, HTMLTextAreaElement>();
-function setTextareaRef(id: string, el: unknown): void {
-  const ta = el as HTMLTextAreaElement | null;
-  if (ta) textareaRefs.set(id, ta);
-  else textareaRefs.delete(id);
-}
-
-// —— 500ms 防抖自动保存（等价 v1.8.1:js/app.js noteSaveTimers：noteId -> timerId）——
-const saveTimers = new Map<string, ReturnType<typeof setTimeout>>();
-function onNoteInput(note: Note): void {
-  const existing = saveTimers.get(note.id);
-  if (existing) clearTimeout(existing);
-  saveTimers.set(
-    note.id,
-    setTimeout(() => {
-      // 与 legacy 一致：commit 时读 textarea 当前值（期间继续输入也会被收进这次提交）
-      const textarea = textareaRefs.get(note.id);
-      void updateNote(note.id, textarea ? textarea.value : '');
-      saveTimers.delete(note.id);
-    }, 500),
-  );
-}
-
-/** 删除：无确认直接删 + toast（文案/时长与 legacy 一字不差） */
-async function onDelete(id: string): Promise<void> {
-  await removeNote(id);
-  toast('便签已删除', 'success', 1500);
-}
+// textarea 引用 / 500ms 防抖自动保存 / 删除：与 NotesPanel 共享同一套实现
+const { setTextareaRef, onNoteInput, onDelete } = useNoteCardActions();
 </script>
 
 <!-- prettier-ignore -->

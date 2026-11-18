@@ -94,7 +94,7 @@ C  有效人日 1–5        已含三浏览器回归与文档，单人负荷系
     - 方案：favicon 只留 `https://www.google.com/` + 首字兜底；用户上传图标走已有裁剪器。若确有自定义域名 favicon 需求，改 `optional_host_permissions` 在用户添加该站点时动态申请
     - 成本：S（0.5 人日，改 manifest + AppIcon 兜底链路验证）
     - **实际做法**：favicon 改走 `t0.gstatic.com/faviconV2` 直链（旧 `www.google.com/s2/favicons` 会 301 到 gstatic，而 301 是 `text/html` + `nosniff`，在无权限时两条探测路全废）。图标经 CSP 的 `img-src` 白名单显示，不再申请任何站点权限
-    - **未获批准的代价（已接受）**：没有 host_permissions 就读不到跨源响应头，也读不到像素 —— AppIcon 的「是否铺满」判定在扩展里恒为否，图标一律按 76% 显示；设置面板的「用站点图标」只能对返回 CORS 的服务生效。要恢复得走 `optional_host_permissions` 动态申请
+    - **未获批准的代价（已接受）**：没有 host_permissions 就读不到跨源响应头，也读不到像素 —— 原先 AppIcon 的「是否铺满」判定在扩展里恒为否，**该探测已删除**（v2.2 修复「两层圆角」），远程图标现统一 70% + squircle 蒙版归一化；设置面板的「用站点图标」仍只能对返回 CORS 的服务生效。要恢复像素级判定得走 `optional_host_permissions` 动态申请
 - [x] **新建 `PRIVACY.md` 并发布到 GitHub Pages**
     - Chrome 政策：处理任何用户数据必须提供隐私政策且填 dashboard 链接，**无政策必然审核不过**
     - 必须如实写：天气请求会向 Open-Meteo 传你的 IP 与大致坐标；壁纸请求从 picsum/wallhaven 拉图。其余数据仅在 `chrome.storage.local`
@@ -325,7 +325,7 @@ C  有效人日 1–5        已含三浏览器回归与文档，单人负荷系
 | R3  | 番茄钟不跨标签页存活（`usePomodoro.ts` 原先只持久化设置与统计，不存运行态） | 用了的人三天后发现不准 → 稳定输出差评 | v2.2 落盘 `pomodoroRuntime`（绝对截止时间戳）+ `storage.onChanged` 跨标签页同步 + 页面可见时按 deadline 补算，**不申请 alarms/notifications** | **已解决**（v2.2：零新权限；代价是后台标签页被冻结时不能准点响铃，回到页面即结算） |
 | R4  | 商店名称冲突                                                                    | listing 权重清零                      | 已完成查重：撞名风险高，待定独立品牌词                                                          | **已查重** |
 | R5  | MV3 CSP 下玻璃降级路径性能                                                      | 首屏卡顿                              | 已有主线程降级 + 量化验收                                                                       | 已缓解     |
-| R6  | 未来引入 CDN 字体/图标库 → 即时下架                                             | 封号                                  | CI 加检查：产物内不得有远程 script src/import()                                                 | 待加       |
+| R6  | 未来引入 CDN 字体/图标库 → 即时下架                                             | 封号                                  | `scripts/check-remote-code.mjs` 扫描三浏览器产物，CI `npm run check:remote-code` 卡门禁；11 用例覆盖误报边界 | **已解决**（构建后自动扫描，远程 script src / import 即失败） |
 | R7  | AMO 2026-12-01 政策更新                                                         | Firefox 渠道阻塞                      | 上架时对照 preview 版复核                                                                       | 待确认     |
 
 ---

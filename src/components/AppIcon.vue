@@ -35,9 +35,6 @@ const slotEl = ref<HTMLElement | null>(null);
 /** 图片加载失败才切的兜底；正常路径由 <img> 自己渲染 */
 const failed = ref(false);
 const svgNode = shallowRef<SVGSVGElement | null>(null);
-/** 图片本身的自然宽度；0 = 还没解析完或加载失败 */
-/** 这张远程图是否「铺满画布」（四边 3px 都有不透明像素）——实测判据，不靠尺寸猜 */
-const fullBleed = ref(false);
 /** 远程图是否已经画出来：远程图标首帧是空的，加载完再淡入，避免先闪一个灰块 */
 const imgReady = ref(false);
 
@@ -58,14 +55,19 @@ const fallbackChar = computed(() => firstCharOf(props.name, props.upper));
 
 /**
  * 图标归一化：站点 favicon 的形状五花八门 ——
- *   · 透明底只占画面 67% 的图形（Google 三色 G、YouTube 圆角矩形）
- *   · 铺满整张画布的实心方块（Bilibili 粉色 #e8a5b8、知乎蓝色 #51a1ff、GitHub 32px 白底图标）
- * 同一个 62% 的盒子里，前者看着「小一号浮在中间」，后者顶到玻璃边缘像贴了一块色卡。
+ *   · 透明底的图形（Google 三色 G、YouTube 圆角矩形）
+ *   · 自带方形底的位图（GitHub 白底黑猫、V2EX 浅灰底深字）
+ * 后者直接贴进圆角玻璃方块，会露出「内层方形 + 外层圆角」两层不同心的轮廓，
+ * 也就是文件夹弹层里看起来像「两层图标」的元凶。
  *
- * 处理办法不是裁切（圆角方块裁成圆形会把字标切掉），而是把「画面」本身归一：
- * 所有远程图标统一用同一个浏览器窗口式的 squircle 蒙版（圆角 27%）收边。
- * 透明底的图形蒙版看不见，实心方块则被收成与整套图标同一个圆角语言。
- * 蒙版只作用在远程图；用户的 data:image 是手动裁剪过的成品，不再归一。
+ * 处理办法不是裁切（会把字标切掉），而是给所有远程图套同一个 squircle 蒙版：
+ * 透明底的图形蒙版看不见，方形底则被收成与玻璃同心的一套圆角语言。
+ * 蒙版只作用在远程图；用户的 data:image 是手动裁剪过的成品，内嵌 SVG 本身透明，都不归一。
+ *
+ * 历史教训：这里曾用「探测 favicon 是否铺满画布」决定 64%+蒙版 / 76%无蒙版，
+ * 但扩展页没有 host 权限，faviconV2 响应也没有 ACAO —— fetch 读 MIME 被 CORS 拦、
+ * canvas 读像素被 taint 拦，探测恒为 false，所有方形底图都走进了 76%无蒙版那条错路。
+ * 可靠判据在扩展约束下拿不到，就别再维护这套假智能：统一蒙版，一刀切干净。
  */
 const ICON_MASK = (() => {
     const size = 64;
@@ -76,38 +78,20 @@ const ICON_MASK = (() => {
     return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
 })();
 /**
- * 实证（curl 直接取 Google favicon 服务）：
- *   google.com   128px 透明占比 67%，边线只有 1% 有像素 —— 图形本来就小
- *   youtube.com  128px 透明占比 67%                         —— 同上
- *   github.com    32px 铺满，白底圆盘                        —— 图本身分辨率就低
- *   bilibili.com 128px 100% 不透明，粉色铺满                —— 没有留白
- *   zhihu.com    128px 100% 不透明，蓝色铺满                —— 没有留白
- * 前两者「小」，后三者「满」，同一个 62% 的盒子放不下两种尺度。
- *
- * 归一规则：小图放大到 76%，铺满的图收到 64% 并加圆角蒙版（两者实测可见面积都 ≈38%）。
- *   · 放大透明底图形只是在玻璃上多铺一层自己的底色，不丢形状；
- *   · 铺满的实心块缩小 + squircle 蒙版后，视觉面积与 Google/YouTube 对齐，
- *     而且不会顶到玻璃边缘变成一块色卡。
+ * 远程图统一尺寸：实测对比（GitHub / V2EX / Google 三种 favicon）
+ *   76% 无蒙版 → 内层方形底与玻璃圆角不同心，两层轮廓明显（旧行为，bug）
+ *   76% 有蒙版 → 圆角同心但图偏满，间隙太小
+ *   64% 有蒙版 → 透明底图（Google 的 G）偏小
+ *   70% 有蒙版 → 方形底与透明底都合适，取此值
  */
-const BIG_ICON_PCT = 76;
-/**
- * 64%：按真实图形实测可见面积定的值 —— 透明底图（Google / YouTube）在 76% 下约 39%，
- * 铺满图在 56% 只有 29%（明显偏小），64% 是 38%，两者对齐。
- * 只降尺寸不降留白，是因为铺满图收得再小也还是一块实心色卡，靠圆角蒙版切出形状才成立。
- */
-const FULL_ICON_PCT = 64;
-/** 只有远程 <img> 能做像素测量；data:image（用户裁剪成品）与内嵌 SVG 一律不改尺寸 */
+const REMOTE_ICON_PCT = 70;
+/** 只有远程 <img> 归一；data:image（用户裁剪成品）与内嵌 SVG 一律不改尺寸 */
 const isRemoteImg = computed(() => !!imgSrc.value && !logoSrc.value && !isSvgIcon.value);
-const iconStyle = computed(() => {
-    if (fullBleed.value) {
-        return {
-            width: `${FULL_ICON_PCT}%`,
-            height: `${FULL_ICON_PCT}%`,
-            '--icon-mask': ICON_MASK,
-        };
-    }
-    return { width: `${BIG_ICON_PCT}%`, height: `${BIG_ICON_PCT}%` };
-});
+const iconStyle = computed(() =>
+    isRemoteImg.value
+        ? { width: `${REMOTE_ICON_PCT}%`, height: `${REMOTE_ICON_PCT}%`, '--icon-mask': ICON_MASK }
+        : {}
+);
 
 function rebuildSvg(): void {
     const host = slotEl.value;
@@ -120,89 +104,17 @@ function rebuildSvg(): void {
     const built = createIconNode(iconText.value);
     if (built instanceof SVGSVGElement) {
         built.classList.add('icon');
-        // 同一处：记录 SVG 的自带尺寸，供归一化判断用
         host.appendChild(built);
     }
 }
 
-/**
- * 判断这张远程图是不是「铺满画布」：四边各取 3px 宽的带，只要有足够比例的不透明像素，
- * 就说明图本身没有留白（Bilibili / 知乎 / GitHub 这类实心方块）。
- *
- * 为什么要实测而不是看尺寸：favicon 服务对不同站点给出的分辨率不同（32 / 64 / 128），
- * 尺寸与「有没有留白」没有关系；只有像素才能回答这个问题。
- * 跨域图会污染 canvas，所以先 fetch 成 blob 再从同源 blob: URL 画进去；
- * 服务不支持 CORS 时 fetch 直接失败，就保持默认的「有留白」处理，不抛错。
- */
 // 换站点（编辑 URL）要重新走一次淡入，否则新图会在旧图的「已就绪」状态里直接硬切
 watch(imgSrc, () => {
     imgReady.value = false;
 });
 
-function onImgLoad(event: Event): void {
-    const img = event.target as HTMLImageElement;
+function onImgLoad(): void {
     imgReady.value = true;
-    if (!isRemoteImg.value) return;
-    measureFullBleed(img)
-        .then(bleed => {
-            fullBleed.value = bleed;
-        })
-        .catch(() => {
-            /* 拿不到像素就按「有留白」处理 */
-        });
-}
-
-async function measureFullBleed(img: HTMLImageElement): Promise<boolean> {
-    // 两条路，都不需要 host_permissions：
-    //   1. MIME：拿到响应头才能用。扩展页的 img-src 白名单让浏览器信任该 host 的图片，
-    //      于是内容协商直接返回 image/*；但没申请 host_permissions 时跨源 fetch 会因缺
-    //      Access-Control-Allow-Origin 而整个失败，这条路只在有 CORS 的服务上成立。
-    //   2. canvas：直接量像素。跨源图不带 crossorigin 属性就是 tainted（读 getImageData 抛
-    //      SecurityError），所以这条路在扩展里同样不可用 —— 它保住了普通网页源下的预览与测试。
-    // 读不出来只返回 false（按「有留白」处理，与历史行为一致），不抛、不刷控制台。
-    const src = img.currentSrc || img.src;
-    if (await imageMimeIsImage(src)) return true;
-    try {
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        if (!ctx || !canvas.width || !canvas.height) return false;
-        ctx.drawImage(img, 0, 0);
-        const { width, height } = canvas;
-        const { data } = ctx.getImageData(0, 0, width, height);
-        const band = 3;
-        let edgePx = 0;
-        let edgeOn = 0;
-        for (let y = 0; y < height; y++) {
-            for (let x = 0; x < width; x++) {
-                if (x >= band && x < width - band && y >= band && y < height - band) continue;
-                edgePx++;
-                if (data[(y * width + x) * 4 + 3] > 16) edgeOn++;
-            }
-        }
-        return edgePx > 0 && edgeOn / edgePx >= 0.9;
-    } catch {
-        // SecurityError = 图被判定 tainted；读不了就按「有留白」处理
-        return false;
-    }
-}
-
-/**
- * 只问「这张 URL 内容协商出来的是不是图片」，不读字节、不解析像素。
- * 这是扩展页里唯一不需要 host_permissions 的资源类型探测（见 measureFullBleed 的注释）。
- * 读不到响应头就返回 false，交给 canvas 那条路。
- */
-async function imageMimeIsImage(src: string): Promise<boolean> {
-    try {
-        const response = await fetch(src, { method: 'GET', cache: 'force-cache' });
-        if (!response.ok) return false;
-        // 立刻取消 body：只要类型，不要字节
-        void response.body?.cancel();
-        return /^image\//i.test(response.headers.get('content-type') || '');
-    } catch {
-        return false;
-    }
 }
 
 function attachGlassTo(el: HTMLElement): void {
@@ -220,7 +132,6 @@ onMounted(() => {
 
 watch(iconText, () => {
     failed.value = false;
-    fullBleed.value = false;
     rebuildSvg();
 });
 
@@ -240,7 +151,6 @@ onBeforeUnmount(() => {
             referrerpolicy="no-referrer"
             :src="imgSrc"
             :style="iconStyle"
-            :data-fullbleed="isRemoteImg ? String(fullBleed) : undefined"
             :class="{ 'is-ready': !isRemoteImg || imgReady }"
             @load="onImgLoad"
             @error="failed = true"
@@ -273,7 +183,8 @@ onBeforeUnmount(() => {
 }
 
 /* 图标占方块 62%：系统图标是「图形 + 留白」，不是把方块填满。
-   contain 保证任意长宽比的图都完整落在这个方框里，不被裁切。 */
+   contain 保证任意长宽比的图都完整落在这个方框里，不被裁切。
+   远程图由 iconStyle 内联覆盖为 70% 并套 squircle 蒙版（见上方注释）。 */
 .icon-square :deep(.icon),
 .icon-square img.icon,
 .icon-square svg {

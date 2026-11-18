@@ -3,9 +3,15 @@ import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import Sortable from 'sortablejs';
 import { usePanels } from '@/src/composables/usePanels';
 import GlassPanel from '@/src/components/common/GlassPanel.vue';
-import { isTodoOverdue, useTodo, type Todo, type TodoCategory } from '@/src/composables/useTodo';
+import { isTodoOverdue, useTodo } from '@/src/composables/useTodo';
 import { toast as showToast } from '@/src/composables/useToast';
-import { ICON_TRASH, ICON_CAT_WORK, ICON_CAT_LIFE, ICON_CAT_NORMAL } from '@/src/lib/icons';
+import {
+  TODO_ICONS as ICONS,
+  categoryIcon,
+  categoryTitle,
+  categoryClass,
+  dueText as formatDueText,
+} from '@/src/lib/todo-display';
 
 /**
  * 待办事项面板。
@@ -34,30 +40,7 @@ const importantActive = ref(false);
 const listEl = ref<HTMLElement | null>(null);
 const inputEl = ref<HTMLInputElement | null>(null);
 
-/** legacy AppIcons（v1.8.1:js/app.js 第 6、10-12 行逐字拷贝，视觉零漂移） */
-const ICONS = {
-  trash: ICON_TRASH,
-  catWork: ICON_CAT_WORK,
-  catLife: ICON_CAT_LIFE,
-  catNormal: ICON_CAT_NORMAL,
-} as const;
-
-// legacy：{ work: 'catWork', life: 'catLife', normal: 'catNormal' }[category] || 'catNormal'
-function categoryIcon(category: TodoCategory | undefined): string {
-  const map: Record<TodoCategory, string> = {
-    work: ICONS.catWork,
-    life: ICONS.catLife,
-    normal: ICONS.catNormal,
-  };
-  return map[category ?? 'normal'] ?? ICONS.catNormal;
-}
-
-// legacy：{ work: '工作', life: '生活', normal: '普通' }[category] || '普通'
-function categoryTitle(category: TodoCategory | undefined): string {
-  const map: Record<TodoCategory, string> = { work: '工作', life: '生活', normal: '普通' };
-  return map[category ?? 'normal'] ?? '普通';
-}
-
+/** 分类图标 / 文案已抽到 @/src/lib/todo-display（与 TodoCard 共享），本组件直接调用 */
 // 新待办的分类跟随当前筛选：选了「工作/生活」就落进该分类；
 // 「全部」下新增一律落「普通」。这里给出可见提示，让用户知道规则，而非静默猜测。
 const categoryHint = computed(() =>
@@ -69,11 +52,9 @@ const categoryHintTitle = computed(() =>
     : `当前在「${categoryTitle(filter.value)}」分类下，新待办会自动归为该分类。`,
 );
 
-// legacy：逾期时 '⚠️ {date} 已逾期'，否则 '📅 {date}'；无截止日期渲染空 span
-function dueText(t: Todo): string {
-  if (!t.dueDate) return '';
-  return isTodoOverdue(t) ? `⚠️ ${t.dueDate} 已逾期` : `📅 ${t.dueDate}`;
-}
+// 截止日文案与 TodoCard 共享同一份语义；逾期判定仍由 isTodoOverdue 提供
+const dueText = (t: import('@/src/composables/useTodo').Todo): string =>
+  formatDueText(t.dueDate, isTodoOverdue(t));
 
 // legacy renderTodoList 的 todoCount 文案：'N 项待完成 · 今日完成 N'（逾期 > 0 追加 ⚠️ 段）
 const countText = computed(() => {
@@ -195,14 +176,14 @@ onUnmounted(() => {
           :key="todo.id"
           :data-id="todo.id"
           class="todo-item"
-          :class="[`cat-${todo.category || 'normal'}`, { done: todo.done, important: todo.important, overdue: isTodoOverdue(todo) }]"
+          :class="[categoryClass(todo.category), { done: todo.done, important: todo.important, overdue: isTodoOverdue(todo) }]"
         >
           <input type="checkbox" :checked="todo.done" @change="toggleTodo(todo.id)" />
           <!-- 仅重要项渲染星标：空占位会拉大勾选框与内容区之间的间距 -->
           <span v-if="todo.important" class="todo-star" title="重要">★</span>
           <span
             class="todo-cat-badge"
-            :class="`cat-${todo.category || 'normal'}`"
+            :class="categoryClass(todo.category)"
             :title="categoryTitle(todo.category)"
             v-html="categoryIcon(todo.category)"
           ></span>

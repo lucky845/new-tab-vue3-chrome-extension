@@ -18,6 +18,7 @@ import {
     normalizeHistory,
     type HistoryEntry,
 } from '@/src/lib/searchHistory';
+import { dedupeEngines } from '@/src/lib/engineDedup';
 
 /** 类型对外仍从本模块取：调用点（SearchBlock / 测试）无需知道它搬去了 lib */
 export type { HistoryEntry } from '@/src/lib/searchHistory';
@@ -247,14 +248,20 @@ function createSearch(): SearchApi {
         return customEngines.value.map(e => ({ name: e.name, url: e.url }));
     }
 
-    function applyCustomEngines(list: unknown): void {
-        const safe: Engine[] = [];
+    /** @returns 被剔除的重复/非法条目数（init 用它决定是否需要清洗存储） */
+    function applyCustomEngines(list: unknown): number {
+        const valid: Engine[] = [];
         if (Array.isArray(list)) {
             for (const item of list) {
+                // 名字先 trim：存储里可能留着 '  Bing  ' 这种脏数据
                 if (!isSafeEngine(item)) continue;
-                safe.push({ name: item.name, url: item.url });
+                valid.push({ name: item.name.trim(), url: item.url });
             }
         }
+        // 与内置引擎重名、或自定义之间互相重名的，一律剔除（保留先出现的）。
+        // 历史数据里确实存在这种脏数据：addCustomEngine 早期只查自定义列表，
+        // 用户可以建一个叫「Bing」的自定义引擎，下拉就会同时出现两个 Bing。
+        const { list: safe, dropped } = dedupeEngines(valid, BUILTIN_ENGINES);
         customEngines.value = safe;
         // 任何一次「自定义引擎变了」都意味着内存态要对外刷新一次。watch(engines) 只在
         // 引用变化时触发，下面可能只是名字换了而数组内容一样，所以这里显式换新引用。
@@ -262,6 +269,7 @@ function createSearch(): SearchApi {
         // 当前引擎若已被删除则回落到内置默认（legacy setCustomEngines 语义）
         const stillExists = engines.value.some(e => e.name === currentName.value);
         if (!stillExists) currentName.value = FIRST_BUILTIN.name;
+        return dropped;
     }
 
     async function persistCustomEngines(list: Array<{ name: string; url: string }>): Promise<void> {
@@ -311,7 +319,17 @@ function createSearch(): SearchApi {
         // 两个覆盖层要先落位再重建，否则首帧会先闪一下品牌图。
         applyEngineLogos(data[STORAGE_KEYS.engineLogos]);
         applyEngineIcons(data[STORAGE_KEYS.engineIcons]);
-        applyCustomEngines(data[STORAGE_KEYS.customEngines]);
+        const droppedEngines = applyCustomEngines(data[STORAGE_KEYS.customEngines]);
+        // 历史上可能已经存进重复项（自己建了个「Bing」）：水合时静默清掉并回写一次，
+        // 否则用户每次打开新标签页都要重新过滤同一份脏数据。
+        if (droppedEngines > 0) {
+            try {
+                await storageArea().set({ [STORAGE_KEYS.customEngines]: plainList() });
+                log.warn('[search] 已清理 ' + droppedEngines + ' 个重复/非法的自定义引擎');
+            } catch (error) {
+                log.error('清理重复引擎失败:', error);
+            }
+        }
         // 回填 currentName：优先独立键，兼容 legacy settings.searchEngine，再取默认
         const rawSettings = data[STORAGE_KEYS.settings];
         const settings =
@@ -407,7 +425,11 @@ function createSearch(): SearchApi {
         if (!/^https?:\/\//i.test(u) || !UrlSafe.isHttp(u.replace('%s', 'test'))) {
             return { ok: false, message: '搜索链接必须以 http(s):// 开头' };
         }
-        if (customEngines.value.some(e => e.name.toLowerCase() === n.toLowerCase())) {
+        // 查重必须同时覆盖内置与自定义：只查自定义会让用户建出第二个「Bing」
+        const taken = [...BUILTIN_ENGINES, ...customEngines.value].some(
+            e => e.name.toLowerCase() === n.toLowerCase()
+        );
+        if (taken) {
             return { ok: false, message: '已存在同名引擎「' + n + '」' };
         }
         await persistCustomEngines([...plainList(), { name: n, url: u }]);

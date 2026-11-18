@@ -13,48 +13,27 @@
  */
 import { ref } from 'vue';
 import SideCard from '@/src/components/common/SideCard.vue';
-import { useTodo, isTodoOverdue, type Todo, type TodoCategory } from '@/src/composables/useTodo';
+import { useTodo, isTodoOverdue } from '@/src/composables/useTodo';
 import { toast as showToast } from '@/src/composables/useToast';
-import { ICON_TRASH, ICON_CAT_WORK, ICON_CAT_LIFE, ICON_CAT_NORMAL } from '@/src/lib/icons';
+import {
+  TODO_ICONS as ICONS,
+  categoryIcon,
+  categoryTitle,
+  categoryClass,
+  dueText as formatDueText,
+} from '@/src/lib/todo-display';
 
 const { todos, stats, addTodo, toggleTodo, removeTodo } = useTodo();
 
 /** 快速添加输入框（legacy todoInput.value） */
 const draft = ref('');
 
-/** legacy AppIcons —— 字面量已抽到 @/src/lib/icons 共享，此处仅做语义映射 */
-const ICONS = {
-  trash: ICON_TRASH,
-  catWork: ICON_CAT_WORK,
-  catLife: ICON_CAT_LIFE,
-  catNormal: ICON_CAT_NORMAL,
-} as const;
-
-// legacy：{ work: 'catWork', life: 'catLife', normal: 'catNormal' }[category] || 'catNormal'
-function categoryIcon(category: TodoCategory | undefined): string {
-  const map: Record<TodoCategory, string> = {
-    work: ICONS.catWork,
-    life: ICONS.catLife,
-    normal: ICONS.catNormal,
-  };
-  return map[category ?? 'normal'] ?? ICONS.catNormal;
-}
-
-// legacy：{ work: '工作', life: '生活', normal: '普通' }[category] || '普通'
-function categoryTitle(category: TodoCategory | undefined): string {
-  const map: Record<TodoCategory, string> = { work: '工作', life: '生活', normal: '普通' };
-  return map[category ?? 'normal'] ?? '普通';
-}
-
-function categoryClass(category: TodoCategory | undefined): string {
-  return 'cat-' + (category || 'normal');
-}
-
-// legacy：逾期时 '⚠️ {date} 已逾期'，否则 '📅 {date}'；无截止日期渲染空 span
-function dueText(t: Todo): string {
-  if (!t.dueDate) return '';
-  return isTodoOverdue(t) ? '⚠️ ' + t.dueDate + ' 已逾期' : '📅 ' + t.dueDate;
-}
+/**
+ * 分类图标 / 文案 / 样式类 / 截止日文案已抽到 @/src/lib/todo-display（与 TodoPanel 共享），
+ * 本组件只保留调用：dueText(todo) = formatDueText(todo.dueDate, isTodoOverdue(todo))。
+ */
+const dueText = (t: import('@/src/composables/useTodo').Todo): string =>
+  formatDueText(t.dueDate, isTodoOverdue(t));
 
 async function quickAdd(): Promise<void> {
   const content = draft.value.trim();

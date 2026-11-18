@@ -1,6 +1,6 @@
-# 商店上架清单 v2.1.0
+# 商店上架清单 v2.2.1
 
-2026-11-16。这份文档把提交 Edge 合作伙伴中心和 Chrome Web Store 时要填的字段集中列出来，可以直接照着填。
+2026-11-18。这份文档把提交 Edge 合作伙伴中心和 Chrome Web Store 时要填的字段集中列出来，可以直接照着填。
 
 字段依据微软官方的 publish-extension 文档。清单里的 name、description、shortDescription 会自动带进商店一览，上传后这几个字段只读。
 
@@ -8,16 +8,19 @@
 
 | 文件 | 版本 | 用途 |
 | --- | --- | --- |
-| .output/new-tab-vue3-chrome-extension-2.1.0-chrome.zip | 2.1.0 | Chrome Web Store |
-| .output/new-tab-vue3-chrome-extension-2.1.0-edge.zip | 2.1.0 | Edge 合作伙伴中心 |
+| .output/new-tab-vue3-chrome-extension-2.2.1-chrome.zip | 2.2.1 | Chrome Web Store |
 
-两个包都由 v2.1.0 源码重新构建（WXT 0.21.5）。解包核对过 manifest：
+Edge 包用同一条命令生成（`npm run zip` 后按需改 `wxt.config.ts` 的 browser 目标）。
 
-- version 2.1.0，default_locale zh_CN，另有 en
+由 v2.2.1 源码构建（WXT 0.21.5）。解包核对过 manifest：
+
+- version 2.2.1，default_locale zh_CN，另有 en
 - permissions 为 storage 和 geolocation
 - host_permissions 是 10 个接口和图床域名，不含 *://*/*
+- content_security_policy.extension_pages 的 script-src 为 'self'
+- 产物 12 个文件过 `npm run check:remote-code` 门禁（无远程 script / 动态 import）
 
-注意 .output/ 下还有 2.0.0 时期的旧 zip，里面带 *://*/* 全站点权限，不要提交。认准文件名里的 -2.1.0-。
+注意 .output/ 下还留着 2.0.0 / 2.1.0 / 2.2.0 的旧 zip，其中 2.0.0 带 *://*/* 全站点权限，**不要提交**。认准文件名里的 -2.2.1-。
 
 ## 2. 扩展名称
 
@@ -110,14 +113,21 @@ https://github.com/lucky845/new-tab-vue3-chrome-extension/blob/master/doc/PRIVAC
 | 壁纸面板 | doc/store-screenshots/03-wallpaper-panel.png | 已完成 |
 | 天气面板 | doc/store-screenshots/04-weather-panel.png | 已完成 |
 | 待办面板 | doc/store-screenshots/05-todo-panel.png | 已完成 |
-| 440x280 宣传图 | — | 未做 |
-| 128x128 图标 | public/icons/icon128.png | 需确认是否留了 16px padding |
+| 440x280 宣传图 | doc/store-screenshots/06-promo-440x280.png | 已完成，440x280，整页缩放无裁切 |
+| 128x128 图标 | public/icons/icon128.png | 已完成，实测留白 L29/T19/R30/B23 px（约 15%–23%，符合商店「四周留白、不贴边」要求） |
 
 ## 9. 提审前还要做的事
 
-这几项自动化跑不了，得在真扩展上做：
+这几项自动化跑不了，得在真扩展上做。**2026-11-18 已完成的部分**（证据见交付记录）：
 
-- 三个浏览器（Chrome / Edge / Firefox）各跑一遍冒烟的 6 条用例
-- 做 440x280 宣传图，确认 128x128 图标合规
-- 真扩展里跑一次备份导出和导入的往返（预览页 shim 已经验证过 16/16，真扩展没测）
-- 把隐私政策 URL 挂到公开地址
+- ✅ 真扩展（Chrome 157 + CDP `Extensions.loadUnpacked`）冒烟 6 脚本 65 项断言全过，控制台 0 错误
+- ✅ 真扩展里跑通备份导出 / 复制 / 粘贴导入 / 非法拒绝 / 往返还原（4 条路径 18 项断言）
+- ✅ 440x280 宣传图已做（`doc/store-screenshots/06-promo-440x280.png`）
+- ✅ 128x128 图标留白实测合规（L29/T19/R30/B23）
+- ✅ 隐私政策 URL 两个地址 2026-11-16 实测 200
+
+**仍需人工完成**：
+
+- Edge / Firefox 各跑一遍冒烟（Chrome 已过，另两个浏览器未测）
+- 在 Partner Center / CWS 后台实填字段并提交
+- 名称重名风险确认（New Tab Pro 有近似条目，备选词见第 2 节）

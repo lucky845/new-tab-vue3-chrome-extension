@@ -11,9 +11,8 @@
  * 而非 SVG 名，createIconNode 返回 null 时回退 textContent，与 legacy innerHTML 逐字节一致。
  * 显隐 / 展开按钮 / 头部由 SideCard 外壳统一承载，本组件只管卡片主体。
  */
-import type { Directive } from 'vue';
 import SideCard from '@/src/components/common/SideCard.vue';
-import { createIconNode } from '@/src/lib/iconSafe';
+import { vToolIcon } from '@/src/directives/toolIcon';
 import { useTools } from '@/src/composables/useTools';
 import { setPanelOriginFromEvent } from '@/src/composables/usePanels';
 
@@ -25,22 +24,7 @@ function openToolDetail(toolId: string, ev: MouseEvent): void {
   openToolsPanel(toolId);
 }
 
-function renderToolIcon(el: HTMLElement, icon: string): void {
-  el.replaceChildren();
-  const node = createIconNode(icon);
-  if (node) el.appendChild(node);
-  else el.textContent = icon;
-}
-
-const vToolIcon: Directive<HTMLElement, string> = {
-  mounted(el, binding) {
-    renderToolIcon(el, binding.value);
-  },
-  updated(el, binding) {
-    if (binding.value === binding.oldValue) return;
-    renderToolIcon(el, binding.value);
-  },
-};
+/** 图标指令 v-tool-icon 由 @/src/directives/toolIcon 提供（与 ToolsPanel 共享） */
 </script>
 
 <!-- prettier-ignore -->

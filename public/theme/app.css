@@ -83,7 +83,7 @@
     --panel-glass-fill: rgb(255 255 255 / 0.62);
     /* 面板底衬（叠加在库的折射层之下），比 --panel-glass-fill 更实一点：
        0.62 铺在 500x600 的大面上仍会让背后的时钟大字透出来。 */
-    --panel-glass-scrim: rgb(250 251 253 / 0.82);
+    --panel-glass-scrim: rgb(250 251 253 / 0.94);
     --shadow: 0 0 0;
     --text-k: 1;
     --wash-k: 0.55;
@@ -3392,9 +3392,63 @@ body:not([data-wings='none']) #quick-access-grid .quick-access-grid {
         display: none;
     }
 
-    .search-container,
-    #quick-access-grid .quick-access-grid {
+    /* 两翼在 ≤920px 已 display:none，但「给两翼让 560px」的 body:not([data-wings='none'])
+       规则仍按 data-wings 生效（属性由 useSideCards 写，此时通常还是 both）。
+       这里必须用「同等 specificity」覆盖，否则 700–920px 中间段会算成
+       calc(100vw - 560px)（实测 810px 屏仅剩 250px），86px 图标塞进 3 列就重叠溢出。
+       裸选择器 .quick-access-grid 会被 body:not(...) 压过，不能只写裸的。 */
+    body:not([data-wings='none']) .search-container,
+    body:not([data-wings='none']) #quick-access-grid .quick-access-grid,
+    body[data-wings='none'] .search-container,
+    body[data-wings='none'] #quick-access-grid .quick-access-grid {
         max-width: min(680px, calc(100vw - 32px));
+    }
+}
+
+/* ============================================================
+   手机视口（≤700px）—— 评审 S2 修复
+   症状：天气卡 fixed 左上 + 顶栏 fixed 右上，在 390px 宽上互相叠压，
+   前两个控制按钮被天气卡盖住（截图工具实测 #todo-btn 中心点被 div#temperature 挡住）；
+   快捷方式按 86px 大图标 + JS 下限 3 列渲染成两块巨型卡片，还被中间文字压住。
+   ============================================================ */
+@media (max-width: 700px) {
+    /* 网格/搜索框的 max-width 让位豁免已在 ≤920px 断点统一处理（见上），
+       这里不再重复声明，避免两处维护。 */
+    /* 天气卡收窄到内容宽，且让出顶部导航带；错误文案仍走 ellipsis 不撑宽 */
+    .weather-widget {
+        top: 12px;
+        left: 12px;
+        min-width: 0;
+        max-width: calc(100vw - 24px);
+        padding: 12px;
+    }
+    /* 顶栏让出天气卡高度，整排移到天气卡下方，不再被盖住 */
+    .top-right-controls {
+        top: 108px;
+        padding: 12px;
+        gap: 8px;
+        width: 100%;
+        justify-content: center;
+        box-sizing: border-box;
+    }
+    .control-btn {
+        width: 44px;
+        height: 44px;
+    }
+    /* 快捷方式：3 列 60px 小图标，一屏放下 5 个，名称单独一行不被裁 */
+    .quick-access-item {
+        --icon-square: 60px;
+        --icon-radius: 13px;
+        gap: 6px;
+    }
+    .quick-access-grid {
+        gap: 10px 8px;
+        margin-top: 16px;
+        min-height: 0;
+        padding: 0 12px;
+    }
+    #quick-access-grid {
+        width: 100%;
     }
 }
 
@@ -3936,7 +3990,15 @@ body:not([data-wings='none']) #quick-access-grid .quick-access-grid {
     grid-template-columns: repeat(2, 1fr);
     grid-template-rows: repeat(2, 1fr);
     gap: 3px;
-    padding: 10px;
+    /* padding 取 --icon-square 的 8%（86px→约 7px，手机 60px→约 5px），
+       不能写死 10px：手机断点把 --icon-square 缩到 60px 后，
+       固定 10px padding + 固定 30px 缩略格会撑出预览框（实测 390px 下溢出）。 */
+    padding: calc(var(--icon-square, 86px) * 0.08);
+    /* 子格尺寸基准必须在「外层」固化：CSS 自定义属性里的百分比按「使用它的元素」解析，
+       写在 .folder-cell 的 --icon-square 里会相对 cell 自身宽度 → 与 grid 列宽循环依赖，缩成 5px。
+       这里把外层已解析出的字号存成绝对值，子格直接引用。 */
+    --preview-size: var(--icon-square, 86px);
+    --preview-pad: calc(var(--preview-size) * 0.08);
     box-sizing: border-box;
     border-radius: 22%;
     background-color: rgb(var(--spec) / 0.24);
@@ -3949,7 +4011,9 @@ body:not([data-wings='none']) #quick-access-grid .quick-access-grid {
 
 /* 预览格里的 AppIcon：换成本地尺寸变量，内部图标自然缩小到格子的 62% */
 .folder-cell {
-    --icon-square: 30px;
+    /* 2×2 子格随外层 --icon-square 缩放：固定 30px 在手机 60px 预览框里会溢出
+       （60px 框 - 2×5px padding - 3px gap = 47px / 2 ≈ 23px）。用百分比让断点自动生效。 */
+    --icon-square: calc((var(--preview-size) - 2 * var(--preview-pad) - 3px) / 2);
     /* 预览格没有空间画 21% 的圆角，用固定的像素值保持「圆角感」 */
     --icon-radius: 7px;
     border-radius: 7px;
@@ -4238,6 +4302,29 @@ body:not([data-wings='none']) #quick-access-grid .quick-access-grid {
     justify-content: center;
     /* 与其它弹窗同层：不压暗、不模糊背景 */
     background: transparent;
+    /* 原生 <dialog> UA 默认有 border/padding/margin，这里清掉以兼容旧布局 */
+    border: 0;
+    padding: 0;
+    margin: 0;
+    max-width: none;
+    max-height: none;
+    color: inherit;
+    /* 关键：UA 给 dialog 的是 width/height: fit-content + margin:auto（那才是它默认居中的来源）。
+       本项目用 inset:0 + flex 做居中，margin:auto 已被清掉，必须把尺寸撑满视口，
+       否则面板会缩到 fit-content 并贴到左上角（真机截图已复现）。 */
+    width: 100%;
+    height: 100%;
+}
+
+/* 原生 dialog 指南 MANDATORY：modal 时阻断背景滚动链。
+   ::backdrop 默认不透明/透传滚动，必须显式声明，否则在 backdrop 上滚轮会带动背景页 */
+.dsh-dialog:modal {
+    overscroll-behavior: contain;
+}
+.dsh-dialog::backdrop {
+    background: transparent;
+    overflow: hidden;
+    overscroll-behavior: contain;
 }
 
 .dsh-dialog__panel {
@@ -4306,11 +4393,12 @@ body:not([data-wings='none']) #quick-access-grid .quick-access-grid {
 }
 
 
-/* 壁纸分类：图源不支持检索时的可见提示 */
+/* 壁纸分类：图源不支持检索时的可见提示。
+   放在右栏标题/搜索行下方、主内容之前：原先挂在侧栏底部既和顶部 toast 重复、
+   又离搜索主操作很远（评审 S6）。现在只保留一处、自然占位不遮挡任何入口。 */
 .wallpaper-category-hint {
-    flex-shrink: 0;
-    margin: 10px 0 0;
-    padding: 8px 10px;
+    margin: 0 0 12px;
+    padding: 8px 12px;
     font-size: 12px;
     line-height: 1.5;
     color: var(--color-warning);
@@ -4431,7 +4519,7 @@ html[data-theme='light'][data-photo-ink='light'] {
     --glass-popover-fill: rgb(8 12 18 / 0.66);
     /* 弹窗面板底：深色下墨是白的，白底会让字消失；用与侧卡同级的冷黑 0.58（白字 6.4:1） */
     --panel-glass-fill: rgb(8 12 18 / 0.58);
-    --panel-glass-scrim: rgb(10 14 20 / 0.82);
+    --panel-glass-scrim: rgb(10 14 20 / 0.9);
     /* 深色的高光不能给白（白 = 塑料抛光），给一点冷灰蓝，像玻璃棱上反的天光 */
     --glass-sheen:
         radial-gradient(
