@@ -1,4 +1,4 @@
-# 商店上架清单 v2.2.1
+# 商店上架清单 v2.2.2
 
 2026-11-18。这份文档把提交 Edge 合作伙伴中心和 Chrome Web Store 时要填的字段集中列出来，可以直接照着填。
 
@@ -8,19 +8,19 @@
 
 | 文件 | 版本 | 用途 |
 | --- | --- | --- |
-| .output/new-tab-vue3-chrome-extension-2.2.1-chrome.zip | 2.2.1 | Chrome Web Store |
+| .output/new-tab-vue3-chrome-extension-2.2.2-chrome.zip | 2.2.2 | Chrome Web Store |
 
 Edge 包用同一条命令生成（`npm run zip` 后按需改 `wxt.config.ts` 的 browser 目标）。
 
-由 v2.2.1 源码构建（WXT 0.21.5）。解包核对过 manifest：
+由 v2.2.2 源码构建（WXT 0.21.5）。解包核对过 manifest：
 
-- version 2.2.1，default_locale zh_CN，另有 en
+- version 2.2.2，default_locale zh_CN，另有 en
 - permissions 为 storage 和 geolocation
 - host_permissions 是 10 个接口和图床域名，不含 *://*/*
 - content_security_policy.extension_pages 的 script-src 为 'self'
 - 产物 12 个文件过 `npm run check:remote-code` 门禁（无远程 script / 动态 import）
 
-注意 .output/ 下还留着 2.0.0 / 2.1.0 / 2.2.0 的旧 zip，其中 2.0.0 带 *://*/* 全站点权限，**不要提交**。认准文件名里的 -2.2.1-。
+注意 .output/ 下还留着 2.0.0 / 2.1.0 / 2.2.0 的旧 zip，其中 2.0.0 带 *://*/* 全站点权限，**不要提交**。认准文件名里的 -2.2.2-。
 
 ## 2. 扩展名称
 
