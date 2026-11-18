@@ -19,6 +19,8 @@ export interface Settings {
   wallpaperBlur: number;
   showSideWidgets: boolean;
   wallpaperSource: string;
+  /** 减少动效：true 时全局面板/悬浮动画降级；系统偏好始终生效，无需打开 */
+  reduceMotion: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -33,6 +35,7 @@ export const DEFAULT_SETTINGS: Settings = {
   wallpaperBlur: 0,
   showSideWidgets: true,
   wallpaperSource: 'picsum',
+  reduceMotion: false,
 };
 
 /** 一次性迁移旧独立键并清理（legacy migrateLegacySettings 逐字移植，幂等） */
