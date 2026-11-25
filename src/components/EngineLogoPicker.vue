@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref } from 'vue';
 import { firstCharOf, isDataImage } from '@/src/lib/iconSafe';
+import { t } from '@/src/composables/useI18n';
 
 /**
  * 引擎 logo 选择器：选一张图 → 拖拽/滚轮调整取景 → 换成 128×128 的方形图标。
@@ -38,7 +39,7 @@ const MAX_FILE_BYTES = 4 * 1024 * 1024;
 async function pasteFromClipboard(): Promise<void> {
     const clip = navigator.clipboard as Clipboard | undefined;
     if (!clip || typeof clip.read !== 'function') {
-        errorText.value = '当前浏览器不支持读取剪贴板，请点「上传图片」';
+        errorText.value = t('engine_logo_err_no_clipboard');
         return;
     }
     try {
@@ -50,9 +51,9 @@ async function pasteFromClipboard(): Promise<void> {
             loadFile(new File([blob], 'clipboard', { type: file }));
             return;
         }
-        errorText.value = '剪贴板里没有图片';
+        errorText.value = t('engine_logo_err_clipboard_empty');
     } catch {
-        errorText.value = '读取剪贴板被拒绝，请点「上传图片」';
+        errorText.value = t('engine_logo_err_clipboard_denied');
     }
 }
 
@@ -118,11 +119,11 @@ function onFileChange(event: Event): void {
 
 function loadFile(file: File): void {
     if (!/^image\//.test(file.type)) {
-        errorText.value = '只支持图片文件';
+        errorText.value = t('engine_logo_err_not_image');
         return;
     }
     if (file.size > MAX_FILE_BYTES) {
-        errorText.value = '图片不要超过 4MB';
+        errorText.value = t('engine_logo_err_too_large');
         return;
     }
     errorText.value = '';
@@ -137,12 +138,12 @@ function loadFile(file: File): void {
             result.value = '';
         };
         img.onerror = () => {
-            errorText.value = '这张图读不出来';
+            errorText.value = t('engine_logo_err_unreadable');
         };
         img.src = src;
     };
     reader.onerror = () => {
-        errorText.value = '读取文件失败';
+        errorText.value = t('engine_logo_err_read_failed');
     };
     reader.readAsDataURL(file);
 }
@@ -218,7 +219,7 @@ function commit(): void {
     canvas.height = SIZE;
     const ctx = canvas.getContext('2d');
     if (!ctx) {
-        errorText.value = '浏览器不支持画布裁剪';
+        errorText.value = t('engine_logo_err_no_canvas');
         return;
     }
     ctx.imageSmoothingEnabled = true;
@@ -233,7 +234,7 @@ function commit(): void {
         emit('update', result.value);
     };
     source.onerror = () => {
-        errorText.value = '裁剪失败，换一张图试试';
+        errorText.value = t('engine_logo_err_crop_failed');
     };
     source.src = img.src;
 }
@@ -258,7 +259,7 @@ function commit(): void {
                 class="logo-stage"
                 :class="{ 'is-dragging': dragging, 'is-empty': !image }"
                 role="img"
-                :aria-label="image ? '拖动调整图标取景' : '引擎图标预览'"
+                :aria-label="image ? t('engine_logo_drag_aria') : t('engine_logo_preview_aria')"
                 @pointerdown="onPointerDown"
                 @pointermove="onPointerMove"
                 @pointerup="onPointerUp"
@@ -287,23 +288,23 @@ function commit(): void {
                     :style="{ width: stageSize + 'px', height: stageSize + 'px', left: 0, top: 0 }"
                 />
                 <span v-else class="logo-stage-fallback">{{ fallbackChar }}</span>
-                <span v-if="!image && !currentLogo && !result" class="logo-stage-hint">上传图片</span>
+                <span v-if="!image && !currentLogo && !result" class="logo-stage-hint">{{ t('engine_logo_upload') }}</span>
             </div>
 
             <div class="logo-picker-actions">
                 <button type="button" class="settings-btn" @click="pickFile">
-                    {{ image ? '换一张' : '上传图片' }}
+                    {{ image ? t('engine_logo_replace') : t('engine_logo_upload') }}
                 </button>
-                <button type="button" class="logo-reset" @click="pasteFromClipboard">粘贴剪贴板图片</button>
-                <button v-if="image" type="button" class="settings-btn" @click="commit">裁剪并应用</button>
-                <button v-if="image || result" type="button" class="logo-reset" @click="clearLogo">恢复默认</button>
+                <button type="button" class="logo-reset" @click="pasteFromClipboard">{{ t('engine_logo_paste') }}</button>
+                <button v-if="image" type="button" class="settings-btn" @click="commit">{{ t('engine_logo_crop_apply') }}</button>
+                <button v-if="image || result" type="button" class="logo-reset" @click="clearLogo">{{ t('engine_logo_reset') }}</button>
                 <button v-if="currentLogo && !image" type="button" class="logo-reset" @click="reopen(currentLogo)">
-                    调整当前图标
+                    {{ t('engine_logo_adjust') }}
                 </button>
                 <p v-if="errorText" class="logo-error">{{ errorText }}</p>
-                <p v-else-if="image" class="logo-hint">拖动图片调整位置，滚轮缩放，满意后点「裁剪并应用」</p>
-                <p v-else-if="currentLogo" class="logo-hint">当前用的是自定义图标，可重新调整或恢复默认</p>
-                <p v-else class="logo-hint">不设置时用引擎自带图标，没有就用名字首字</p>
+                <p v-else-if="image" class="logo-hint">{{ t('engine_logo_hint_crop') }}</p>
+                <p v-else-if="currentLogo" class="logo-hint">{{ t('engine_logo_hint_custom') }}</p>
+                <p v-else class="logo-hint">{{ t('engine_logo_hint_default') }}</p>
             </div>
         </div>
     </div>

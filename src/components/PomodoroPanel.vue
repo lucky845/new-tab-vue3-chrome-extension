@@ -12,6 +12,7 @@ import { computed, ref, watch } from 'vue';
 import { usePanels } from '@/src/composables/usePanels';
 import GlassPanel from '@/src/components/common/GlassPanel.vue';
 import { usePomodoro, formatPomodoroTime, showToast } from '@/src/composables/usePomodoro';
+import { t } from '@/src/composables/useI18n';
 
 const { isOpen, close } = usePanels();
 const {
@@ -38,7 +39,7 @@ const ringStyle = computed(() => ({
 
 // 时长设置折叠区（legacy togglePomodoroSettings：切 u-hidden + 按钮文案两态）
 const settingsOpen = ref(false);
-const settingsToggleLabel = computed(() => (settingsOpen.value ? '⚙ 收起设置' : '⚙ 时长设置'));
+const settingsToggleLabel = computed(() => (settingsOpen.value ? t('pomodoro_settings_collapse') : t('pomodoro_settings_expand')));
 function toggleSettings(): void {
     settingsOpen.value = !settingsOpen.value;
 }
@@ -73,7 +74,7 @@ async function applySettings(): Promise<void> {
     breakDraft.value = saved.breakMinutes;
     longBreakDraft.value = saved.longBreakMinutes;
     roundsDraft.value = saved.roundsBeforeLongBreak;
-    showToast('番茄钟设置已保存', 'success', 1500);
+    showToast(t('pomodoro_toast_saved'), 'success', 1500);
 }
 </script>
 
@@ -88,12 +89,12 @@ async function applySettings(): Promise<void> {
       >
         <div class="widget-content">
             <div class="widget-header">
-                <h2 id="pomodoro-panel-title">番茄专注钟</h2>
+                <h2 id="pomodoro-panel-title">{{ t('pomodoro_panel_title') }}</h2>
                 <button
                     id="close-pomodoro-btn"
                     class="control-btn widget-close-btn"
-                    title="关闭"
-                    aria-label="关闭"
+                    :title="t('common_close')"
+                    :aria-label="t('common_close')"
                     @click="close('pomodoro')"
                 >
                     <svg
@@ -141,14 +142,14 @@ async function applySettings(): Promise<void> {
                     ></span>
                 </span>
                 <span class="pomodoro-today-count" id="pomodoro-today-count"
-                    >今日 🍅 × {{ stats.completedToday || 0 }}</span
+                    >{{ t('pomodoro_today', { n: stats.completedToday || 0 }) }}</span
                 >
             </div>
             <!-- prettier-ignore -->
             <div class="pomodoro-actions">
                 <button id="pomodoro-start-btn" class="settings-btn" @click="toggleStart">{{ startLabel }}</button>
-                <button id="pomodoro-skip-btn" class="settings-btn secondary" @click="skipPhase">跳过</button>
-                <button id="pomodoro-reset-btn" class="settings-btn secondary" @click="reset">重置</button>
+                <button id="pomodoro-skip-btn" class="settings-btn secondary" @click="skipPhase">{{ t('pomodoro_skip') }}</button>
+                <button id="pomodoro-reset-btn" class="settings-btn secondary" @click="reset">{{ t('pomodoro_reset') }}</button>
               </div>
             <button
                 id="pomodoro-settings-toggle"
@@ -163,7 +164,7 @@ async function applySettings(): Promise<void> {
                 :class="{ 'u-hidden': !settingsOpen }"
             >
                 <label
-                    >专注
+                    >{{ t('pomodoro_phase_work') }}
                     <input
                         type="number"
                         id="pomodoro-work-input"
@@ -172,10 +173,10 @@ async function applySettings(): Promise<void> {
                         v-model.number="workDraft"
                         @change="applySettings"
                     />
-                    分钟</label
+                    {{ t('pomodoro_unit_min') }}</label
                 >
                 <label
-                    >短休
+                    >{{ t('pomodoro_phase_short_break') }}
                     <input
                         type="number"
                         id="pomodoro-break-input"
@@ -184,10 +185,10 @@ async function applySettings(): Promise<void> {
                         v-model.number="breakDraft"
                         @change="applySettings"
                     />
-                    分钟</label
+                    {{ t('pomodoro_unit_min') }}</label
                 >
                 <label
-                    >长休
+                    >{{ t('pomodoro_phase_long_break') }}
                     <input
                         type="number"
                         id="pomodoro-long-break-input"
@@ -196,10 +197,10 @@ async function applySettings(): Promise<void> {
                         v-model.number="longBreakDraft"
                         @change="applySettings"
                     />
-                    分钟</label
+                    {{ t('pomodoro_unit_min') }}</label
                 >
                 <label
-                    >长休间隔
+                                        >{{ t('pomodoro_phase_round_interval') }}
                     <input
                         type="number"
                         id="pomodoro-rounds-input"
@@ -208,7 +209,7 @@ async function applySettings(): Promise<void> {
                         v-model.number="roundsDraft"
                         @change="applySettings"
                     />
-                    轮</label
+                    {{ t('pomodoro_unit_round') }}</label
                 >
             </div>
         </div>

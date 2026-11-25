@@ -10,6 +10,7 @@ import { registerEscapeTarget } from '@/src/composables/useEscapeClose';
 import { useDialog } from '@/src/composables/useDialog';
 import { toast } from '@/src/composables/useToast';
 import AppIcon from '@/src/components/AppIcon.vue';
+import { t } from '@/src/composables/useI18n';
 
 /**
  * 文件夹浮层 + 右键菜单 + 拖拽合并（经典脚本 → Vue3 组件）。
@@ -23,7 +24,8 @@ import AppIcon from '@/src/components/AppIcon.vue';
 // ---------- 自持状态 ----------
 const folderOpen = ref(false);
 const folderIndex = ref<number | null>(null);
-const folderTitle = ref('文件夹');
+// key 形式：渲染时才翻译，切换语言立即跟随
+const folderTitle = ref('folder_title');
 const emptyHintHidden = ref(true);
 const dragOut = ref(false);
 
@@ -62,7 +64,7 @@ const menuCss = computed<string>(() => contextMenu.value?.css ?? '');
 const menuRows = computed<MenuRow[]>(() => contextMenu.value?.rows ?? []);
 
 // 逐字迁移 newtab.html:240-254 的静态文案/按钮字符
-const EMPTY_HINT_TEXT = '空文件夹 — 点右上角 ＋ 添加，或右键其他快捷方式「移入文件夹」。';
+const EMPTY_HINT_TEXT = 'folder_empty_hint';
 const CLOSE_BTN_TEXT = '✕';
 
 // 文件夹内拖拽运行时句柄
@@ -99,8 +101,8 @@ async function handleItemMerge(draggedIndex: number, targetIndex: number): Promi
     const dragged = mgr.getNodeByIndex(draggedIndex);
     const suggest = mgr.suggestFolderName([target, dragged].filter((n): n is QuickAccessNode => n != null));
     // 统一对话框替代原生 prompt：校验直接内联提示，不再弹 toast 打断
-    const input = await dialog()?.prompt?.('新建文件夹', suggest, {
-      confirmText: '创建',
+    const input = await dialog()?.prompt?.(t('folder_new'), suggest, {
+      confirmText: t('common_create'),
       validate: (value: string) => {
         const check = mgr.validateName(value);
         return check.valid ? null : check.message;
@@ -114,15 +116,15 @@ async function handleItemMerge(draggedIndex: number, targetIndex: number): Promi
   if (!result) return false;
 
   renderAndNotify();
-  toast(target.isFolder ? `已移入「${result.name}」` : `已创建文件夹「${result.name}」`, 'success', 1800);
+  toast(target.isFolder ? t('folder_moved_into', { name: result.name }) : t('folder_created', { name: result.name }), 'success', 1800);
   return true;
 }
 
 // ---------- v1.8.1:js/app.js:1410-1429 createFolderAndMove(siteIndex = null) ----------
 async function createFolderAndMove(siteIndex: number | null = null) {
   const mgr = manager();
-  const trimmed = await dialog()?.prompt?.('新建文件夹', '', {
-    confirmText: '创建',
+  const trimmed = await dialog()?.prompt?.(t('folder_new'), '', {
+    confirmText: t('common_create'),
     validate: (value: string) => {
       const check = mgr.validateName(value);
       return check.valid ? null : check.message;
@@ -135,7 +137,7 @@ async function createFolderAndMove(siteIndex: number | null = null) {
     await mgr.moveSiteToFolder(siteIndex, fi);
   }
   renderAndNotify();
-  toast(`已创建文件夹「${trimmed}」`, 'success', 1800);
+  toast(t('folder_created', { name: trimmed }), 'success', 1800);
 }
 
 // ---------- v1.8.1:js/app.js:1430-1447 renameQuickFolder(index) ----------
@@ -143,8 +145,8 @@ async function renameQuickFolder(index: number) {
   const mgr = manager();
   const folder = mgr?.getSites?.()[index];
   if (!folder || !folder.isFolder) return;
-  const trimmed = await dialog()?.prompt?.('重命名文件夹', folder.name, {
-    confirmText: '保存',
+  const trimmed = await dialog()?.prompt?.(t('folder_rename'), folder.name, {
+    confirmText: t('common_save'),
     validate: (value: string) => {
       const check = mgr.validateName(value);
       return check.valid ? null : check.message;
@@ -164,7 +166,7 @@ async function dissolveQuickFolder(index: number) {
   const items = (await mgr.dissolveFolder(index)) || [];
   renderAndNotify();
   closeFolder();
-  toast(`已解散文件夹，${items.length} 个站点已回到主面板`, 'success', 2200);
+  toast(t('folder_dissolved', { n: items.length }), 'success', 2200);
 }
 
 // ---------- v1.8.1:js/app.js:1458-1467 moveQuickItemToFolder(siteIndex, folderIndex) ----------
@@ -174,7 +176,7 @@ async function moveQuickItemToFolder(siteIndex: number, targetFolderIndex: numbe
   if (ok) {
     renderAndNotify();
     const folder = mgr.getSites()[targetFolderIndex];
-    toast(`已移入「${folder ? folder.name : '文件夹'}」`, 'success', 1800);
+    toast(t('folder_moved_into', { name: folder ? folder.name : t('folder_title') }), 'success', 1800);
   }
 }
 
@@ -264,7 +266,7 @@ async function removeFromFolder(itemIndex: number) {
   } else {
     closeFolder();
   }
-  if (moved) toast(`「${moved.name}」已移回主面板`, 'success', 1800);
+  if (moved) toast(t('folder_moved_back_named', { name: moved.name }), 'success', 1800);
 }
 
 /**
@@ -426,15 +428,15 @@ async function dropItemOutOfFolder(name: string) {
   await mgr.moveFromFolderToRoot(fIndex, itemIndex);
   closeFolder();
   renderAndNotify();
-  toast(`「${name}」已移到主面板`, 'success', 1800);
+  toast(t('folder_moved_back_named', { name }), 'success', 1800);
 }
 
 // ---------- v1.8.1:js/app.js:1679-1693 confirmDeleteQuickAccess(index, siteName) ----------
 async function confirmDeleteQuickAccess(index: number, siteName: string) {
   const ok = await dialog()?.confirm?.(
-    '确认删除',
-    `您确定要删除「${siteName}」吗？此操作无法撤销。`,
-    { confirmText: '删除', danger: true }
+    t('common_confirm_delete'),
+    t('folder_confirm_delete', { name: siteName }),
+    { confirmText: t('common_delete'), danger: true }
   );
   if (!ok) return;
   await manager().deleteSite(index);
@@ -463,16 +465,16 @@ function showContextMenu(e: MouseEvent, item: HTMLElement) {
   };
 
   if (site.isFolder) {
-    addMenuRow('打开文件夹', () => openFolder(index));
-    addMenuRow('重命名文件夹', () => void renameQuickFolder(index));
-    addMenuRow('解散文件夹', () => void dissolveQuickFolder(index));
-    addMenuRow('删除文件夹', () => void confirmDeleteQuickAccess(index, site.name), { danger: true });
+    addMenuRow(t('folder_menu_open'), () => openFolder(index));
+    addMenuRow(t('folder_menu_rename'), () => void renameQuickFolder(index));
+    addMenuRow(t('folder_menu_dissolve'), () => void dissolveQuickFolder(index));
+    addMenuRow(t('folder_menu_delete'), () => void confirmDeleteQuickAccess(index, site.name), { danger: true });
   } else {
-    addMenuRow('编辑', () => openEditQuickAccessModal(index));
-    addMenuRow('新建文件夹…', () => void createFolderAndMove(index === -1 ? null : index));
+    addMenuRow(t('common_edit'), () => openEditQuickAccessModal(index));
+    addMenuRow(t('common_new_folder_ellipsis'), () => void createFolderAndMove(index === -1 ? null : index));
     const folders = mgr.getFolders();
     if (folders.length > 0) {
-      addMenuRow('移入文件夹', () => {}, { disabled: true });
+      addMenuRow(t('common_move_into_folder'), () => {}, { disabled: true });
       folders.forEach((folder: QuickAccessNode, i: number) => {
         addMenuRow(
           '　' + folder.name + '（' + (folder.items || []).length + '）',
@@ -481,7 +483,7 @@ function showContextMenu(e: MouseEvent, item: HTMLElement) {
         );
       });
     }
-    addMenuRow('删除', () => void confirmDeleteQuickAccess(index, site.name), { danger: true });
+    addMenuRow(t('common_delete'), () => void confirmDeleteQuickAccess(index, site.name), { danger: true });
   }
 
   // v1.8.1:js/app.js:1317-1330 菜单容器 cssText + 1394-1395 定位，逐字保留令牌与视口钳制
@@ -613,8 +615,8 @@ onUnmounted(() => {
                     <button
                         type="button"
                         class="folder-site-remove"
-                        title="移出文件夹（回到主面板）"
-                        aria-label="移出文件夹"
+                        :title="t('folder_move_out_title')"
+                        :aria-label="t('folder_move_out')"
                         @click.stop="removeFromFolder((folderPage - 1) * 9 + i)"
                     >{{ CLOSE_BTN_TEXT }}</button>
                 </div>
@@ -622,15 +624,15 @@ onUnmounted(() => {
                 <div
                     v-if="folderPageItems.length < FOLDER_PAGE_SIZE"
                     class="folder-site add-quick-access-btn"
-                    title="向文件夹添加"
+                    :title="t('folder_add_to')"
                     @click="onAddSite"
                 >
                     <div class="icon-wrapper" aria-hidden="true">＋</div>
-                    <span class="folder-site-name">添加</span>
+                    <span class="folder-site-name">{{ t('folder_add') }}</span>
                 </div>
             </div>
             <div v-if="folderTotalPages > 1" class="folder-pager">
-                <button class="page-btn prev-btn" :disabled="folderPage === 1" aria-label="上一页" @click="goToFolderPage(folderPage - 1)">‹</button>
+                <button class="page-btn prev-btn" :disabled="folderPage === 1" :aria-label="t('common_prev_page')" @click="goToFolderPage(folderPage - 1)">‹</button>
                 <button
                     v-for="p in folderTotalPages"
                     :key="p"
@@ -638,7 +640,7 @@ onUnmounted(() => {
                     :class="{ active: p === folderPage }"
                     @click="goToFolderPage(p)"
                 >{{ p }}</button>
-                <button class="page-btn next-btn" :disabled="folderPage === folderTotalPages" aria-label="下一页" @click="goToFolderPage(folderPage + 1)">›</button>
+                <button class="page-btn next-btn" :disabled="folderPage === folderTotalPages" :aria-label="t('common_next_page')" @click="goToFolderPage(folderPage + 1)">›</button>
             </div>
             <p id="folder-empty-hint" class="folder-empty-hint" :class="{ 'u-hidden': emptyHintHidden }">{{ EMPTY_HINT_TEXT }}</p>
         </div>

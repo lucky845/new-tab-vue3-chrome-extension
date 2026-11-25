@@ -5,6 +5,7 @@ import { vToolIcon } from '@/src/directives/toolIcon';
 import { usePanels } from '@/src/composables/usePanels';
 import GlassPanel from '@/src/components/common/GlassPanel.vue';
 import { useTools } from '@/src/composables/useTools';
+import { t } from '@/src/composables/useI18n';
 
 /**
  * 小工具面板（两层视图：工具宫格 + 单工具详情）。
@@ -65,15 +66,15 @@ watch(
           >
             <div class="settings-content tools-content">
                 <div class="tools-panel-header">
-                    <h2 id="tools-panel-title">{{ activeTool?.name ?? '小工具' }}</h2>
+                    <h2 id="tools-panel-title">{{ activeTool ? t(activeTool.name) : t('tools_panel_title') }}</h2>
                     <div class="tools-panel-header-actions">
-                        <button id="close-tools-btn" class="close-panel-btn close-btn" title="关闭" aria-label="关闭" @click="closePanel()">✕</button>
+                        <button id="close-tools-btn" class="close-panel-btn close-btn"  @click="closePanel()">✕</button>
                     </div>
                 </div>
 
                 <div id="tools-grid-view" :class="{ 'u-hidden': view !== 'grid' }">
                     <p class="api-key-description">
-                        纯本地运行，不联网、不上传。输入内容后点「转换 / 生成」，结果可一键复制。
+                        {{ t('tools_privacy_hint') }}
                     </p>
                     <div id="tools-grid" class="tools-grid">
                         <button
@@ -85,8 +86,8 @@ watch(
                             @click="showDetail(tool.id)"
                         >
                             <span class="tool-grid-icon" v-tool-icon="tool.icon"></span>
-                            <span class="tool-grid-name">{{ tool.name }}</span>
-                            <span class="tool-grid-desc">{{ tool.desc }}</span>
+                            <span class="tool-grid-name">{{ t(tool.name) }}</span>
+                            <span class="tool-grid-desc">{{ t(tool.desc) }}</span>
                         </button>
                     </div>
                 </div>
@@ -99,8 +100,8 @@ watch(
                         class="tools-back-link"
                         :class="{ 'u-hidden': view !== 'detail' }"
                         @click="showGridView()"
-                    >← 全部工具</button>
-                    <p id="tool-desc" class="api-key-description">{{ activeTool?.desc ?? '' }}</p>
+                    >{{ t('tools_back_all') }}</button>
+                    <p id="tool-desc" class="api-key-description">{{ activeTool ? t(activeTool.desc) : '' }}</p>
                     <textarea
                         id="tool-input"
                         ref="inputEl"
@@ -108,15 +109,15 @@ watch(
                         class="tool-input"
                         rows="5"
                         spellcheck="false"
-                        :placeholder="activeTool?.placeholder ?? ''"
+                        :placeholder="activeTool?.placeholder ? t(activeTool.placeholder) : ''"
                         @keydown.meta.enter.prevent="runActive()"
                         @keydown.ctrl.enter.prevent="runActive()"
                     ></textarea>
                     <div class="tools-actions">
-                        <button id="tool-run-btn" class="primary" :class="{ 'u-hidden': isGenerate }" @click="runActive()">转换</button>
-                        <button id="tool-generate-btn" class="primary" :class="{ 'u-hidden': !isGenerate }" @click="runActive()">生成</button>
-                        <button id="tool-copy-btn" @click="copyResult()">复制结果</button>
-                        <button id="tool-clear-btn" @click="clearAll()">清空</button>
+                        <button id="tool-run-btn" class="primary" :class="{ 'u-hidden': isGenerate }" @click="runActive()">{{ t('tools_convert') }}</button>
+                        <button id="tool-generate-btn" class="primary" :class="{ 'u-hidden': !isGenerate }" @click="runActive()">{{ t('tools_generate') }}</button>
+                        <button id="tool-copy-btn" @click="copyResult()">{{ t('tools_copy_result') }}</button>
+                        <button id="tool-clear-btn" @click="clearAll()">{{ t('tools_clear') }}</button>
                     </div>
                     <pre id="tool-output" class="tool-output">{{ output }}</pre>
                 </div>

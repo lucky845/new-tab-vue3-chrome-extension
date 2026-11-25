@@ -11,7 +11,9 @@ import {
   categoryTitle,
   categoryClass,
   dueText as formatDueText,
+  todoCategoryKey,
 } from '@/src/lib/todo-display';
+import { t } from '@/src/composables/useI18n';
 
 /**
  * 待办事项面板。
@@ -44,12 +46,12 @@ const inputEl = ref<HTMLInputElement | null>(null);
 // 新待办的分类跟随当前筛选：选了「工作/生活」就落进该分类；
 // 「全部」下新增一律落「普通」。这里给出可见提示，让用户知道规则，而非静默猜测。
 const categoryHint = computed(() =>
-  filter.value === 'all' ? '分类：普通（全部）' : `分类：${categoryTitle(filter.value)}`,
+  t('todo_scope_all', { category: t(todoCategoryKey('normal')) }),
 );
 const categoryHintTitle = computed(() =>
   filter.value === 'all'
-    ? '在「全部」下添加的待办默认归为「普通」；想加到其他分类，先点上方对应分类再添加。'
-    : `当前在「${categoryTitle(filter.value)}」分类下，新待办会自动归为该分类。`,
+    ? t('todo_hint_all', { category: t(todoCategoryKey('normal')) })
+    : t('todo_hint_category', { category: categoryTitle(filter.value) }),
 );
 
 // 截止日文案与 TodoCard 共享同一份语义；逾期判定仍由 isTodoOverdue 提供
@@ -59,8 +61,8 @@ const dueText = (t: import('@/src/composables/useTodo').Todo): string =>
 // legacy renderTodoList 的 todoCount 文案：'N 项待完成 · 今日完成 N'（逾期 > 0 追加 ⚠️ 段）
 const countText = computed(() => {
   const s = stats.value;
-  const parts = [`${s.active} 项待完成`, `今日完成 ${s.doneToday}`];
-  if (s.overdue > 0) parts.push(`⚠️ ${s.overdue} 项已逾期`);
+  const parts = [t('todo_stats_active', { n: s.active }), t('todo_stats_done_today', { n: s.doneToday })];
+  if (s.overdue > 0) parts.push(t('todo_stats_overdue', { n: s.overdue }));
   return parts.join(' · ');
 });
 
@@ -68,7 +70,7 @@ const countText = computed(() => {
 async function add(): Promise<void> {
   const content = draft.value.trim();
   if (!content) {
-    showToast('请输入待办内容', 'error');
+    showToast(t('todo_toast_empty'), 'error');
     return;
   }
   await addTodo(content, {
@@ -84,7 +86,7 @@ async function add(): Promise<void> {
 // 组件包装与数据层 clearDone 同名是刻意的：UI 提示留在组件层，数据动作走 todoStore
 async function clearDone(): Promise<void> {
   const removed = await todoStore.clearDone();
-  if (removed > 0) showToast(`已清除 ${removed} 条已完成待办`, 'success');
+  if (removed > 0) showToast(t('todo_toast_cleared', { n: removed }), 'success');
 }
 
 // —— 面板打开时聚焦输入框（legacy：todoBtn click → renderTodoList → todoInput.focus() 的聚焦部分）——
@@ -117,7 +119,7 @@ onMounted(() => {
         .filter((id): id is string => Boolean(id));
       if (ids.length) {
         await updateOrder(ids);
-        showToast('排序已保存', 'success', 1200);
+        showToast(t('todo_toast_order_saved'), 'success', 1200);
       }
     },
   });
@@ -141,8 +143,8 @@ onUnmounted(() => {
   >
     <div class="widget-content">
       <div class="widget-header">
-        <h2 id="todo-panel-title">待办事项</h2>
-        <button id="close-todo-btn" class="control-btn widget-close-btn" title="关闭" aria-label="关闭" @click="close('todo')">
+        <h2 id="todo-panel-title">{{ t('todo_panel_title') }}</h2>
+        <button id="close-todo-btn" class="control-btn widget-close-btn" :title="t('common_close')" :aria-label="t('common_close')" @click="close('todo')">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <line x1="18" y1="6" x2="6" y2="18"></line>
             <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -150,26 +152,26 @@ onUnmounted(() => {
         </button>
       </div>
       <div id="todo-filter-bar" class="todo-filter-bar">
-        <button class="todo-filter-tab" :class="{ active: filter === 'all' }" @click="setFilter('all')">全部</button>
-        <button class="todo-filter-tab" :class="{ active: filter === 'work' }" @click="setFilter('work')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg> 工作</button>
-        <button class="todo-filter-tab" :class="{ active: filter === 'life' }" @click="setFilter('life')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path><path d="M10 21v-6h4v6"></path></svg> 生活</button>
-        <button class="todo-filter-tab" :class="{ active: filter === 'normal' }" @click="setFilter('normal')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8M8 17h5"></path></svg> 普通</button>
+        <button class="todo-filter-tab" :class="{ active: filter === 'all' }" @click="setFilter('all')">{{ t('todo_filter_all') }}</button>
+        <button class="todo-filter-tab" :class="{ active: filter === 'work' }" @click="setFilter('work')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg> {{ t(todoCategoryKey('work')) }}</button>
+        <button class="todo-filter-tab" :class="{ active: filter === 'life' }" @click="setFilter('life')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5"></path><path d="M5 9.5V21h14V9.5"></path><path d="M10 21v-6h4v6"></path></svg> {{ t(todoCategoryKey('life')) }}</button>
+        <button class="todo-filter-tab" :class="{ active: filter === 'normal' }" @click="setFilter('normal')"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><path d="M14 2v6h6"></path><path d="M8 13h8M8 17h5"></path></svg> {{ t(todoCategoryKey('normal')) }}</button>
       </div>
       <div class="todo-input-row">
-        <button id="todo-important-btn" class="todo-important-btn" :class="{ active: importantActive }" title="重要标记" aria-label="重要标记" :aria-pressed="importantActive" @click="importantActive = !importantActive">
+        <button id="todo-important-btn" class="todo-important-btn" :class="{ active: importantActive }" :title="t('todo_mark_important')" :aria-label="t('todo_mark_important')" :aria-pressed="importantActive" @click="importantActive = !importantActive">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
           </svg>
         </button>
-        <input type="text" id="todo-input" ref="inputEl" v-model="draft" placeholder="添加一个待办…" maxlength="100" @keydown.enter="add" />
+        <input type="text" id="todo-input" ref="inputEl" v-model="draft" :placeholder="t('todo_input_placeholder')" maxlength="100" @keydown.enter="add" />
         <span id="todo-category-hint" class="todo-category-hint" :title="categoryHintTitle">{{ categoryHint }}</span>
-        <input type="date" id="todo-due-date" class="todo-due-date" title="截止日期（可选）" v-model="draftDueDate" />
-        <button id="todo-add-btn" class="settings-btn" @click="add">添加</button>
+        <input type="date" id="todo-due-date" class="todo-due-date" :title="t('todo_due_date_label')" v-model="draftDueDate" />
+        <button id="todo-add-btn" class="settings-btn" @click="add">{{ t('common_add') }}</button>
       </div>
       <ul id="todo-list" class="todo-list" ref="listEl">
         <!-- 空态与 NotesPanel 的 notes-empty 同一语义：有筛选 = 该分类无匹配；否则 = 首跑引导 -->
         <li v-if="filteredTodos.length === 0" class="todo-empty">
-          {{ filter === 'all' ? '还没有待办，在上方输入并回车，第一条就会出现在这里' : '该分类下暂无待办' }}
+          {{ filter === 'all' ? t('todo_empty_all') : t('todo_empty_category') }}
         </li>
         <li
           v-for="todo in filteredTodos"
@@ -180,7 +182,7 @@ onUnmounted(() => {
         >
           <input type="checkbox" :checked="todo.done" @change="toggleTodo(todo.id)" />
           <!-- 仅重要项渲染星标：空占位会拉大勾选框与内容区之间的间距 -->
-          <span v-if="todo.important" class="todo-star" title="重要">★</span>
+          <span v-if="todo.important" class="todo-star" :title="t('todo_important')">★</span>
           <span
             class="todo-cat-badge"
             :class="categoryClass(todo.category)"
@@ -191,8 +193,8 @@ onUnmounted(() => {
           <span class="todo-due">{{ dueText(todo) }}</span>
           <button
             class="todo-delete-btn"
-            title="删除"
-            aria-label="删除待办"
+            :title="t('common_delete')"
+            :aria-label="t('todo_delete_aria')"
             @click.stop="removeTodo(todo.id)"
             v-html="ICONS.trash"
           ></button>
@@ -200,7 +202,7 @@ onUnmounted(() => {
       </ul>
       <div class="todo-footer">
         <span id="todo-count">{{ countText }}</span>
-        <button id="todo-clear-done-btn" class="link-btn" @click="clearDone">清除已完成</button>
+        <button id="todo-clear-done-btn" class="link-btn" @click="clearDone">{{ t('todo_clear_done') }}</button>
       </div>
     </div>
   </GlassPanel>

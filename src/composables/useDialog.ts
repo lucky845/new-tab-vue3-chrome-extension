@@ -13,6 +13,7 @@
  * 原生 dialog 挂 body 且保留该 class，契约不变。
  */
 import { PANEL_GLASS, applyGlass } from '@/src/lib/glass';
+import { t } from '@/src/composables/useI18n';
 
 interface PromptOptions {
   confirmText?: string;
@@ -65,8 +66,8 @@ function createDialog(): { dialog: HTMLDialogElement; panel: HTMLElement; ui: Di
     '  <input class="dsh-dialog__input" type="text" />',
     '  <div class="dsh-dialog__error" aria-live="polite"></div>',
     '  <div class="dsh-dialog__actions">',
-    '    <button type="button" class="settings-btn secondary dsh-dialog__cancel">取消</button>',
-    '    <button type="button" class="settings-btn primary dsh-dialog__confirm">确定</button>',
+    '    <button type="button" class="settings-btn secondary dsh-dialog__cancel"></button>',
+    '    <button type="button" class="settings-btn primary dsh-dialog__confirm"></button>',
     '  </div>',
     '</div>',
   ].join('');
@@ -98,13 +99,13 @@ function open<T>(opt: DialogSpec): Promise<T> {
     const { dialog, panel, ui } = createDialog();
     const { titleEl, messageEl, inputEl, errorEl, cancelBtn, confirmBtn } = ui;
 
-    titleEl.textContent = opt.title || '请确认';
+    titleEl.textContent = opt.title || t('dialog_title_confirm');
     if (opt.message) messageEl.textContent = opt.message;
     else messageEl.classList.add('u-hidden');
     if (opt.type === 'prompt') inputEl.value = opt.defaultValue ?? '';
     else inputEl.classList.add('u-hidden');
-    cancelBtn.textContent = opt.cancelText || '取消';
-    confirmBtn.textContent = opt.confirmText || '确定';
+    cancelBtn.textContent = opt.cancelText || t('common_cancel');
+    confirmBtn.textContent = opt.confirmText || t('common_confirm');
     if (opt.danger) confirmBtn.classList.add('is-danger');
     if (opt.type === 'alert') cancelBtn.classList.add('u-hidden');
 

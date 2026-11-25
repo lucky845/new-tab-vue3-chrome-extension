@@ -15,6 +15,7 @@ import SideCard from '@/src/components/common/SideCard.vue';
 import { vToolIcon } from '@/src/directives/toolIcon';
 import { useTools } from '@/src/composables/useTools';
 import { setPanelOriginFromEvent } from '@/src/composables/usePanels';
+import { t } from '@/src/composables/useI18n';
 
 const { featuredTools, openPanel: openToolsPanel } = useTools();
 
@@ -29,7 +30,7 @@ function openToolDetail(toolId: string, ev: MouseEvent): void {
 
 <!-- prettier-ignore -->
 <template>
-    <SideCard cardId="tools" elementId="side-card-tools" title="小工具" expandId="tools-card-expand" expandTitle="打开全部工具">
+    <SideCard cardId="tools" elementId="side-card-tools" :title="t('side_card_tools')" expandId="tools-card-expand" expand-title-key="side_expand_tools">
         <div id="tools-card-grid" class="tools-mini-grid">
             <button
                 v-for="tool in featuredTools"
@@ -37,7 +38,7 @@ function openToolDetail(toolId: string, ev: MouseEvent): void {
                 type="button"
                 class="tool-mini-btn"
                 :data-tool-id="tool.id"
-                :title="tool.name + ' · ' + tool.desc"
+                :title="t(tool.name) + ' · ' + t(tool.desc)"
                 @click="openToolDetail(tool.id, $event)"
             >
                 <span class="tool-mini-icon" v-tool-icon="tool.icon"></span>

@@ -1,5 +1,14 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { QUICK_TOOLS, QUICK_TOOLS_FEATURED } from '@/src/config/tools';
+import { registerCatalog, resetLocaleState } from '@/src/composables/useI18n';
+import { catalog } from '@/src/locales/catalog';
+
+// 工具输出已走 i18n：node 环境没有 chrome.i18n，必须先注册语料并固定中文，
+// 否则 t() 返回裸 key，断言看到的是 tool_out_json_fail 而不是文案。
+beforeEach(() => {
+    registerCatalog(catalog);
+    resetLocaleState('zh-CN');
+});
 
 const tool = (id: string) => {
   const t = QUICK_TOOLS.find((x) => x.id === id);

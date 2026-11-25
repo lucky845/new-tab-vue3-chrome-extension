@@ -6,6 +6,7 @@ import { quickAccessBridge } from '@/src/composables/useQuickAccessBridge';
 import GlassPanel from '@/src/components/common/GlassPanel.vue';
 import { useTip, type TipHandle } from '@/src/composables/useTip';
 import { toast } from '@/src/composables/useToast';
+import { t } from '@/src/composables/useI18n';
 
 /**
  * 「添加/编辑快捷方式」弹窗。
@@ -19,7 +20,7 @@ import { toast } from '@/src/composables/useToast';
 
 /** v1.8.1:js/app.js:20-21 —— help tip 的文案与链接，逐字保留 */
 const QA_ICON_HELP_URL = 'https://www.iconfont.cn/';
-const QA_ICON_HELP_MESSAGE = '推荐前往 iconfont.cn 获取SVG代码。';
+const QA_ICON_HELP_MESSAGE = 'qa_icon_help_message';
 
 interface FolderOption {
     index: number;
@@ -29,7 +30,8 @@ interface FolderOption {
 
 /* ---------- 自持状态 ---------- */
 const dialogOpen = ref(false);
-const dialogTitle = ref('添加快捷方式');
+// ref 里存 key，模板渲染时才翻译——切换语言后标题立即跟随
+const dialogTitle = ref('qa_dialog_title_add');
 const editIndex = ref(-1);
 
 const urlDraft = ref('');
@@ -52,7 +54,7 @@ const saveDisabled = ref(true);
 const iconPreviewVisible = ref(false);
 const iconPreviewEl = ref<HTMLElement | null>(null);
 const helpBtnEl = ref<HTMLButtonElement | null>(null);
-const helpTitle = ref('关于自定义图标');
+const helpTitle = ref('qa_icon_help_title');
 
 /** dsh-tip 实例不参与渲染，用普通变量即可 */
 let qaIconHelpTip: TipHandle | null = null;
@@ -71,10 +73,10 @@ function validateQuickAccessForm(): void {
     const mgr = manager();
     const url = urlDraft.value.trim();
     const name = nameDraft.value.trim();
-    const urlCheck = mgr?.validateUrl?.(url) ?? { valid: false, message: '请输入有效的网址。' };
+    const urlCheck = mgr?.validateUrl?.(url) ?? { valid: false, message: 'qa_err_url_invalid' };
     const nameCheck = mgr?.validateName?.(name) ?? {
         valid: false,
-        message: '名称长度应在 2 到 10 个字符之间。',
+        message: 'qa_err_name_length',
     };
 
     if (url.length === 0) {
@@ -85,7 +87,7 @@ function validateQuickAccessForm(): void {
         urlErrorHidden.value = true;
     } else {
         urlInvalid.value = true;
-        urlErrorText.value = urlCheck.message;
+        urlErrorText.value = t(urlCheck.message);
         urlErrorHidden.value = false;
     }
 
@@ -97,7 +99,7 @@ function validateQuickAccessForm(): void {
         nameErrorHidden.value = true;
     } else {
         nameInvalid.value = true;
-        nameErrorText.value = nameCheck.message;
+        nameErrorText.value = t(nameCheck.message);
         nameErrorHidden.value = false;
     }
 
@@ -155,8 +157,8 @@ function onIconHelpClick(): void {
         closable: true,
         message: QA_ICON_HELP_MESSAGE,
         action: {
-            label: '打开 iconfont',
-            title: '在新标签页打开 https://www.iconfont.cn/',
+            label: 'qa_icon_help_action',
+            title: 'qa_icon_help_action_title',
             onClick: () => window.open(QA_ICON_HELP_URL, '_blank', 'noopener'),
         },
     });
@@ -164,7 +166,7 @@ function onIconHelpClick(): void {
 
 /* ---------- 桥方法（签名固定，合并注册不覆盖） ---------- */
 function openAdd(preselect = -1): void {
-    dialogTitle.value = '添加快捷方式';
+    dialogTitle.value = 'qa_dialog_title_add';
     editIndex.value = -1;
     urlDraft.value = '';
     nameDraft.value = '';
@@ -187,7 +189,7 @@ function openEdit(index: number): void {
     const mgr = manager();
     const site = mgr?.getSites?.()[index];
     if (!site) return;
-    dialogTitle.value = '编辑快捷方式';
+    dialogTitle.value = 'qa_dialog_title_edit';
     editIndex.value = index;
     urlDraft.value = site.url ?? '';
     nameDraft.value = site.name ?? '';
@@ -213,7 +215,7 @@ async function saveQuickAccess(): Promise<void> {
     const icon = iconDraft.value.trim() || null;
 
     // 保存前必须再校验一次：按钮禁用状态只是 UI 提示
-    const urlCheck = mgr?.validateUrl?.(url) ?? { valid: false, message: '请输入有效的网址。' };
+    const urlCheck = mgr?.validateUrl?.(url) ?? { valid: false, message: 'qa_err_url_invalid' };
     const nameCheck = mgr?.validateName?.(name) ?? {
         valid: false,
         message: '名称长度应在 2 到 10 个字符之间。',
@@ -221,7 +223,7 @@ async function saveQuickAccess(): Promise<void> {
     if (!urlCheck.valid || !nameCheck.valid) {
         validateQuickAccessForm();
         // v1.8.1:js/app.js:1275 —— 保存校验失败提示，文案/类型/时长逐字一致
-        toast(urlCheck.valid ? nameCheck.message : urlCheck.message, 'error', 2200);
+        toast(t(urlCheck.valid ? nameCheck.message : urlCheck.message), 'error', 2200);
         return;
     }
     saveDisabled.value = false;
@@ -273,20 +275,20 @@ onUnmounted(() => {
                 id="close-qa-btn"
                 class="close-panel-btn"
                 type="button"
-                title="关闭"
-                aria-label="关闭"
+                :title="t('common_close')"
+                :aria-label="t('common_close')"
                 @click="closeDialog"
             >
                 ✕
             </button>
-            <h2 id="qa-panel-title">{{ dialogTitle }}</h2>
+            <h2 id="qa-panel-title">{{ t(dialogTitle) }}</h2>
             <input type="hidden" id="qa-edit-index" :value="editIndex" />
             <div class="setting-item">
-                <label for="qa-url-input">链接地址 (URL)</label>
+                <label for="qa-url-input">{{ t('qa_url_label') }}</label>
                 <input
                     type="text"
                     id="qa-url-input"
-                    placeholder="例如: https://www.baidu.com"
+                    :placeholder="t('qa_url_placeholder')"
                     v-model="urlDraft"
                     :class="{ invalid: urlInvalid }"
                     @input="validateQuickAccessForm"
@@ -296,11 +298,11 @@ onUnmounted(() => {
                 </p>
             </div>
             <div class="setting-item">
-                <label for="qa-name-input">标签名称</label>
+                <label for="qa-name-input">{{ t('qa_name_label') }}</label>
                 <input
                     type="text"
                     id="qa-name-input"
-                    placeholder="例如: Baidu"
+                    :placeholder="t('qa_name_placeholder')"
                     v-model="nameDraft"
                     :class="{ invalid: nameInvalid }"
                     @input="validateQuickAccessForm"
@@ -311,14 +313,14 @@ onUnmounted(() => {
             </div>
             <div class="setting-item">
                 <div class="label-with-tooltip">
-                    <label for="qa-icon-input">换个图标（选填）</label>
+                    <label for="qa-icon-input">{{ t('qa_icon_label') }}</label>
                     <button
                         type="button"
                         id="qa-icon-help"
                         class="qa-help-btn"
                         ref="helpBtnEl"
-                        aria-label="关于自定义图标的说明"
-                        :title="helpTitle"
+                        :aria-label="t('qa_icon_help_aria')"
+                        :title="t(helpTitle)"
                         @click="onIconHelpClick"
                     >
                         i
@@ -331,13 +333,13 @@ onUnmounted(() => {
                     :aria-expanded="iconAdvancedOpen"
                     @click="iconAdvancedOpen = !iconAdvancedOpen"
                 >
-                    {{ iconAdvancedOpen ? '收起图标设置' : '想换个图标？点这里' }}
+                    {{ iconAdvancedOpen ? t('qa_icon_collapse') : t('qa_icon_expand') }}
                 </button>
                 <div v-if="iconAdvancedOpen" class="icon-input-wrapper">
                     <textarea
                         id="qa-icon-input"
                         rows="3"
-                        placeholder="粘贴图片 URL 或 SVG 代码"
+                        :placeholder="t('qa_icon_placeholder')"
                         v-model="iconDraft"
                         @input="renderQaIconPreview"
                     ></textarea>
@@ -345,22 +347,22 @@ onUnmounted(() => {
                         id="qa-icon-preview-container"
                         :class="['icon-preview-container', { 'u-hidden': !iconPreviewVisible }]"
                     >
-                        <span class="preview-label">预览:</span>
+                        <span class="preview-label">{{ t('qa_icon_preview') }}</span>
                         <div id="qa-icon-preview" class="icon-preview" ref="iconPreviewEl"></div>
                     </div>
                 </div>
-                <p class="api-key-description">不用管这一项：留空会自动抓网站图标。</p>
+                <p class="api-key-description">{{ t('qa_icon_hint') }}</p>
             </div>
             <div id="qa-folder-item" :class="['setting-item', { 'u-hidden': folderItemHidden }]">
-                <label for="qa-folder-select">所属文件夹</label>
+                <label for="qa-folder-select">{{ t('qa_folder_label') }}</label>
                 <select id="qa-folder-select" v-model="folderValue">
-                    <option value="-1">根目录（不放入文件夹）</option>
+                    <option value="-1">{{ t('qa_folder_root') }}</option>
                     <option v-for="f in folders" :key="f.index" :value="String(f.index)">
-                        {{ f.name }}（{{ (f.items || []).length }}）
+                        {{ f.name }} ({{ (f.items || []).length }})
                     </option>
                 </select>
                 <p class="api-key-description">
-                    也可以保存后在快捷方式上右键，选择「移入文件夹」或「新建文件夹」。
+                    {{ t('qa_folder_hint') }}
                 </p>
             </div>
             <div class="settings-actions">
@@ -370,10 +372,10 @@ onUnmounted(() => {
                     :disabled="saveDisabled"
                     @click="saveQuickAccess"
                 >
-                    保存
+                    {{ t('qa_save') }}
                 </button>
                 <button id="cancel-qa-btn" class="settings-btn secondary" @click="closeDialog">
-                    取消
+                    {{ t('qa_cancel') }}
                 </button>
             </div>
         </div>

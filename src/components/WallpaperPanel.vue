@@ -27,6 +27,7 @@ import {
   useWallpaper,
   type WallpaperPhoto,
 } from '@/src/composables/useWallpaper';
+import { t } from '@/src/composables/useI18n';
 
 const { isOpen, open, close } = usePanels();
 const {
@@ -78,18 +79,18 @@ const localFull = computed(() => localLibrary.value.length >= LOCAL_LIBRARY_MAX_
 /** 库缩略图整块点击：应用该本地壁纸（写五键哨兵直出）。 */
 async function onApplyLocal(entryId: string): Promise<void> {
   await applyLocalWallpaper(entryId);
-  flashLocalMsg('本地壁纸已应用');
+  flashLocalMsg(t('wallpaper_toast_local_applied'));
 }
 
 /** × 点击：从库里删除；删的正是当前壁纸会一并撤回随机图。 */
 async function onRemoveLocal(entryId: string): Promise<void> {
   await removeLocalWallpaper(entryId);
   await refreshLocalLibrary();
-  flashLocalMsg('已从本地库移除');
+  flashLocalMsg(t('wallpaper_toast_local_removed'));
 }
 
 function flashLocalMsg(text: string): void {
-  localMsg.value = text;
+  localMsg.value = t(text);
   if (localMsgTimer) clearTimeout(localMsgTimer);
   localMsgTimer = setTimeout(() => (localMsg.value = ''), 3500);
 }
@@ -101,7 +102,7 @@ async function onLocalFile(event: Event): Promise<void> {
   input.value = '';
   if (!file || localBusy.value) return;
   localBusy.value = true;
-  flashLocalMsg('正在处理图片…');
+  flashLocalMsg(t('wallpaper_toast_processing'));
   const result = await setLocalWallpaper(file);
   if (result.ok) await refreshLocalLibrary();
   localBusy.value = false;
@@ -178,10 +179,10 @@ async function onJumpEnter(): Promise<void> {
     @dismiss="close('wallpaper')"
   >
     <div class="wallpaper-content settings-content">
-      <button id="close-wallpaper-btn" class="close-panel-btn" type="button" title="关闭" aria-label="关闭" @click="close('wallpaper')">✕</button>
+      <button id="close-wallpaper-btn" class="close-panel-btn" type="button" :title="t('common_close')" :aria-label="t('common_close')" @click="close('wallpaper')">✕</button>
       <div id="wallpaper-categories-sidebar" class="wallpaper-categories-sidebar">
         <div class="wallpaper-categories-scroll">
-          <h4>推荐分类</h4>
+          <h4>{{ t('wallpaper_categories_title') }}</h4>
           <ul>
             <li
               v-for="category in CATEGORIES"
@@ -190,7 +191,7 @@ async function onJumpEnter(): Promise<void> {
               :class="{ active: activeCategory === category.query }"
               @click="selectCategory(category)"
             >
-              {{ category.name }}
+              {{ t(category.nameKey) }}
             </li>
           </ul>
           <div class="wallpaper-sidebar-divider"></div>
@@ -199,10 +200,10 @@ async function onJumpEnter(): Promise<void> {
             :class="{ active: viewMode === 'local' }"
             type="button"
             :disabled="categoryUnsupported"
-            :title="categoryUnsupported ? '当前图源不支持按分类筛选，分类入口暂不可用' : undefined"
+            :title="categoryUnsupported ? t('wallpaper_category_unsupported_title') : undefined"
             @click="switchToLocal"
           >
-            本地壁纸
+            {{ t('wallpaper_local_tab') }}
             <span class="wallpaper-local-entry-count">{{ localLibrary.length }}/{{ LOCAL_LIBRARY_MAX_ENTRIES }}</span>
           </button>
         </div>
@@ -210,30 +211,30 @@ async function onJumpEnter(): Promise<void> {
       <div class="wallpaper-main">
         <div class="wallpaper-header">
           <div class="wallpaper-header-row">
-            <h2 id="wallpaper-panel-title">壁纸库</h2>
+            <h2 id="wallpaper-panel-title">{{ t('wallpaper_panel_title') }}</h2>
             <div class="wallpaper-search-box">
               <input
                 type="text"
                 id="wallpaper-search-input"
                 v-model="wallpaperSearchQuery"
-                placeholder="搜索壁纸，例如 'Forest'"
+                :placeholder="t('wallpaper_search_placeholder')"
                 @keydown.enter="handleSearch"
               />
-              <button id="wallpaper-search-btn" @click="handleSearch">搜索</button>
+              <button id="wallpaper-search-btn" @click="handleSearch">{{ t('wallpaper_search') }}</button>
             </div>
           </div>
           <div v-if="localMsg && viewMode === 'local'" class="wallpaper-local-msg">{{ localMsg }}</div>
         </div>
         <p v-if="categoryUnsupported" class="wallpaper-category-hint">
-          当前图源不支持按分类筛选，已切换为浏览模式；分类入口暂不可用。需要按分类浏览请到设置里切换到 Wallhaven 图源。
+                    {{ t('wallpaper_category_hint') }}
         </p>
 
         <!-- 本地壁纸视图：主屏式网格 + + 占位上传，删除靠缩略图 hover 的 × -->
         <div v-show="viewMode === 'local'" class="wallpaper-local-view">
           <p class="wallpaper-local-capacity">
-            本地最多保存 {{ LOCAL_LIBRARY_MAX_ENTRIES }} 张壁纸
-            <template v-if="localFull"> · 已满，上传将自动替换最早的一张</template>
-            <template v-else> · 当前 {{ localLibrary.length }} 张</template>
+            {{ t('wallpaper_local_cap', { n: LOCAL_LIBRARY_MAX_ENTRIES }) }}
+            <template v-if="localFull"> · {{ t('wallpaper_local_full_suffix') }}</template>
+            <template v-else> · {{ t('wallpaper_local_count', { n: localLibrary.length }) }}</template>
           </p>
           <div class="wallpaper-local-grid">
             <div
@@ -248,21 +249,21 @@ async function onJumpEnter(): Promise<void> {
               <button
                 class="wallpaper-local-tile-remove"
                 type="button"
-                title="移除此壁纸"
-                aria-label="移除此壁纸"
+                :title="t('wallpaper_remove_title')"
+                :aria-label="t('wallpaper_remove')"
                 @click.stop="onRemoveLocal(item.id)"
               >
                 ×
               </button>
-              <span v-if="item.id === activeLocalId" class="wallpaper-local-tile-badge">当前</span>
+              <span v-if="item.id === activeLocalId" class="wallpaper-local-tile-badge">{{ t('wallpaper_current') }}</span>
             </div>
             <label
               class="wallpaper-local-tile wallpaper-local-add"
               :class="{ 'u-disabled': localBusy, 'is-full': localFull }"
-              :title="localFull ? '库已满，上传将替换最早的一张' : '上传本地图片'"
+              :title="localFull ? t('wallpaper_upload_full_title') : t('wallpaper_upload_title')"
             >
               <span class="wallpaper-local-add-plus">+</span>
-              <span class="wallpaper-local-add-text">{{ localBusy ? '处理中…' : (localFull ? '替换最早' : '上传') }}</span>
+              <span class="wallpaper-local-add-text">{{ localBusy ? t('wallpaper_processing') : (localFull ? t('wallpaper_replace_earliest') : t('wallpaper_upload')) }}</span>
               <input type="file" accept="image/*" hidden @change="onLocalFile" />
             </label>
           </div>
@@ -272,7 +273,7 @@ async function onJumpEnter(): Promise<void> {
         <div v-show="viewMode === 'online'" class="wallpaper-online-view">
           <div id="wallpaper-grid" class="wallpaper-grid">
             <div v-if="loadFailed" class="wallpaper-empty-hint">
-              图库加载失败，请检查网络连接后重试。<br />若使用代理，请确认代理节点可用。
+                    {{ t('wallpaper_gallery_failed') }}<br />{{ t('wallpaper_gallery_proxy_hint') }}
             </div>
             <img
               v-for="photo in photos"
@@ -286,11 +287,11 @@ async function onJumpEnter(): Promise<void> {
           </div>
           <div id="wallpaper-loading" class="wallpaper-loading" :class="{ 'u-hidden': !isSearching }">
             <div class="loading-spinner"></div>
-            <div class="loading-text">正在加载壁纸...</div>
+            <div class="loading-text">{{ t('wallpaper_loading') }}</div>
           </div>
           <div id="wallpaper-pagination" class="wallpaper-pagination">
           <div id="pagination-buttons" class="pagination-buttons">
-            <button :disabled="currentPage === 1" @click="goToPage(currentPage - 1)">上一页</button>
+            <button :disabled="currentPage === 1" @click="goToPage(currentPage - 1)">{{ t('common_prev_page') }}</button>
             <template v-for="(item, index) in paginationItems" :key="'page-' + index">
               <span v-if="item.type === 'ellipsis'">...</span>
               <button
@@ -301,12 +302,12 @@ async function onJumpEnter(): Promise<void> {
                 {{ item.value }}
               </button>
             </template>
-            <button :disabled="currentPage >= totalPages" @click="goToPage(currentPage + 1)">下一页</button>
+            <button :disabled="currentPage >= totalPages" @click="goToPage(currentPage + 1)">{{ t('common_next_page') }}</button>
           </div>
           <div class="pagination-info">
             <span id="total-results-info">{{ totalResultsInfo }}</span>
             <div class="jump-to-page">
-              <span>跳至</span>
+              <span>{{ t('wallpaper_jump_to') }}</span>
               <input
                 type="number"
                 id="jump-to-page-input"
@@ -316,7 +317,7 @@ async function onJumpEnter(): Promise<void> {
                 :max="totalPages"
                 @keydown.enter="onJumpEnter"
               />
-              <span>页</span>
+              <span>{{ t('wallpaper_page_unit') }}</span>
             </div>
           </div>
           </div>

@@ -6,6 +6,7 @@ import EngineIcon from '@/src/components/EngineIcon.vue';
 import { UrlSafe } from '@/src/lib/urlSafe';
 import { useSearch, type HistoryEntry } from '@/src/composables/useSearch';
 import { registerEscapeTarget } from '@/src/composables/useEscapeClose';
+import { t } from '@/src/composables/useI18n';
 
 /**
  * 搜索框。
@@ -294,7 +295,7 @@ watch(
                     type="button"
                     :aria-expanded="engineOpen"
                     aria-haspopup="listbox"
-                    :aria-label="`搜索引擎：${currentEngine?.name ?? ''}`"
+                    :aria-label="t('search_engine_aria', { name: currentEngine?.name ?? '' })"
                     :title="currentEngine?.name"
                     @click="toggleEngineDropdown"
                 >
@@ -339,7 +340,7 @@ watch(
                 v-model="keyword"
                 class="search-input"
                 type="text"
-                placeholder="搜索..."
+                :placeholder="t('search_placeholder')"
                 autocomplete="off"
                 @keydown.enter.prevent="submit()"
                 @input="onInput"
@@ -351,8 +352,8 @@ watch(
                 class="clear-search-btn"
                 :class="{ visible: keyword.length > 0 }"
                 type="button"
-                title="清空"
-                aria-label="清空"
+                :title="t('search_clear')"
+                :aria-label="t('search_clear')"
                 @click="clearInput"
             >
                 <svg
@@ -372,8 +373,8 @@ watch(
                 id="search-submit-btn"
                 class="search-submit-btn"
                 type="button"
-                title="搜索"
-                aria-label="搜索"
+                :title="t('search_submit')"
+                :aria-label="t('search_submit')"
                 @click="submit()"
             >
                 <svg
@@ -397,12 +398,12 @@ watch(
             >
                 <div id="history-items-container">
                     <!-- 两种空态：真的没有记录 vs 历史内搜索没有匹配 -->
-                    <div v-if="history.length === 0" class="history-item empty">暂无搜索记录</div>
+                    <div v-if="history.length === 0" class="history-item empty">{{ t('search_history_empty') }}</div>
                     <div
                         v-else-if="historyRows.length === 0"
                         class="history-item empty"
                     >
-                        没有匹配「{{ keyword.trim() }}」的记录
+                        {{ t('search_history_no_match', { keyword: keyword.trim() }) }}
                     </div>
                     <div
                         v-for="row in historyRows"
@@ -414,10 +415,10 @@ watch(
                             class="pin-history-btn"
                             type="button"
                             :class="{ 'is-pinned': row.entry.pinned }"
-                            :title="row.entry.pinned ? '取消固定' : '固定到顶部'"
+                            :title="row.entry.pinned ? t('search_unpin') : t('search_pin')"
                             :aria-pressed="row.entry.pinned ? 'true' : 'false'"
                             :aria-label="
-                                (row.entry.pinned ? '取消固定搜索记录 ' : '固定搜索记录 ') +
+                                (row.entry.pinned ? t('search_unpin_aria') : t('search_pin_aria')) +
                                 row.entry.text
                             "
                             @click.stop="togglePin(row.index, !row.entry.pinned)"
@@ -443,7 +444,7 @@ watch(
                         <button
                             class="delete-history-btn"
                             type="button"
-                            :aria-label="'删除搜索记录 ' + row.entry.text"
+                            :aria-label="t('search_delete_aria', { text: row.entry.text })"
                             @click.stop="removeHistory(row.index)"
                         >
                             ×
@@ -457,7 +458,7 @@ watch(
                         type="button"
                         @click="clearHistory"
                     >
-                        清空搜索记录
+                        {{ t('search_clear_history') }}
                     </button>
                 </div>
             </div>

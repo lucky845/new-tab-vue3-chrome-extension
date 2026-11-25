@@ -1,4 +1,6 @@
 import { log } from '@/src/lib/log';
+import type { LocalePref } from '@/src/lib/i18n';
+import { t } from '@/src/composables/useI18n';
 /**
  * 设置域数据层（Vue3 版）——逐字移植 v1.8.1:js/modules/settings-manager.js（250 行）。
  *
@@ -21,6 +23,8 @@ export interface Settings {
   wallpaperSource: string;
   /** 减少动效：true 时全局面板/悬浮动画降级；系统偏好始终生效，无需打开 */
   reduceMotion: boolean;
+  /** 界面语言：'auto' 跟随浏览器/系统，或显式 'zh_CN' / 'en'，见 src/lib/i18n.ts */
+  locale: LocalePref;
 }
 
 export const DEFAULT_SETTINGS: Settings = {
@@ -36,6 +40,7 @@ export const DEFAULT_SETTINGS: Settings = {
   showSideWidgets: true,
   wallpaperSource: 'picsum',
   reduceMotion: false,
+  locale: 'auto',
 };
 
 /** 一次性迁移旧独立键并清理（legacy migrateLegacySettings 逐字移植，幂等） */
@@ -149,14 +154,14 @@ export async function addCustomEngine(
   const n = (name || '').trim();
   const u = (url || '').trim();
   if (!n || !u || !u.includes('%s')) {
-    return { ok: false, message: '名称与搜索链接（含 %s 占位符）均不能为空' };
+    return { ok: false, message: 'engine_err_name_url_required' };
   }
   if (!/^https?:\/\//i.test(u)) {
-    return { ok: false, message: '搜索链接必须以 http(s):// 开头' };
+    return { ok: false, message: 'engine_err_url_scheme' };
   }
   const engines = await readCustomEngines();
   if (engines.some((e) => e.name.toLowerCase() === n.toLowerCase())) {
-    return { ok: false, message: '已存在同名引擎「' + n + '」' };
+    return { ok: false, message: t('engine_err_duplicate', { name: n }) };
   }
   engines.push(logo ? { name: n, url: u, logo } : { name: n, url: u });
   await writeCustomEngines(engines);

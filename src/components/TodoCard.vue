@@ -22,6 +22,7 @@ import {
   categoryClass,
   dueText as formatDueText,
 } from '@/src/lib/todo-display';
+import { t } from '@/src/composables/useI18n';
 
 const { todos, stats, addTodo, toggleTodo, removeTodo } = useTodo();
 
@@ -38,7 +39,7 @@ const dueText = (t: import('@/src/composables/useTodo').Todo): string =>
 async function quickAdd(): Promise<void> {
   const content = draft.value.trim();
   if (!content) {
-    showToast('请输入待办内容', 'error');
+    showToast(t('todo_toast_empty_input'), 'error');
     return;
   }
   await addTodo(content, { category: 'normal' });
@@ -48,9 +49,9 @@ async function quickAdd(): Promise<void> {
 
 <!-- prettier-ignore -->
 <template>
-    <SideCard cardId="todo" elementId="side-card-todo" title="待办" :badge="stats.active" badgeId="todo-card-badge" expandId="todo-card-expand">
+    <SideCard cardId="todo" elementId="side-card-todo" :title="t('side_card_todo')" :badge="stats.active" badgeId="todo-card-badge" expandId="todo-card-expand">
         <div class="side-todo-add">
-            <input type="text" id="todo-card-input" placeholder="快速添加待办，回车确认" maxlength="100" v-model="draft" @keydown.enter="quickAdd" />
+            <input type="text" id="todo-card-input" :placeholder="t('todo_card_placeholder')" maxlength="100" v-model="draft" @keydown.enter="quickAdd" />
         </div>
         <ul id="todo-card-list" class="side-todo-list todo-list">
             <li
@@ -62,7 +63,7 @@ async function quickAdd(): Promise<void> {
             >
                 <input type="checkbox" :checked="todo.done" @change="toggleTodo(todo.id)" />
                 <!-- 仅重要项渲染星标：空占位会拉大勾选框与内容区之间的间距 -->
-                <span v-if="todo.important" class="todo-star" title="重要">★</span>
+                <span v-if="todo.important" class="todo-star" :title="t('todo_important')">★</span>
                 <span
                     class="todo-cat-badge"
                     :class="categoryClass(todo.category)"
@@ -73,8 +74,8 @@ async function quickAdd(): Promise<void> {
                 <span class="todo-due">{{ dueText(todo) }}</span>
                 <button
                     class="todo-delete-btn"
-                    title="删除"
-                    aria-label="删除待办"
+                    :title="t('common_delete')"
+                    :aria-label="t('todo_delete_aria')"
                     @click.stop="removeTodo(todo.id)"
                     v-html="ICONS.trash"
                 ></button>

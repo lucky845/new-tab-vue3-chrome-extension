@@ -3,6 +3,15 @@ import {
   APP_ID, SCHEMA_VERSION, MAX_IMPORT_BYTES, isCacheKey, buildPayload, summarize,
   buildFileName, migrate, validate, importFromText,
 } from '@/src/lib/backup';
+import { registerCatalog, resetLocaleState } from '@/src/composables/useI18n';
+import { catalog } from '@/src/locales/catalog';
+
+// 备份的 throw / label 文案与导入导出指示已走 i18n：node 环境无 chrome.i18n，
+// 必须先注册语料并固定中文，否则错误信息是裸 key、导出的 label 也会丢。
+beforeEach(() => {
+  registerCatalog(catalog);
+  resetLocaleState('zh-CN');
+});
 
 const store: Record<string, unknown> = {};
 const setMock = vi.fn(async (items: Record<string, unknown>) => Object.assign(store, items));

@@ -15,6 +15,7 @@ import { applyGlass } from '@/src/lib/glass';
 import { quickAccessBridge } from '@/src/composables/useQuickAccessBridge';
 import AppIcon from '@/src/components/AppIcon.vue';
 import IconDragGhost from '@/src/components/IconDragGhost.vue';
+import { t } from '@/src/composables/useI18n';
 
 /**
  * 快捷访问事件桥统一走 ESM 单例（useQuickAccessBridge.ts）：
@@ -462,8 +463,8 @@ onBeforeUnmount(() => {
         <div class="advanced-pagination" v-if="ready">
             <!-- 首跑 / 清空后的空位文案：不弹窗，把「怎么开始」写在空出来的位置上 -->
             <div v-if="list.length === 0" class="qa-empty" aria-live="polite">
-                <p class="qa-empty-title">这里还是空的</p>
-                <p class="qa-empty-sub">点下面的「添加」放常用网站；把两个图标拖到一起，可以收进同一个文件夹</p>
+                <p class="qa-empty-title">{{ t('qa_empty_title') }}</p>
+                <p class="qa-empty-sub">{{ t('qa_empty_sub') }}</p>
             </div>
             <div class="current-page-container">
                 <div class="quick-access-grid" ref="gridEl">
@@ -495,7 +496,7 @@ onBeforeUnmount(() => {
                             <button
                                 type="button"
                                 class="qa-more"
-                                :aria-label="`${node.name} 的更多操作`"
+                                :aria-label="t('qa_more_aria', { name: node.name })"
                                 @click.stop.prevent="openMenuFor(node, $event)"
                                 @pointerdown.stop
                             >
@@ -521,7 +522,7 @@ onBeforeUnmount(() => {
                             <button
                                 type="button"
                                 class="qa-more"
-                                :aria-label="`${node.name} 的更多操作`"
+                                :aria-label="t('qa_more_aria', { name: node.name })"
                                 @click.stop.prevent="openMenuFor(node, $event)"
                                 @pointerdown.stop
                             >
@@ -533,10 +534,10 @@ onBeforeUnmount(() => {
                     <div
                         v-if="pageItems.length < itemsPerPage"
                         class="add-quick-access-btn"
-                        title="添加快捷方式"
+                        :title="t('qa_add_title')"
                     >
                         <div class="icon-wrapper">＋</div>
-                        <span class="name">添加</span>
+                        <span class="name">{{ t('qa_add') }}</span>
                     </div>
                 </div>
             </div>
@@ -545,7 +546,7 @@ onBeforeUnmount(() => {
                 <button
                     class="page-btn prev-btn"
                     :disabled="currentPage === 1"
-                    aria-label="上一页"
+                    :aria-label="t('common_prev_page')"
                     @click="previousPage"
                 >
                     ‹
@@ -562,7 +563,7 @@ onBeforeUnmount(() => {
                 <button
                     class="page-btn next-btn"
                     :disabled="currentPage === totalPages"
-                    aria-label="下一页"
+                    :aria-label="t('common_next_page')"
                     @click="nextPage"
                 >
                     ›
