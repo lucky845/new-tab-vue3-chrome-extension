@@ -15,6 +15,7 @@ import { QUICK_TOOLS, QUICK_TOOLS_FEATURED, type QuickTool } from '@/src/config/
 import { usePanels } from '@/src/composables/usePanels';
 import { toast as showToast } from '@/src/composables/useToast';
 import { copyText } from '@/src/lib/clipboard';
+import { t } from '@/src/composables/useI18n';
 
 /** legacy 的两层视图：宫格（grid）+ 详情（detail），与 #tools-grid-view / #tools-detail-view 对应 */
 export type ToolsView = 'grid' | 'detail';
@@ -95,7 +96,7 @@ export function useTools() {
       }
       output.value = result;
     } catch (error) {
-      output.value = `执行失败: ${(error as Error).message}`;
+      output.value = t('tools_out_failed', { message: (error as Error).message });
     }
   }
 
@@ -106,13 +107,13 @@ export function useTools() {
   async function copyResult(): Promise<void> {
     const text = output.value;
     if (!text) {
-      showToast('没有可复制的结果', 'warning', 1800);
+      showToast(t('tools_toast_nothing'), 'warning', 1800);
       return;
     }
     // 剪贴板降级逻辑收敛在 src/lib/clipboard.ts，备份页共用同一实现
     const ok = await copyText(text);
-    if (ok) showToast('已复制到剪贴板', 'success', 1600);
-    else showToast('复制失败，请手动选择复制', 'error', 2200);
+    if (ok) showToast(t('tools_toast_copied'), 'success', 1600);
+    else showToast(t('tools_toast_copy_fail'), 'error', 2200);
   }
 
   /** legacy bindToolsEvents（v1.8.1:js/app.js:2358-2402）里的清空按钮：清输入 + 清输出 */

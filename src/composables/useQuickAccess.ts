@@ -11,6 +11,7 @@ import type { Ref } from 'vue';
 import { defaultSitesFor } from '@/src/config/defaultSites';
 import type { QuickAccessNode } from '@/src/lib/defaultSites';
 import { defaultSiteRegion } from '@/src/lib/region';
+import { t } from '@/src/composables/useI18n';
 
 export type { QuickAccessNode } from '@/src/lib/defaultSites';
 
@@ -321,7 +322,7 @@ function suggestFolderName(nodes: QuickAccessNode[]): string {
             return label.slice(0, 10);
         }
     }
-    return '文件夹';
+    return t('qa_folder_default_name');
 }
 
 // 把文件夹内某一项移回根列表（不删除数据）；成员不足 2 个时文件夹自动解散
@@ -423,13 +424,13 @@ function renderQuickAccess(): void {
 // 验证URL格式（与设置面板 UI 同源规则，返回 {valid, message}）
 function validateUrl(url: string): { valid: boolean; message: string } {
     if (!url || !url.trim()) {
-        return { valid: false, message: '请输入有效的网址。' };
+        return { valid: false, message: 'qa_err_invalid_url' };
     }
     const urlPattern =
         /^(https?:\/\/)?((([a-z\d]([a-z\d-]*[a-z\d])*)\.)+[a-z]{2,}|((\d{1,3}\.){3}\d{1,3}))(:\d+)?(\/[-a-z\d%_.~+]*)*(\?.*)?(#[-a-z\d_]*)?$/i;
     return {
         valid: urlPattern.test(url.trim()),
-        message: '请输入有效的网址。',
+        message: 'qa_err_invalid_url',
     };
 }
 
@@ -438,7 +439,7 @@ function validateName(name: string): { valid: boolean; message: string } {
     const len = (name || '').trim().length;
     return {
         valid: len >= 2 && len <= 10,
-        message: '名称长度应在 2 到 10 个字符之间。',
+        message: 'qa_err_bad_name',
     };
 }
 

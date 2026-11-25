@@ -19,6 +19,7 @@ import {
     type HistoryEntry,
 } from '@/src/lib/searchHistory';
 import { dedupeEngines } from '@/src/lib/engineDedup';
+import { t } from '@/src/composables/useI18n';
 
 /** 类型对外仍从本模块取：调用点（SearchBlock / 测试）无需知道它搬去了 lib */
 export type { HistoryEntry } from '@/src/lib/searchHistory';
@@ -420,17 +421,17 @@ function createSearch(): SearchApi {
         const n = (name || '').trim();
         const u = (url || '').trim();
         if (!n || !u || !u.includes('%s')) {
-            return { ok: false, message: '名称与搜索链接（含 %s 占位符）均不能为空' };
+            return { ok: false, message: 'engine_err_name_url_required' };
         }
         if (!/^https?:\/\//i.test(u) || !UrlSafe.isHttp(u.replace('%s', 'test'))) {
-            return { ok: false, message: '搜索链接必须以 http(s):// 开头' };
+            return { ok: false, message: 'engine_err_url_scheme' };
         }
         // 查重必须同时覆盖内置与自定义：只查自定义会让用户建出第二个「Bing」
         const taken = [...BUILTIN_ENGINES, ...customEngines.value].some(
             e => e.name.toLowerCase() === n.toLowerCase()
         );
         if (taken) {
-            return { ok: false, message: '已存在同名引擎「' + n + '」' };
+            return { ok: false, message: t('engine_err_duplicate', { name: n }) };
         }
         await persistCustomEngines([...plainList(), { name: n, url: u }]);
         const safe = safeLogo(logo);

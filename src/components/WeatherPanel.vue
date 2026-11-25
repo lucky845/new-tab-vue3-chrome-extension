@@ -13,6 +13,7 @@ import { ref, watch } from 'vue';
 import { usePanels } from '@/src/composables/usePanels';
 import GlassPanel from '@/src/components/common/GlassPanel.vue';
 import { useWeather } from '@/src/composables/useWeather';
+import { t } from '@/src/composables/useI18n';
 
 const { isOpen, close } = usePanels();
 const { setCity, useCurrentLocation, setTemperatureUnit, currentCity, temperatureUnit } =
@@ -63,27 +64,27 @@ async function save(): Promise<void> {
     @dismiss="close('weather-settings')"
   >
     <div class="settings-content settings-content--fit">
-      <button id="close-weather-settings-btn" class="close-panel-btn" type="button" title="关闭" aria-label="关闭" @click="close('weather-settings')">✕</button>
-      <h2 id="weather-panel-title">天气设置</h2>
+      <button id="close-weather-settings-btn" class="close-panel-btn" type="button" :title="t('common_close')" :aria-label="t('common_close')" @click="close('weather-settings')">✕</button>
+      <h2 id="weather-panel-title">{{ t('weather_panel_title') }}</h2>
       <div class="setting-item">
-        <label for="weather-city-input-panel">城市名称</label>
+        <label for="weather-city-input-panel">{{ t('weather_city_label') }}</label>
         <input
           type="text"
           id="weather-city-input-panel"
-          placeholder="例如: 北京, 上海, 广州"
+          :placeholder="t('settings_weather_city_placeholder')"
           v-model="cityDraft"
         />
-        <p class="api-key-description">输入城市名称，留空将使用您的位置。</p>
+        <p class="api-key-description">{{ t('weather_city_desc') }}</p>
       </div>
       <div class="setting-item">
-        <label for="weather-unit-select">温度单位</label>
+        <label for="weather-unit-select">{{ t('weather_unit_label') }}</label>
         <select id="weather-unit-select" v-model="unitDraft">
-          <option value="celsius">摄氏度 (°C)</option>
-          <option value="fahrenheit">华氏度 (°F)</option>
+          <option value="celsius">{{ t('weather_unit_celsius') }}</option>
+          <option value="fahrenheit">{{ t('weather_unit_fahrenheit') }}</option>
         </select>
       </div>
       <div class="settings-actions">
-        <button id="save-weather-settings-btn" class="settings-btn" @click="save">保存</button>
+        <button id="save-weather-settings-btn" class="settings-btn" @click="save">{{ t('common_save') }}</button>
       </div>
     </div>
   </GlassPanel>

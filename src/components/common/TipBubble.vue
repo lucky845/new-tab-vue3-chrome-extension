@@ -4,6 +4,7 @@
  * 只负责画，不负责定位与计时——那些在 <TipHost> 与 useTip 队列里。
  */
 import { TIP_ICONS, type TipItem } from '@/src/composables/useTip';
+import { t } from '@/src/composables/useI18n';
 
 const props = defineProps<{ item: TipItem }>();
 const emit = defineEmits<{ close: [] }>();
@@ -31,7 +32,7 @@ function runAction(): void {
         v-if="item.closable"
         type="button"
         class="dsh-tip__close"
-        aria-label="关闭提示"
+        :aria-label="t('common_close')"
         @click="emit('close')"
     >×</button>
     <span v-if="item.arrow && item.anchor" class="dsh-tip__arrow" />

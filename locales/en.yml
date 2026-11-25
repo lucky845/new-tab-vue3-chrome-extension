@@ -1,0 +1,500 @@
+appName: New Tab Pro
+appDescription: "Local new tab: Picsum wallpapers, clock, weather, todo, notes, pomodoro with side wings. Zero backend, no tracking."
+settings_tab_search: Search
+settings_tab_wallpaper: Wallpaper
+settings_tab_theme: Theme
+settings_tab_home: Home
+settings_tab_advanced: Advanced
+settings_language_auto: Follow browser
+settings_language_desc: Takes effect immediately and is remembered. "Follow browser" matches your system UI language.
+settings_title: Settings
+settings_close: Close
+settings_autosave: Auto-saves 3s after you stop
+settings_engine_custom: Custom search engines
+settings_engine_name_placeholder: Name, e.g. Zhihu
+settings_engine_add: Add
+settings_engine_icon_details: Icon for the new engine (optional)
+settings_engine_empty: No custom engines yet
+settings_engine_favicon: Use the site favicon as icon
+settings_engine_site_icon: Site icon
+settings_engine_pick_image: Pick an image as icon
+settings_engine_change_image: Change
+settings_engine_choose_image: Choose
+settings_engine_clear_icon: Clear icon, fall back to favicon or initial
+settings_engine_clear: Clear
+settings_engine_delete: Delete
+settings_engine_delete_aria: Delete engine
+settings_engine_placeholder_desc: Use %s in the search URL as the keyword placeholder; once added it appears in the search bar dropdown. Custom engines accept a dragged image crop; without one the site favicon is used, then the first character of the name. Built-in engines always use brand icons.
+settings_engine_builtin: Built-in engines
+settings_weather_city: Weather city
+settings_weather_city_placeholder: e.g. Beijing, Shanghai, Guangzhou
+settings_weather_city_desc: Leave empty to use your location automatically, or type a city name.
+settings_tagline: Home tagline
+settings_tagline_placeholder: e.g. Write good code today
+settings_tagline_desc: Shown below the clock. Leave empty to hide.
+settings_wallpaper_brightness: Brightness
+settings_wallpaper_blur: Blur
+settings_wallpaper_adjust_desc: Tune the wallpaper for easier reading. Changes apply immediately and save automatically.
+settings_wallpaper_source: Wallpaper source
+settings_source_picsum: Picsum picks (default)
+settings_source_picsum_desc: Reachable directly in mainland China; curated Unsplash photos, no API key needed. Page browsing only — category and keyword filters are unsupported; picking a category tries Wallhaven and falls back to browse mode with a notice if unreachable.
+settings_source_wallhaven: Wallhaven (category and keyword filters)
+settings_source_wallhaven_desc: The only source that really filters by category and keyword, with high-quality wallpapers; requires access to overseas networks (wallhaven.cc is unstable from mainland China). Choose this if you want category filtering.
+settings_wallpaper_source_hint: Takes effect the next time you open the wallpaper library; the startup wallpaper and "Shuffle" also use the selected source.
+settings_theme_label: Appearance theme
+settings_theme_light: Light
+settings_theme_light_desc: "Always as-is: white text over the wallpaper"
+settings_theme_dark: Dark
+settings_theme_dark_desc: Darkens the wallpaper on top of the base style
+settings_theme_system: Follow system
+settings_theme_system_desc: Switches with your OS light/dark preference
+settings_theme_sun: Sunrise and sunset
+settings_theme_sun_desc: Light by day, dark at night
+settings_theme_light_start: Day starts
+settings_theme_motion_preview: Preview mode — auto-saves 3s after you stop
+settings_sun_desc: Sunrise and sunset times are read from your location; if location or network is unavailable, the custom times above are used.
+settings_motion: Motion
+settings_reduce_motion: Reduce motion
+settings_reduce_motion_desc: Disables panel transitions and hover movement to cut visual noise and repaint cost. When your system turns on "Reduce motion" this degrades automatically; no need to enable it here.
+settings_widgets: Widgets
+settings_widgets_home: Show widgets on the homepage
+settings_widgets_desc: To-do, notes and Pomodoro stay on both sides; once off you can still open each panel from the buttons at the top right
+settings_side_card_desc: All four cards are shown by default; switch any to "Show when there is content" or "Hidden". Hidden cards give their width back to the centre.
+settings_language: Language
+settings_pexels_placeholder: Enter your API key
+settings_pexels_desc_part1: "Optional enhancement: when set, wallpaper search and category filtering always use Pexels (this takes priority over the \"Wallpaper source\" selection below). Works fine without it — the free Picsum library is the default and needs no key, but Picsum does not support category filtering."
+settings_get_free_key: Get a free key
+settings_amap_key: Amap (Gaode) Web Service Key (optional)
+settings_amap_placeholder: Enter your Amap Web Service key
+settings_amap_desc: "Optional: without it, weather uses free Open-Meteo data and needs no key. For Amap data, apply for a Web Service Key on the Amap open platform."
+settings_backup: Backup and restore
+settings_backup_export: Export backup
+settings_backup_copy: Copy backup
+settings_backup_import: Import backup
+settings_backup_paste_import: Paste text to import
+settings_backup_paste_placeholder: Paste the full backup JSON here, then click Import
+settings_backup_paste_aria: Paste backup JSON
+settings_backup_import_short: Import
+settings_toast_export_fail: Export failed
+settings_toast_import_fail: "Import failed: "
+settings_toast_locale_fail: Could not save the language preference
+settings_side_always: Always show
+settings_side_auto: Show when there is content
+settings_theme_dark_start: Night starts
+settings_pexels_key: Pexels API key (optional)
+settings_side_never: Hidden
+side_card_todo: To-do
+side_card_todo_hint: Shown by default; can be set to appear only when there are unfinished items
+side_card_pomodoro: Pomodoro
+side_card_pomodoro_hint: Shown by default; can be set to appear only while focusing or after a session today
+side_card_notes: Notes
+side_card_notes_hint: Shown by default; can be set to appear only when notes exist
+side_card_tools: Tools
+side_card_tools_hint: Tools are fixed content and always shown
+settings_toast_widgets_on: Homepage widgets shown
+settings_toast_widgets_off: Homepage widgets hidden
+settings_toast_motion_on: Motion reduced
+settings_toast_motion_off: Full motion restored
+settings_toast_add_fail: Failed to add
+settings_toast_engine_added: Custom engine added
+settings_toast_engine_removed: Removed engine "{name}"
+settings_toast_logo_set: Icon updated
+settings_toast_logo_reset: Default icon restored
+settings_toast_bad_url: Could not extract a domain from that engine URL
+settings_toast_no_favicon: Could not fetch the site icon, try another image
+settings_toast_favicon_ok: Switched to the site icon
+settings_toast_exported: Backup exported
+settings_toast_import_ok: Import succeeded, reloading…
+settings_toast_invalid_file: Invalid file
+settings_toast_copy_fail: Copy failed
+settings_toast_copied: Backup copied
+settings_toast_saved: Settings saved
+settings_toast_save_fail: Failed to save settings, please retry
+weather_err_key_invalid_short: "Invalid API key"
+weather_err_key_invalid_hint: "Set a valid Amap Web-service key in ⚙️ Settings"
+weather_err_quota_short: "Amap quota exceeded"
+weather_err_quota_hint: "Raise the quota in the Amap console, or remove the key to use the free weather service"
+weather_err_service_unavailable_short: "Amap service unavailable"
+weather_err_service_unavailable_hint: "Retry automatically later, or remove the key in ⚙️ Settings to use the free weather service"
+weather_err_geo_denied_short: "Location not allowed"
+weather_err_geo_denied_hint: "Set a weather city in ⚙️ Settings to show weather"
+weather_err_geo_failed_short: "Can't get location"
+weather_err_geo_failed_hint: "Set a weather city in ⚙️ Settings to show weather"
+weather_err_geo_unsupported_short: "Location unavailable"
+weather_err_geo_unsupported_hint: "Set a weather city in ⚙️ Settings to show weather"
+weather_err_timeout_short: "Weather service timed out"
+weather_err_timeout_hint: "Network is unreachable or the free weather domain is blocked; you can add an Amap key in ⚙️ Settings"
+weather_err_network_short: "Weather network error"
+weather_err_network_hint: "Check your network and tap the weather card to retry; ⚙️ lets you add an Amap key"
+weather_err_http_short: "Weather service error"
+weather_err_http_hint: "Retry automatically later; if it keeps failing, switch the source in ⚙️ Settings"
+weather_err_city_short: "Invalid city"
+weather_err_city_hint: "Open ⚙️ Settings to change the weather city"
+weather_err_unknown_short: "Failed to get weather"
+weather_err_unknown_hint: "Retry automatically later, or switch the source in ⚙️ Settings"
+weather_loading: "Loading..."
+weather_locating: "Locating..."
+weather_desc_clear: "Clear"
+weather_desc_partly_cloudy: "Partly cloudy"
+weather_desc_overcast: "Overcast"
+weather_desc_fog: "Fog"
+weather_desc_rime_fog: "Rime fog"
+weather_desc_drizzle: "Drizzle"
+weather_desc_freezing_rain: "Freezing rain"
+weather_desc_light_rain: "Light rain"
+weather_desc_rain: "Rain"
+weather_desc_heavy_rain: "Heavy rain"
+weather_desc_light_snow: "Light snow"
+weather_desc_snow: "Snow"
+weather_desc_heavy_snow: "Heavy snow"
+weather_desc_showers: "Showers"
+weather_desc_violent_showers: "Violent showers"
+weather_desc_snow_showers: "Snow showers"
+weather_desc_thunderstorm: "Thunderstorm"
+weather_desc_thunderstorm_hail: "Thunderstorm with hail"
+weather_desc_unknown: "Unknown"
+weather_stale: "Showing cached data"
+weather_stale_minutes: "Showing data from {n} min ago (next auto-update after cooldown)"
+weather_current_location: "Current location"
+weather_err_city_not_found: "City not found, please check the city name"
+weather_err_init: "Weather service failed to initialise"
+wallpaper_cat_nature: "Nature"
+wallpaper_cat_city: "City"
+wallpaper_cat_tech: "Technology"
+wallpaper_cat_abstract: "Abstract"
+wallpaper_cat_ocean: "Ocean"
+wallpaper_cat_forest: "Forest"
+wallpaper_cat_mountain: "Mountains"
+wallpaper_cat_sky: "Sky"
+wallpaper_cat_animal: "Animals"
+wallpaper_cat_food: "Food"
+wallpaper_cat_sport: "Sports"
+wallpaper_cat_travel: "Travel"
+wallpaper_local_image: "Local image"
+wallpaper_gallery_failed: "Failed to load gallery"
+wallpaper_wallhaven_unreachable: "Wallhaven is unreachable. This source needs access to overseas networks; you can switch back to Picsum in Settings."
+wallpaper_load_failed: "Failed to load wallpaper, please check your network"
+wallpaper_page_range: "Enter a page number between 1 and {max}."
+wallpaper_total_info: "{pages} pages / {total} images"
+wallpaper_photo_by: "Photo by {author}"
+wallpaper_alt_wallhaven: "Wallhaven {res} wallpaper"
+tool_name_timestamp: "Timestamp"
+tool_desc_timestamp: "Unix timestamp ⇄ date time"
+tool_ph_timestamp: "Enter a Unix timestamp (s/ms) or 2026-01-01 12:00:00"
+tool_name_radix: "Radix"
+tool_desc_radix: "Binary / octal / decimal / hex"
+tool_ph_radix: "42, 0x2A, 0b101010, 0o52"
+tool_name_case: "Case"
+tool_desc_case: "Upper / lower / camel / snake"
+tool_ph_case: "hello world / user_name / userName"
+tool_name_dedupe: "Dedupe"
+tool_desc_dedupe: "Remove duplicate lines, keep order"
+tool_ph_dedupe: "One item per line"
+tool_name_wordcount: "Word count"
+tool_desc_wordcount: "Characters / words / lines"
+tool_ph_wordcount: "Paste text"
+tool_name_color: "Color"
+tool_ph_color: "#4EC2C6 or rgb(78,194,198)"
+tool_name_jwt: "JWT"
+tool_desc_jwt: "Decode header and payload"
+tool_ph_jwt: "Paste a JWT (aaa.bbb.ccc)"
+tool_name_htmlentity: "HTML entities"
+tool_desc_htmlentity: "Escape / unescape"
+tool_ph_htmlentity: "&lt;div&gt; or <div>"
+tool_name_password: "Password"
+tool_desc_password: "Generate a 20-character strong password"
+tool_ph_password: "Click Generate for a random strong password"
+tool_desc_uuid: "Generate UUID v4"
+tool_ph_uuid: "Click Generate for a UUID"
+tool_desc_json: "Format / minify / validate"
+tool_desc_base64: "Encode / decode"
+tool_ph_base64: "Text or Base64 string"
+tool_desc_url: "Encode / decode"
+tool_ph_url: "URL or text with spaces or %E4%BD%A0"
+tool_desc_hash: "Text hash digest"
+tool_ph_hash: "Enter any text"
+tool_out_timestamp: "{date}\nLocal: {local}\nISO: {iso}"
+tool_out_bad_time: "Unrecognised time format"
+tool_out_timestamp_conv: "Seconds: {sec}\nMilliseconds: {ms}\nISO: {iso}"
+tool_out_json_fail: "JSON parse failed: {msg}"
+tool_out_bad_number: "Unrecognised number format"
+tool_out_bad_color: "Supported: #4EC2C6 or rgb(78,194,198)"
+tool_out_bad_jwt: "Not a valid JWT: expected three dot-separated parts"
+tool_out_jwt_fail: "JWT decode failed: {msg}"
+tool_out_jwt_time_header: "--- Time and claims ---"
+tool_out_jwt_no_time: "No standard time claims in the payload (iat / nbf / exp)"
+tool_out_jwt_expires: "Status: expires {when}"
+tool_out_jwt_no_exp: "Status: no exp claim, does not expire"
+tool_out_jwt_expired: "Expired"
+tool_out_jwt_valid: "Still valid"
+tool_out_jwt_no_verify: "Signature not verified (this tool only decodes)"
+tool_out_entity_unknown: "({n} entities not recognised, kept as-is)"
+tool_out_radix: "Decimal: {dec}\nHex: 0x{hex}\nOctal: 0o{oct}\nBinary: 0b{bin}"
+tool_out_case_upper: "UPPER"
+tool_out_case_lower: "lower"
+tool_out_case_title: "Title"
+tool_out_case_camel: "camel"
+tool_out_case_snake: "snake"
+tool_out_dedupe: "{out} / {total} lines after dedupe\n\n{body}"
+tool_out_wordcount_empty: "Characters: 0"
+tool_out_wordcount: "Characters: {chars}\nNo whitespace: {noSpace}\nWords/CJK: {words}\nLines: {lines}"
+tool_jwt_iss: "Issuer"
+tool_jwt_sub: "Subject"
+tool_jwt_aud: "Audience"
+tool_jwt_exp: "Expires at"
+tool_jwt_nbf: "Not before"
+tool_jwt_iat: "Issued at"
+tool_jwt_jti: "Unique ID"
+tools_panel_title: "Tools"
+common_close: "Close"
+qa_dialog_title_add: "Add shortcut"
+qa_dialog_title_edit: "Edit shortcut"
+qa_icon_help_title: "About custom icons"
+qa_icon_help_message: "We recommend getting SVG code from iconfont.cn."
+qa_icon_help_action: "Open iconfont"
+qa_icon_help_action_title: "Open https://www.iconfont.cn/ in a new tab"
+qa_icon_help_aria: "About custom icons"
+qa_err_url_invalid: "Please enter a valid URL."
+qa_err_name_length: "The name must be 2–10 characters long."
+qa_url_label: "URL"
+qa_url_placeholder: "e.g. https://www.baidu.com"
+qa_name_label: "Label"
+qa_name_placeholder: "e.g. Baidu"
+qa_icon_label: "Custom icon (optional)"
+qa_icon_collapse: "Hide icon options"
+qa_icon_expand: "Want a different icon? Click here"
+qa_icon_placeholder: "Paste an image URL or SVG code"
+qa_icon_preview: "Preview:"
+qa_icon_hint: "Optional: leave empty to fetch the site favicon automatically."
+qa_folder_label: "Folder"
+qa_folder_root: "Root (no folder)"
+qa_folder_hint: "You can also right-click a shortcut after saving to move it into a folder or create one."
+qa_save: "Save"
+qa_cancel: "Cancel"
+backup_label_settings: "Settings"
+backup_label_custom_engines: "Custom search engines"
+backup_label_engine_logos: "Search engine icons"
+backup_label_quick_access: "Shortcuts"
+backup_label_todos: "To-dos"
+backup_label_notes: "Notes"
+backup_label_pomodoro_settings: "Pomodoro settings"
+backup_label_pomodoro_stats: "Pomodoro stats"
+backup_label_pomodoro_runtime: "Pomodoro runtime state"
+backup_label_search_history: "Search history"
+backup_label_engine_icons: "Search engine icon cache"
+backup_label_theme_settings: "Theme settings"
+backup_label_side_card_modes: "Side card visibility"
+backup_label_local_wallpapers: "Local wallpaper library"
+backup_label_wallpaper_id: "Wallpaper ID"
+backup_label_wallpaper_url: "Wallpaper URL"
+backup_label_wallpaper_data: "Wallpaper metadata"
+backup_label_wallpaper_blob: "Wallpaper cached image"
+backup_label_wallpaper_blob_url: "Wallpaper cache marker"
+backup_err_not_object: "Invalid backup file: the top level must be an object."
+backup_err_app_mismatch: "This is not a New Tab Pro backup (app id mismatch)."
+backup_err_no_data: "The backup contains no importable data."
+backup_err_bad_key: "Invalid field name \"{key}\"."
+backup_err_bad_type: "Field \"{key}\" has the wrong type: expected {expected}, got {actual}."
+backup_err_no_known_field: "The backup contains no importable data (no known fields)."
+backup_err_empty_file: "The file is empty."
+backup_err_too_large: "The backup is too large (over {mb} MB) and was rejected."
+backup_err_bad_json: "Cannot parse JSON: {detail}"
+folder_title: "Folder"
+folder_new: "New folder"
+folder_rename: "Rename folder"
+folder_empty_hint: "Empty folder — click + in the top-right to add a shortcut, or right-click another shortcut and choose \"Move into folder\"."
+folder_created: "Folder \"{name}\" created"
+folder_moved_into: "Moved into \"{name}\""
+folder_moved_back_named: "\"{name}\" moved back to the main panel"
+folder_dissolved: "Folder dissolved — {n} shortcuts returned to the main panel"
+folder_confirm_delete: "Delete \"{name}\"? This cannot be undone."
+folder_menu_open: "Open folder"
+folder_menu_rename: "Rename folder"
+folder_menu_dissolve: "Dissolve folder"
+folder_menu_delete: "Delete folder"
+folder_move_out: "Move out of folder"
+folder_move_out_title: "Move out of folder (back to the main panel)"
+folder_add_to: "Add to folder"
+folder_add: "Add"
+common_edit: "Edit"
+common_delete: "Delete"
+common_create: "Create"
+common_save: "Save"
+common_cancel: "Cancel"
+common_confirm_delete: "Confirm delete"
+common_new_folder_ellipsis: "New folder…"
+common_move_into_folder: "Move into folder"
+common_prev_page: "Previous page"
+common_next_page: "Next page"
+wallpaper_toast_local_applied: "Local wallpaper applied"
+wallpaper_toast_local_removed: "Removed from local library"
+wallpaper_toast_processing: "Processing image…"
+wallpaper_categories_title: "Categories"
+wallpaper_category_unsupported_title: "The current source does not support category filtering"
+wallpaper_local_tab: "Local"
+wallpaper_panel_title: "Wallpaper gallery"
+wallpaper_search_placeholder: "Search wallpapers, e.g. 'Forest'"
+wallpaper_search: "Search"
+wallpaper_category_hint: "This source does not support category filtering, so browse mode is active. To browse by category, switch the wallpaper source to Wallhaven in Settings."
+wallpaper_local_cap: "Up to {n} wallpapers can be saved locally"
+wallpaper_local_full_suffix: "Full — uploading replaces the oldest one"
+wallpaper_local_count: "{n} saved"
+wallpaper_remove_title: "Remove this wallpaper"
+wallpaper_remove: "Remove this wallpaper"
+wallpaper_current: "Current"
+wallpaper_upload_full_title: "Library is full — uploading replaces the oldest one"
+wallpaper_upload_title: "Upload a local image"
+wallpaper_processing: "Processing…"
+wallpaper_replace_earliest: "Replace oldest"
+wallpaper_upload: "Upload"
+wallpaper_gallery_proxy_hint: "If you use a proxy, make sure the node is reachable."
+wallpaper_loading: "Loading wallpapers…"
+wallpaper_jump_to: "Go to"
+wallpaper_page_unit: "page"
+todo_cat_work: "Work"
+todo_cat_life: "Life"
+todo_cat_normal: "General"
+todo_filter_all: "All"
+todo_mark_important: "Mark as important"
+todo_input_placeholder: "Add a to-do…"
+todo_panel_title: "To-dos"
+todo_empty_all: "No to-dos yet — type above and press Enter to add the first one"
+todo_empty_category: "No to-dos in this category"
+todo_important: "Important"
+todo_delete_aria: "Delete to-do"
+todo_scope_all: "Category: {category} (all)"
+todo_scope_category: "Category: {category}"
+todo_hint_all: "To-dos added under \"All\" default to \"{category}\". To use another category, pick it above first."
+todo_hint_category: "You are in \"{category}\" — new to-dos will use this category."
+todo_stats_active: "{n} active"
+todo_stats_done_today: "{n} done today"
+todo_stats_overdue: "⚠️ {n} overdue"
+todo_toast_empty: "Please enter a to-do"
+todo_toast_cleared: "Cleared {n} completed to-dos"
+todo_toast_order_saved: "Order saved"
+todo_due_overdue: "⚠️ {date} overdue"
+engine_logo_err_no_clipboard: "This browser cannot read the clipboard. Use \"Upload image\" instead."
+engine_logo_err_clipboard_empty: "No image in the clipboard"
+engine_logo_err_clipboard_denied: "Clipboard access was denied. Use \"Upload image\" instead."
+engine_logo_err_not_image: "Only image files are supported"
+engine_logo_err_too_large: "The image must not exceed 4 MB"
+engine_logo_err_unreadable: "This image cannot be read"
+engine_logo_err_read_failed: "Failed to read the file"
+engine_logo_err_no_canvas: "This browser cannot crop with canvas"
+engine_logo_err_crop_failed: "Cropping failed — try another image"
+engine_logo_drag_aria: "Drag to adjust the icon framing"
+engine_logo_preview_aria: "Engine icon preview"
+engine_logo_hint_crop: "Drag to reposition, scroll to zoom, then click \"Crop and apply\"."
+engine_logo_hint_custom: "A custom icon is in use — you can adjust it or restore the default."
+engine_logo_hint_default: "Leave empty to use the engine icon, or the first letter of its name."
+engine_logo_upload: "Upload image"
+engine_logo_replace: "Choose another"
+engine_logo_paste: "Paste image from clipboard"
+engine_logo_crop_apply: "Crop and apply"
+engine_logo_reset: "Restore default"
+engine_logo_adjust: "Adjust current icon"
+search_engine_aria: "Search engine: {name}"
+search_placeholder: "Search…"
+search_clear: "Clear"
+search_submit: "Search"
+search_history_empty: "No search history"
+search_history_no_match: "No history matches \"{keyword}\""
+search_pin: "Pin to top"
+search_unpin: "Unpin"
+search_pin_aria: "Pin search history entry "
+search_unpin_aria: "Unpin search history entry "
+search_delete_aria: "Delete search history entry {text}"
+search_clear_history: "Clear search history"
+weather_panel_title: "Weather settings"
+weather_city_label: "City"
+weather_city_desc: "Enter a city name; leave empty to use your location."
+weather_unit_label: "Temperature unit"
+weather_unit_celsius: "Celsius (°C)"
+weather_unit_fahrenheit: "Fahrenheit (°F)"
+notes_panel_title: "Notes"
+notes_empty_search: "No notes match"
+notes_empty_all: "No notes yet — click \"+ New note\" to start"
+notes_stats: "{total} notes · {chars} characters (autosaved)"
+notes_search_placeholder: "Search notes…"
+notes_add: "New note"
+notes_pin: "Pin"
+notes_unpin: "Unpin"
+notes_delete: "Delete note"
+notes_input_placeholder: "Jot something down… (autosaved)"
+greet_night: "Good night"
+greet_morning: "Good morning"
+greet_forenoon: "Good morning"
+greet_noon: "Good afternoon"
+greet_afternoon: "Good afternoon"
+greet_evening: "Good evening"
+pomodoro_panel_title: "Pomodoro"
+pomodoro_settings_collapse: "⚙ Hide settings"
+pomodoro_settings_expand: "⚙ Durations"
+pomodoro_toast_saved: "Pomodoro settings saved"
+pomodoro_today: "Today 🍅 × {n}"
+pomodoro_skip: "Skip"
+pomodoro_reset: "Reset"
+pomodoro_phase_work: "Focus"
+pomodoro_phase_short_break: "Short break"
+pomodoro_phase_long_break: "Long break"
+pomodoro_phase_round_interval: "Long break every"
+pomodoro_unit_min: "min"
+pomodoro_unit_round: "rounds"
+pomodoro_status_focusing: "Focusing"
+pomodoro_status_long_break: "On a long break"
+pomodoro_status_break: "On a break"
+pomodoro_status_paused: "Paused"
+pomodoro_action_pause: "Pause"
+pomodoro_action_resume: "Resume"
+pomodoro_action_start: "Start"
+pomodoro_msg_break: "🍅 Focus complete! Take a break"
+pomodoro_msg_long_break: "🎉 Full round complete! Long break time"
+pomodoro_msg_work: "⏰ Break over — back to focus"
+tools_out_failed: "Failed: {message}"
+tools_toast_nothing: "Nothing to copy"
+tools_toast_copied: "Copied to clipboard"
+tools_toast_copy_fail: "Copy failed — select and copy manually"
+notes_deleted: "Note deleted"
+todo_toast_empty_input: "Enter a to-do first"
+todo_card_placeholder: "Quick add a to-do, press Enter"
+qa_empty_title: "Nothing here yet"
+qa_empty_sub: "Click \"Add\" below to pin your favourite sites; drag one icon onto another to group them in a folder"
+qa_more_aria: "More actions for {name}"
+qa_add_title: "Add a shortcut"
+qa_add: "Add"
+qa_folder_default_name: "Folder"
+dialog_title_confirm: "Please confirm"
+common_confirm: "OK"
+engine_err_name_url_required: "Name and search URL (with the %s placeholder) are both required"
+engine_err_url_scheme: "The search URL must start with http(s)://"
+engine_err_duplicate: "An engine named \"{name}\" already exists"
+wallpaper_picsum_title: "Random photography"
+wallpaper_err_pick_image: "Please choose an image file"
+wallpaper_err_too_large: "Even after compression the image is too large — try a smaller one"
+wallpaper_toast_local_applied_tmp: "Wallpaper applied (large image, used for this session only)"
+wallpaper_err_process_failed: "Image processing failed — try another one"
+qa_err_invalid_url: "Please enter a valid URL."
+qa_err_bad_name: "The name must be 2–10 characters long."
+clock_aria_name: "Clock"
+todo_due_date_label: "Due date (optional)"
+side_expand_open: "Open full panel"
+side_expand_tools: "Open all tools"
+weather_settings: "Weather settings"
+settings_show_key: "Show key"
+settings_hide_key: "Hide key"
+tools_back_all: "← All tools"
+tools_copy_result: "Copy result"
+tools_privacy_hint: "Runs entirely locally. Nothing is uploaded. Enter input, then hit Convert / Generate and copy the result."
+tools_clear: "Clear"
+todo_clear_done: "Clear completed"
+settings_locale_badge: "简体中文"
+settings_locale_badge_en: "English"
+settings_backup_status_default: "A backup is a single JSON file containing settings, search engines and icons, quick access, to-dos, notes, pomodoro, search history, side card layout, theme preferences and wallpapers (including the local library). Weather, geolocation and sunrise caches are excluded (they refetch after restore). You can download it as a file, copy it to the clipboard, or paste text to import."
+settings_sun_today: "Sunrise {sunrise}, sunset {sunset} today; theme switches at these times."
+settings_sun_unknown: "Local sunrise/sunset unavailable; using custom times (light from {light}, dark from {dark})."
+settings_exported: "Exported {file} ({keys} items, about {kb} KB)"
+settings_export_failed: "Export failed: {message}"
+settings_unknown_error: "unknown error"
+common_add: "Add"
+tools_convert: "Convert"
+tools_generate: "Generate"

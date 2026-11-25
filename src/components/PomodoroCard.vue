@@ -14,6 +14,7 @@
 import { computed } from 'vue';
 import SideCard from '@/src/components/common/SideCard.vue';
 import { usePomodoro, formatPomodoroTime } from '@/src/composables/usePomodoro';
+import { t } from '@/src/composables/useI18n';
 
 const { progress, stateLabel, startLabel, stats, toggleStart, skipPhase } = usePomodoro();
 
@@ -22,12 +23,12 @@ const RING_CIRC = 2 * Math.PI * 34;
 const dashOffset = computed(() => String(RING_CIRC * (1 - progress.value.progress)));
 const timeText = computed(() => formatPomodoroTime(progress.value.remaining));
 const isBreak = computed(() => progress.value.phaseType !== 'work');
-const todayText = computed(() => '今日 🍅 × ' + (stats.value.completedToday || 0));
+const todayText = computed(() => t('pomodoro_today', { n: stats.value.completedToday || 0 }));
 </script>
 
 <!-- prettier-ignore -->
 <template>
-    <SideCard cardId="pomodoro" elementId="side-card-pomodoro" title="番茄钟" expandId="pomodoro-card-expand">
+    <SideCard cardId="pomodoro" elementId="side-card-pomodoro" :title="t('side_card_pomodoro')" expandId="pomodoro-card-expand">
         <div class="pomodoro-mini">
             <div class="pomodoro-mini-ring">
                 <svg viewBox="0 0 80 80" aria-hidden="true">
@@ -49,7 +50,7 @@ const todayText = computed(() => '今日 🍅 × ' + (stats.value.completedToday
                 <span id="pomodoro-card-today" class="pomodoro-mini-today">{{ todayText }}</span>
                 <div class="pomodoro-mini-actions">
                     <button id="pomodoro-card-start" class="mini-btn primary" @click="toggleStart()">{{ startLabel }}</button>
-                    <button id="pomodoro-card-skip" class="mini-btn" @click="skipPhase()">跳过</button>
+                    <button id="pomodoro-card-skip" class="mini-btn" @click="skipPhase()">{{ t('pomodoro_skip') }}</button>
                 </div>
             </div>
         </div>

@@ -6,7 +6,13 @@
  * 这也是 ROADMAP v3.0「useWeather.ts 拆分」的第一刀。
  */
 
-/** 卡面文案（短句 + 位置行指引 + 完整原因；原 useWeather.showError 归并产物） */
+/**
+ * 卡面文案（短句 + 位置行指引 + 完整原因；原 useWeather.showError 归并产物）。
+ *
+ * short / locationHint 现在放的是 i18n key（`weather_err_*_short` / `_hint`），
+ * 由展示层调 t() 翻译；message 保持原始错误串（可能含接口原文，用于诊断）。
+ * 这里仍是纯函数、零依赖——不 import useI18n，就不必为分类逻辑拉进 Vue。
+ */
 export interface WeatherErrorInfo {
   message: string;
   short: string;
@@ -30,24 +36,24 @@ export function classifyWeatherError(
 
   // 1) 高德错误码：key 类（用户要改设置）与配额/服务类（等恢复或提配额）
   if (/INVALID_USER_KEY|USERKEY_PLAT_NOMATCH|INVALID_USER_SCODE/i.test(info)) {
-    return { message, short: '高德 Key 无效', locationHint: '⚙️ 设置里填有效的 Web服务 类型高德 Key' };
+    return { message, short: 'weather_err_key_invalid_short', locationHint: 'weather_err_key_invalid_hint' };
   }
   if (/CUQPS|QUERY_OVER_LIMIT|OVER_LIMIT/i.test(info)) {
-    return { message, short: '高德配额超限', locationHint: '高德控制台提配额，或移除 Key 用免费天气' };
+    return { message, short: 'weather_err_quota_short', locationHint: 'weather_err_quota_hint' };
   }
   if (/SERVICE_NOT_AVAILABLE/i.test(info)) {
-    return { message, short: '高德服务不可用', locationHint: '稍后自动重试，或 ⚙️ 设置移除 Key 用免费天气' };
+    return { message, short: 'weather_err_service_unavailable_short', locationHint: 'weather_err_service_unavailable_hint' };
   }
 
   // 2) 定位/权限类（保留 legacy 语义）
   if (/权限被拒绝|NotAllowed|Permission/i.test(message)) {
-    return { message, short: '定位未授权', locationHint: '点 ⚙️ 设置天气城市即可显示' };
+    return { message, short: 'weather_err_geo_denied_short', locationHint: 'weather_err_geo_denied_hint' };
   }
   if (/位置信息不可用|未找到可用/i.test(message)) {
-    return { message, short: '无法定位', locationHint: '点 ⚙️ 设置天气城市即可显示' };
+    return { message, short: 'weather_err_geo_failed_short', locationHint: 'weather_err_geo_failed_hint' };
   }
   if (/不支持地理位置|请在浏览器\/系统设置中允许位置访问/.test(message)) {
-    return { message, short: '定位不可用', locationHint: '点 ⚙️ 设置天气城市即可显示' };
+    return { message, short: 'weather_err_geo_unsupported_short', locationHint: 'weather_err_geo_unsupported_hint' };
   }
 
   // 3) 网络类：Open-Meteo 不通 / 请求超时 / HTTP 失败 —— 明确告诉用户「换源或稍后」
@@ -61,18 +67,18 @@ export function classifyWeatherError(
         : code === 'HTTP_ERROR' ? 'http'
           : null;
   if (codeClass === 'abort' || (codeClass === null && /ABORT_ERROR|请求超时|超时|timeout/i.test(message))) {
-    return { message, short: '天气服务连接超时', locationHint: '网络不通或免费天气域名不可达，⚙️ 设置可填高德 Key 换源' };
+    return { message, short: 'weather_err_timeout_short', locationHint: 'weather_err_timeout_hint' };
   }
   if (codeClass === 'network' || (codeClass === null && /NETWORK_ERROR|网络错误|Failed to fetch|NetworkError/i.test(message))) {
-    return { message, short: '天气网络错误', locationHint: '检查网络后点天气卡片重试；⚙️ 可填高德 Key 换源' };
+    return { message, short: 'weather_err_network_short', locationHint: 'weather_err_network_hint' };
   }
   if (codeClass === 'http' || (codeClass === null && /HTTP_ERROR|HTTP 4\d\d|HTTP 5\d\d/i.test(message))) {
-    return { message, short: '天气服务异常', locationHint: '稍后自动重试；持续失败可 ⚙️ 设置换源' };
+    return { message, short: 'weather_err_http_short', locationHint: 'weather_err_http_hint' };
   }
 
   // 4) 城市类 + 兜底
   if (/城市/.test(message)) {
-    return { message, short: '城市无效', locationHint: '打开右上角 ⚙️ 设置可修改天气城市' };
+    return { message, short: 'weather_err_city_short', locationHint: 'weather_err_city_hint' };
   }
-  return { message, short: '天气获取失败', locationHint: '稍后自动重试，或 ⚙️ 设置换源' };
+  return { message, short: 'weather_err_unknown_short', locationHint: 'weather_err_unknown_hint' };
 }

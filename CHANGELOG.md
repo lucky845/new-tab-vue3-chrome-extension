@@ -1,3 +1,15 @@
+# Unreleased
+
+## 功能
+
+- **多语言（简体中文 / English）**：接入 `@wxt-dev/i18n` 做 `locales/*.yml` → `_locales/*/messages.json` 的构建管线，运行时语言解析由 `src/lib/i18n.ts` + `src/composables/useI18n.ts` 自研层负责（库本身调用的是 `browser.i18n.getMessage`，语言恒等于浏览器 UI 语言，无法运行时切换）。
+- **设置 → 高级 → 界面语言**：可选「跟随浏览器（自动）」/ 简体中文 / English，选择持久化到 `settings.locale`，切换即时生效、刷新后保持。
+- 面板、toast、确认框、校验提示、静态按钮 tooltip（`data-i18n-*`）与时钟日期问候语全部走词表，共 500 key × 2 语言。
+
+## 工程保障
+
+- 新增 `scripts/gen-catalog.mjs`（yml → `src/locales/catalog.ts`，构建前置步骤）与 `tests/i18n-catalog.test.ts`（key 集合比对、值非空、js-yaml 解析门禁）、`tests/i18n.test.ts`（13 用例）、`tests/useI18n.test.ts`（8 用例）、`tests/static-i18n.test.ts`（6 用例）。
+
 # 2.2.3 (2026-11-18)
 
 缺陷修复小版本：修掉搜索下拉的点击穿透，零新功能、零新权限、零新依赖。

@@ -1,4 +1,5 @@
 // 移植自 v1.8.1:js/config/tools.js —— 工具语义逐行等价，仅改 TS + 导出方式
+import { t as tr } from '@/src/composables/useI18n';
 export interface QuickTool {
     id: string;
     name: string;
@@ -124,13 +125,13 @@ export interface QuickTool {
     };
 
     const JWT_CLAIM_HINTS: Record<string, string> = {
-        iss: '签发者',
-        sub: '主体',
-        aud: '受众',
-        exp: '过期时间',
-        nbf: '生效时间',
-        iat: '签发时间',
-        jti: '唯一 ID',
+        iss: 'tool_jwt_iss',
+        sub: 'tool_jwt_sub',
+        aud: 'tool_jwt_aud',
+        exp: 'tool_jwt_exp',
+        nbf: 'tool_jwt_nbf',
+        iat: 'tool_jwt_iat',
+        jti: 'tool_jwt_jti',
     };
 
     /** HTML 实体表：覆盖常用命名实体 + 数字实体 */
@@ -224,10 +225,10 @@ export interface QuickTool {
     export const QUICK_TOOLS: QuickTool[] = [
         {
             id: 'timestamp',
-            name: '时间戳',
+            name: 'tool_name_timestamp',
             icon: '⏱',
-            desc: '时间戳 ⇄ 日期时间',
-            placeholder: '输入 Unix 时间戳（秒/毫秒）或 2026-01-01 12:00:00',
+            desc: 'tool_desc_timestamp',
+            placeholder: 'tool_ph_timestamp',
             kind: 'transform',
             run(input) {
                 const t = input.trim();
@@ -235,18 +236,18 @@ export interface QuickTool {
                 if (/^\d{10,13}$/.test(t)) {
                     const ms = t.length === 13 ? Number(t) : Number(t) * 1000;
                     const d = new Date(ms);
-                    return `${formatDate(d, true)}\n本地: ${d.toString()}\nISO: ${d.toISOString()}`;
+                    return tr('tool_out_timestamp', { local: d.toString(), iso: d.toISOString() });
                 }
                 const d = new Date(t.replace(/-/g, '/'));
-                if (isNaN(d.getTime())) return '无法识别的时间格式';
-                return `秒: ${Math.floor(d.getTime() / 1000)}\n毫秒: ${d.getTime()}\nISO: ${d.toISOString()}`;
+                if (isNaN(d.getTime())) return tr('tool_out_bad_time');
+                return tr('tool_out_timestamp_conv', { sec: Math.floor(d.getTime() / 1000), ms: d.getTime(), iso: d.toISOString() });
             },
         },
         {
             id: 'json',
             name: 'JSON',
             icon: '{}',
-            desc: '格式化 / 压缩 / 校验',
+            desc: 'tool_desc_json',
             placeholder: '{"a":1,"b":[2,3]}',
             kind: 'transform',
             run(input) {
@@ -256,7 +257,7 @@ export interface QuickTool {
                     const obj = JSON.parse(t);
                     return JSON.stringify(obj, null, 2);
                 } catch (e: unknown) {
-                    return `JSON 解析失败: ${(e as Error).message}`;
+                    return tr('tool_out_json_fail', { msg: (e as Error).message });
                 }
             },
         },
@@ -264,8 +265,8 @@ export interface QuickTool {
             id: 'base64',
             name: 'Base64',
             icon: '🔐',
-            desc: '编码 / 解码',
-            placeholder: '文本或 Base64 字符串',
+            desc: 'tool_desc_base64',
+            placeholder: 'tool_ph_base64',
             kind: 'transform',
             run(input) {
                 if (!input) return '';
@@ -288,8 +289,8 @@ export interface QuickTool {
             id: 'url',
             name: 'URL',
             icon: '🔗',
-            desc: '编码 / 解码',
-            placeholder: '带空格或 %E4%BD%A0 的链接/文本',
+            desc: 'tool_desc_url',
+            placeholder: 'tool_ph_url',
             kind: 'transform',
             run(input) {
                 if (!input) return '';
@@ -305,16 +306,16 @@ export interface QuickTool {
             id: 'hash',
             name: 'SHA-256',
             icon: '#',
-            desc: '文本哈希摘要',
-            placeholder: '输入任意文本',
+            desc: 'tool_desc_hash',
+            placeholder: 'tool_ph_hash',
             kind: 'transform',
             run: sha256,
         },
         {
             id: 'radix',
-            name: '进制',
+            name: 'tool_name_radix',
             icon: '🔢',
-            desc: '二进制 / 八进制 / 十进制 / 十六进制',
+            desc: 'tool_desc_radix',
             placeholder: '42、0x2A、0b101010、0o52',
             kind: 'transform',
             run(input) {
@@ -325,35 +326,35 @@ export interface QuickTool {
                 else if (/^0b[01]+$/.test(t)) n = parseInt(t.slice(2), 2);
                 else if (/^0o[0-7]+$/.test(t)) n = parseInt(t.slice(2), 8);
                 else if (/^-?\d+$/.test(t)) n = parseInt(t, 10);
-                if (isNaN(n)) return '无法识别的数字格式';
-                return `十进制: ${n}\n十六进制: 0x${n.toString(16).toUpperCase()}\n八进制: 0o${n.toString(8)}\n二进制: 0b${n.toString(2)}`;
+                if (isNaN(n)) return tr('tool_out_bad_number');
+                return tr('tool_out_radix', { dec: n, hex: n.toString(16).toUpperCase(), oct: n.toString(8), bin: n.toString(2) });
             },
         },
         {
             id: 'case',
-            name: '大小写',
+            name: 'tool_name_case',
             icon: 'Aa',
-            desc: '大小写 / 驼峰 / 下划线',
+            desc: 'tool_desc_case',
             placeholder: 'hello world / user_name / userName',
             kind: 'transform',
             run(input) {
                 const t = input.trim();
                 if (!t) return '';
                 return [
-                    `大写: ${t.toUpperCase()}`,
-                    `小写: ${t.toLowerCase()}`,
-                    `首字母大写: ${t.replace(/\b\w/g, c => c.toUpperCase())}`,
-                    `驼峰: ${toCamel(t)}`,
-                    `下划线: ${toSnake(t)}`,
+                    `${tr('tool_out_case_upper')}: ${t.toUpperCase()}`,
+                    `${tr('tool_out_case_lower')}: ${t.toLowerCase()}`,
+                    `${tr('tool_out_case_title')}: ${t.replace(/\b\w/g, c => c.toUpperCase())}`,
+                    `${tr('tool_out_case_camel')}: ${toCamel(t)}`,
+                    `${tr('tool_out_case_snake')}: ${toSnake(t)}`,
                 ].join('\n');
             },
         },
         {
             id: 'dedupe',
-            name: '去重',
+            name: 'tool_name_dedupe',
             icon: '🧹',
-            desc: '按行去重并保留顺序',
-            placeholder: '每行一条内容',
+            desc: 'tool_desc_dedupe',
+            placeholder: 'tool_ph_dedupe',
             kind: 'transform',
             run(input) {
                 if (!input) return '';
@@ -365,28 +366,28 @@ export interface QuickTool {
                     seen.add(key);
                     return true;
                 });
-                return `去重后 ${out.length} / ${lines.length} 行\n\n${out.join('\n')}`;
+                return tr('tool_out_dedupe', { out: out.length, total: lines.length, body: out.join('\n') });
             },
         },
         {
             id: 'wordcount',
-            name: '字数',
+            name: 'tool_name_wordcount',
             icon: '🔤',
-            desc: '字符 / 词 / 行统计',
-            placeholder: '粘贴文本',
+            desc: 'tool_desc_wordcount',
+            placeholder: 'tool_ph_wordcount',
             kind: 'transform',
             run(input) {
-                if (!input) return '字符: 0';
+                if (!input) return tr('tool_out_wordcount_empty');
                 const chars = [...input].length;
                 const noSpace = [...input.replace(/\s/g, '')].length;
                 const words = (input.match(/[A-Za-z0-9]+|[\u4e00-\u9fa5]/g) || []).length;
                 const lines = input.split('\n').length;
-                return `字符: ${chars}\n不含空白: ${noSpace}\n词/汉字: ${words}\n行数: ${lines}`;
+                return tr('tool_out_wordcount', { chars, noSpace, words, lines });
             },
         },
         {
             id: 'color',
-            name: '颜色',
+            name: 'tool_name_color',
             icon: '🎨',
             desc: 'HEX ⇄ RGB ⇄ HSL',
             placeholder: '#4EC2C6 或 rgb(78,194,198)',
@@ -400,7 +401,7 @@ export interface QuickTool {
                     const m = t.match(/rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/);
                     if (m) rgb = { r: +m[1], g: +m[2], b: +m[3] };
                 }
-                if (!rgb) return '支持 #4EC2C6 或 rgb(78,194,198)';
+                if (!rgb) return tr('tool_out_bad_color');
                 const hex =
                     '#' +
                     [rgb.r, rgb.g, rgb.b]
@@ -413,16 +414,16 @@ export interface QuickTool {
         },
         {
             id: 'jwt',
-            name: 'JWT',
+            name: 'tool_name_jwt',
             icon: '🪙',
-            desc: '解析头部与载荷',
-            placeholder: '粘贴 JWT（格式 aaa.bbb.ccc）',
+            desc: 'tool_desc_jwt',
+            placeholder: 'tool_ph_jwt',
             kind: 'transform',
             run(input) {
                 const t = input.trim().replace(/^Bearer\s+/i, '');
                 if (!t) return '';
                 const parts = t.split('.');
-                if (parts.length !== 3) return '不是合法的 JWT：应有三段，用 . 分隔';
+                if (parts.length !== 3) return tr('tool_out_bad_jwt');
                 const decodeSegment = (seg: string) => {
                     const text = new TextDecoder().decode(base64UrlToBytes(seg));
                     return JSON.parse(text) as Record<string, unknown>;
@@ -433,7 +434,7 @@ export interface QuickTool {
                     header = decodeSegment(parts[0]);
                     payload = decodeSegment(parts[1]);
                 } catch (e: unknown) {
-                    return `JWT 解析失败: ${(e as Error).message}`;
+                    return tr('tool_out_jwt_fail', { msg: (e as Error).message });
                 }
                 const lines = [
                     '--- Header ---',
@@ -445,32 +446,32 @@ export interface QuickTool {
                 const notes = annotateJwtClaims(payload);
                 const hints = Object.keys(payload)
                     .filter(k => JWT_CLAIM_HINTS[k])
-                    .map(k => `${k} = ${JWT_CLAIM_HINTS[k]}`);
+                    .map(k => `${k} = ${tr(JWT_CLAIM_HINTS[k])}`);
                 if (notes.length || hints.length) {
-                    lines.push('', '--- 时间与字段 ---');
+                    lines.push('', tr('tool_out_jwt_time_header'));
                     if (notes.length) lines.push(...notes);
                     if (hints.length) lines.push(hints.join(' / '));
                 } else {
-                    lines.push('', '载荷里没有标准的时间字段（iat / nbf / exp）');
+                    lines.push('', tr('tool_out_jwt_no_time'));
                 }
                 // 过期判断永远给一句，避免用户自己换算秒数
                 const exp = payload.exp;
                 const readable = formatUnixSeconds(exp);
-                lines.push('', readable ? `状态: ${readable} 过期` : '状态: 无 exp 字段，不过期');
+                lines.push('', readable ? tr('tool_out_jwt_expires', { when: readable }) : tr('tool_out_jwt_no_exp'));
                 if (readable) {
                     const expired = typeof exp === 'number' && exp * 1000 < Date.now();
-                    lines.push(expired ? '已过期' : '仍在有效期内');
+                    lines.push(expired ? tr('tool_out_jwt_expired') : tr('tool_out_jwt_valid'));
                 }
-                lines.push('', '签名未校验（本工具只解码不验签）');
+                lines.push('', tr('tool_out_jwt_no_verify'));
                 return lines.join('\n');
             },
         },
         {
             id: 'htmlentity',
-            name: 'HTML 实体',
+            name: 'tool_name_htmlentity',
             icon: '&amp;',
-            desc: '转义 / 反转义',
-            placeholder: '&lt;div&gt; 或 <div>',
+            desc: 'tool_desc_htmlentity',
+            placeholder: 'tool_ph_htmlentity',
             kind: 'transform',
             run(input) {
                 if (!input) return '';
@@ -486,7 +487,7 @@ export interface QuickTool {
                         return value;
                     });
                     return unknown
-                        ? `${decoded}\n\n（${unknown} 个实体无法识别，已原样保留）`
+                        ? `${decoded}\n\n${tr('tool_out_entity_unknown', { n: unknown })}`
                         : decoded;
                 }
                 return escapeHtml(input);
@@ -494,10 +495,10 @@ export interface QuickTool {
         },
         {
             id: 'password',
-            name: '密码',
+            name: 'tool_name_password',
             icon: '🔑',
-            desc: '生成 20 位强密码',
-            placeholder: '点「生成」得到随机强密码',
+            desc: 'tool_desc_password',
+            placeholder: 'tool_ph_password',
             kind: 'generate',
             action: randomPassword,
         },
@@ -505,8 +506,8 @@ export interface QuickTool {
             id: 'uuid',
             name: 'UUID',
             icon: '🆔',
-            desc: '生成 UUID v4',
-            placeholder: '点「生成」得到 UUID',
+            desc: 'tool_desc_uuid',
+            placeholder: 'tool_ph_uuid',
             kind: 'generate',
             action: uuid,
         },

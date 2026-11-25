@@ -21,6 +21,7 @@ import { computed, ref, type ComputedRef, type Ref } from 'vue';
 import { WEATHER_CONFIG } from '@/src/config/weather';
 import { fetchJSON } from '@/src/lib/http';
 import { classifyWeatherError, type WeatherErrorInfo } from '@/src/lib/weather-error';
+import { t } from '@/src/composables/useI18n';
 
 // re-export：既有 import { classifyWeatherError/WeatherErrorInfo } from useWeather 的消费者不破
 export { classifyWeatherError, type WeatherErrorInfo } from '@/src/lib/weather-error';
@@ -158,7 +159,8 @@ const emptySettings: LegacySettings = {};
 function loadSettingsRaw(raw: unknown): LegacySettings {
   const base = raw && typeof raw === 'object' ? (raw as LegacySettings) : {};
   const next: LegacySettings = { ...base };
-  if (next.weatherCity === '当前位置') next.weatherCity = '';
+  // 兼容历史持久化：老版本把显示占位文案直接存进了 weatherCity
+  if (next.weatherCity === '当前位置' || next.weatherCity === t('weather_current_location')) next.weatherCity = '';
   if (next.weatherApiKey === 'your_amap_api_key_here') next.weatherApiKey = '';
   return next;
 }
@@ -531,7 +533,7 @@ function createWeatherApi(): WeatherApi {
    */
   async function readAmapAdcodeCache(): Promise<AdcodeCacheEntry | null> {
     const city = currentCity.value;
-    if (!city || city === '当前位置') return null;
+    if (!city || city === '当前位置' || city === t('weather_current_location')) return null;
     const adcodeKey = `amap_adcode_${city}`;
     const stored = (await chrome.storage.local.get([adcodeKey])) as Record<string, unknown>;
     const entry = stored && (stored[adcodeKey] as AdcodeCacheEntry | undefined);
@@ -593,8 +595,8 @@ function createWeatherApi(): WeatherApi {
   function markStale(ageMin?: number): void {
     isStale.value = true;
     staleTitle.value = ageMin
-      ? `当前显示 ${ageMin} 分钟前的缓存数据（下次自动更新在冷却结束后）`
-      : '当前显示缓存数据';
+      ? t('weather_stale_minutes', { n: ageMin })
+      : t('weather_stale');
   }
 
   function clearStale(): void {
@@ -1068,7 +1070,7 @@ function createWeatherApi(): WeatherApi {
         backoff: 2,
       });
       if (!data.results || data.results.length === 0) {
-        throw new Error('未查询到该城市，请检查城市名称');
+        throw new Error(t('weather_err_city_not_found'));
       }
       const r = data.results[0];
       place = {
@@ -1101,7 +1103,7 @@ function createWeatherApi(): WeatherApi {
       const position = await getCurrentPosition();
       const latitude = position.coords.latitude;
       const longitude = position.coords.longitude;
-      const data = await fetchOpenMeteoCurrent(latitude, longitude, '当前位置', '');
+      const data = await fetchOpenMeteoCurrent(latitude, longitude, t('weather_current_location'), '');
       await chrome.storage.local.set({
         [locKey]: { latitude, longitude, ts: Date.now() },
       });
@@ -1111,7 +1113,7 @@ function createWeatherApi(): WeatherApi {
       const last = (await chrome.storage.local.get([locKey])) as Record<string, unknown>;
       const saved = last && (last[locKey] as LastLocationEntry | undefined);
       if (saved) {
-        return fetchOpenMeteoCurrent(saved.latitude, saved.longitude, '当前位置', '');
+        return fetchOpenMeteoCurrent(saved.latitude, saved.longitude, t('weather_current_location'), '');
       }
       // 无缓存可选：交由上层统一展示友好文案（不在这里打 warn，避免噪音）
       throw geoErr;
@@ -1179,36 +1181,36 @@ function createWeatherApi(): WeatherApi {
   /** WMO weathercode -> [中文描述, 图标类别]（legacy getWmoMapping 逐字移植） */
   function getWmoMapping(code: number): [string, string] {
     const map: Record<number, [string, string]> = {
-      0: ['晴', 'sunny'],
-      1: ['晴', 'sunny'],
-      2: ['多云', 'cloudy-sunny'],
-      3: ['阴', 'cloudy'],
-      45: ['雾', 'fog'],
-      48: ['雾凇', 'fog'],
-      51: ['毛毛雨', 'rain'],
-      53: ['毛毛雨', 'rain'],
-      55: ['毛毛雨', 'rain'],
-      56: ['冻雨', 'snow'],
-      57: ['冻雨', 'snow'],
-      61: ['小雨', 'rain'],
-      63: ['中雨', 'rain'],
-      65: ['大雨', 'heavy-rain'],
-      66: ['冻雨', 'snow'],
-      67: ['冻雨', 'snow'],
-      71: ['小雪', 'snow'],
-      73: ['中雪', 'snow'],
-      75: ['大雪', 'snow'],
-      77: ['雪', 'snow'],
-      80: ['阵雨', 'rain'],
-      81: ['阵雨', 'rain'],
-      82: ['强阵雨', 'heavy-rain'],
-      85: ['阵雪', 'snow'],
-      86: ['阵雪', 'snow'],
-      95: ['雷阵雨', 'thunderstorm'],
-      96: ['雷阵雨伴冰雹', 'thunderstorm'],
-      99: ['雷阵雨伴冰雹', 'thunderstorm'],
+      0: ['weather_desc_clear', 'sunny'],
+      1: ['weather_desc_clear', 'sunny'],
+      2: ['weather_desc_partly_cloudy', 'cloudy-sunny'],
+      3: ['weather_desc_overcast', 'cloudy'],
+      45: ['weather_desc_fog', 'fog'],
+      48: ['weather_desc_rime_fog', 'fog'],
+      51: ['weather_desc_drizzle', 'rain'],
+      53: ['weather_desc_drizzle', 'rain'],
+      55: ['weather_desc_drizzle', 'rain'],
+      56: ['weather_desc_freezing_rain', 'snow'],
+      57: ['weather_desc_freezing_rain', 'snow'],
+      61: ['weather_desc_light_rain', 'rain'],
+      63: ['weather_desc_rain', 'rain'],
+      65: ['weather_desc_heavy_rain', 'heavy-rain'],
+      66: ['weather_desc_freezing_rain', 'snow'],
+      67: ['weather_desc_freezing_rain', 'snow'],
+      71: ['weather_desc_light_snow', 'snow'],
+      73: ['weather_desc_snow', 'snow'],
+      75: ['weather_desc_heavy_snow', 'snow'],
+      77: ['weather_desc_snow', 'snow'],
+      80: ['weather_desc_showers', 'rain'],
+      81: ['weather_desc_showers', 'rain'],
+      82: ['weather_desc_violent_showers', 'heavy-rain'],
+      85: ['weather_desc_snow_showers', 'snow'],
+      86: ['weather_desc_snow_showers', 'snow'],
+      95: ['weather_desc_thunderstorm', 'thunderstorm'],
+      96: ['weather_desc_thunderstorm_hail', 'thunderstorm'],
+      99: ['weather_desc_thunderstorm_hail', 'thunderstorm'],
     };
-    return map[code] || ['未知', 'unknown'];
+    return map[code] || ['weather_desc_unknown', 'unknown'];
   }
 
   /** 将 Open-Meteo current 结构格式化为内部结构（对齐高德 formatter 字段） */
@@ -1233,7 +1235,7 @@ function createWeatherApi(): WeatherApi {
         current.pressure_msl !== undefined ? Math.round(current.pressure_msl) : undefined,
       description,
       icon,
-      city: cityName || '当前位置',
+      city: cityName || t('weather_current_location'),
       country: country || '',
       windSpeed:
         current.wind_speed_10m !== undefined ? Math.round(current.wind_speed_10m) : undefined,
@@ -1334,7 +1336,7 @@ function createWeatherApi(): WeatherApi {
         void writeWeatherCache(lastResolvedCacheKey, data).catch(() => {});
         // 若当前未指定城市且成功从定位/IP 获取到城市名，持久化保存，避免频繁请求。
         // 「当前位置」是定位路径的显示占位文案，持久化它会让下次启动误走城市查询。
-        if (!currentCity.value && data.city && data.city !== '当前位置') {
+        if (!currentCity.value && data.city && data.city !== '当前位置' && data.city !== t('weather_current_location')) {
           try {
             await persistDetectedCity(data.city);
           } catch (e) {
@@ -1401,7 +1403,7 @@ function createWeatherApi(): WeatherApi {
       log.error('天气管理器初始化失败:', error);
       const fallback = await readCachedData({ allowExpired: true }).catch(() => null);
       if (fallback && fallback.data) displayFallbackCache(fallback.data, fallback.ts);
-      else showError('天气服务初始化失败');
+      else showError(t('weather_err_init'));
     }
   }
 

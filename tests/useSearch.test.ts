@@ -1,4 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { registerCatalog, resetLocaleState } from '@/src/composables/useI18n';
+import { catalog } from '@/src/locales/catalog';
+
+// addCustomEngine 的重名提示已走 i18n（"{name}" 占位），node 环境须先注册语料。
+beforeEach(() => {
+    registerCatalog(catalog);
+    resetLocaleState('zh-CN');
+});
 
 // useSearch 在模块顶层不直接访问 chrome（storageArea() 延迟到调用时读 globalThis），
 // 但模块级单例会跨测试文件共享；这里通过 vi.resetModules + 动态 import 拿到隔离实例。
@@ -23,6 +31,11 @@ async function fresh(seed?: Record<string, unknown>) {
   if (seed) Object.assign(store, seed);
   setMock.mockClear();
   vi.stubGlobal('chrome', makeChrome());
+  // useSearch 的重名提示走 i18n，与 useSearch 一起在 resetModules 后重新注册语料，
+  // 否则 useI18n 也被重置成空 catalog，t() 只会返回裸 key。
+  const i18n = await import('@/src/composables/useI18n');
+  i18n.registerCatalog(catalog);
+  i18n.resetLocaleState('zh-CN');
   const mod = await import('@/src/composables/useSearch');
   const api = mod.useSearch();
   await api.init();

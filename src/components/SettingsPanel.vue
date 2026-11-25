@@ -38,6 +38,8 @@ import { onWeatherSettingsSaved } from '@/src/composables/useWeather';
 import { useSearch } from '@/src/composables/useSearch';
 import { SIDE_CARD_LABELS, useSideCards, type SideCardId, type SideCardMode } from '@/src/composables/useSideCards';
 import { toast as showToast } from '@/src/composables/useToast';
+import { t, useI18n, setLocalePref } from '@/src/composables/useI18n';
+import { normalizeLocale, type LocalePref, SUPPORTED_LOCALES } from '@/src/lib/i18n';
 
 const panels = usePanels();
 const themeApi = useTheme();
@@ -45,12 +47,39 @@ const wallpaper = useWallpaper();
 
 /* ---------- 分页（tab）：一次只渲染一组设置项，避免整面板滚动触发大范围重绘掉帧 ---------- */
 type SettingsTab = 'search' | 'wallpaper' | 'theme' | 'home' | 'advanced';
-const settingsTabs: Array<{ id: SettingsTab; label: string }> = [
-    { id: 'search', label: '搜索' },
-    { id: 'wallpaper', label: '壁纸' },
-    { id: 'theme', label: '主题' },
-    { id: 'home', label: '主页' },
-    { id: 'advanced', label: '高级' },
+// 界面语言：用户显式选择存 storage；'auto' 跟随浏览器 UI 语言
+const { localePref: activeLocalePref, locale: activeLocale } = useI18n();
+
+/** 语言自称，不随界面语言翻译（中文用户看到「English」也能认出英文选项） */
+const LOCALE_NAMES: Record<string, string> = {
+    zh_CN: '简体中文',
+    en: 'English',
+};
+
+/** 「自动」项要把实际解析到的语言显示出来，否则用户不知道自己在看什么 */
+const autoLocaleLabel = computed(
+    () => `${t('settings_language_auto')}（${LOCALE_NAMES[activeLocale.value] ?? activeLocale.value}）`
+);
+
+async function onLocaleChange(event: Event): Promise<void> {
+    const raw = (event.target as HTMLSelectElement).value;
+    const next: LocalePref = normalizeLocale(raw) ?? 'auto';
+    setLocalePref(next);
+    try {
+        // patchSettings 会广播 onChanged，其他标签页/组件同步切换
+        await patchSettings({ locale: next });
+    } catch (error) {
+        showToast(t('settings_toast_locale_fail'), 'error');
+        console.error('[settings] 保存语言偏好失败:', error);
+    }
+}
+
+const settingsTabs: Array<{ id: SettingsTab; labelKey: string }> = [
+    { id: 'search', labelKey: 'settings_tab_search' },
+    { id: 'wallpaper', labelKey: 'settings_tab_wallpaper' },
+    { id: 'theme', labelKey: 'settings_tab_theme' },
+    { id: 'home', labelKey: 'settings_tab_home' },
+    { id: 'advanced', labelKey: 'settings_tab_advanced' },
 ];
 const activeTab = ref<SettingsTab>('search');
 /** 切页时把内容区滚回顶部，避免停在上一页的滚动位置。 */
@@ -89,7 +118,7 @@ function eyeIcon(hidden: boolean): string {
     return hidden ? EYE_OFF : EYE;
 }
 function visibilityLabel(hidden: boolean): string {
-    return hidden ? '显示密钥' : '隐藏密钥';
+    return hidden ? t('settings_show_key') : t('settings_hide_key');
 }
 
 /* ---------- 主题预览（legacy previewThemeMode / snapshotTheme / markThemeDirty） ---------- */
@@ -104,15 +133,12 @@ const sunStatus = computed<string>(() => {
     if (!isSun.value) return '';
     const sun = themeApi.sunTimes.value;
     if (sun && !themeApi.getState().sunApproximate) {
-        return '今日日出 ' + sun.sunrise + '、日落 ' + sun.sunset + '，将按此时刻自动切换。';
+        return t('settings_sun_today', { sunrise: sun.sunrise, sunset: sun.sunset });
     }
-    return (
-        '未取得当地日出日落，暂用自定义时段（' +
-        themeLightStart.value +
-        ' 起浅色、' +
-        themeDarkStart.value +
-        ' 起深色）。'
-    );
+    return t('settings_sun_unknown', {
+        light: themeLightStart.value,
+        dark: themeDarkStart.value,
+    });
 });
 
 function markThemeDirty(): void {
@@ -183,10 +209,10 @@ function applySideWidgetsVisibility(show = showSideWidgets.value): void {
 const sideCards = useSideCards();
 
 /** 三态下拉的选项文案。'always' 是默认值，放首位。 */
-const SIDE_CARD_MODE_OPTIONS: Array<{ value: SideCardMode; label: string }> = [
-    { value: 'always', label: '总是显示' },
-    { value: 'auto', label: '有内容时出现' },
-    { value: 'never', label: '隐藏' },
+const SIDE_CARD_MODE_OPTIONS: Array<{ value: SideCardMode; labelKey: string }> = [
+    { value: 'always', labelKey: 'settings_side_always' },
+    { value: 'auto', labelKey: 'settings_side_auto' },
+    { value: 'never', labelKey: 'settings_side_never' },
 ];
 
 function sideCardMode(id: SideCardId): SideCardMode {
@@ -201,13 +227,13 @@ function onSideCardModeChange(id: SideCardId, event: Event): void {
 async function onShowSideWidgetsChange(): Promise<void> {
     await patchSettings({ showSideWidgets: showSideWidgets.value });
     applySideWidgetsVisibility();
-    showToast(showSideWidgets.value ? '主页小组件已显示' : '主页小组件已隐藏', 'success', 1500);
+    showToast(t(showSideWidgets.value ? 'settings_toast_widgets_on' : 'settings_toast_widgets_off'), 'success', 1500);
 }
 
 /** 减少动效：落盘后经 useMotion 的 storage.onChanged 统一应用并写首屏镜像 */
 async function onReduceMotionChange(): Promise<void> {
     await patchSettings({ reduceMotion: reduceMotion.value });
-    showToast(reduceMotion.value ? '已减少动效' : '已恢复完整动效', 'success', 1500);
+    showToast(t(reduceMotion.value ? 'settings_toast_motion_on' : 'settings_toast_motion_off'), 'success', 1500);
 }
 
 /* ---------- 自定义引擎（legacy refreshCustomEngines / bindCustomEngineEvents） ---------- */
@@ -238,20 +264,20 @@ async function addEngine(): Promise<void> {
         engineLogo.value || undefined
     );
     if (!result.ok) {
-        showToast(result.message || '添加失败', 'error');
+        showToast(result.message || t('settings_toast_add_fail'), 'error');
         return;
     }
     engineName.value = '';
     engineUrl.value = '';
     engineLogo.value = '';
     await refreshCustomEngines();
-    showToast('自定义引擎已添加', 'success');
+    showToast(t('settings_toast_engine_added'), 'success');
 }
 
 async function removeEngine(name: string): Promise<void> {
     await useSearch().removeCustomEngine(name);
     await refreshCustomEngines();
-    showToast('已删除引擎「' + name + '」', 'success');
+    showToast(t('settings_toast_engine_removed', { name }), 'success');
 }
 
 /* ---------- 已有引擎换图标 ---------- */
@@ -267,7 +293,7 @@ function toggleLogoEditor(name: string): void {
 async function onEngineLogoChanged(name: string, logo: string | undefined): Promise<void> {
     await useSearch().setEngineLogo(name, logo);
     await refreshCustomEngines();
-    showToast(logo ? '图标已更新' : '已恢复默认图标', 'success');
+    showToast(t(logo ? 'settings_toast_logo_set' : 'settings_toast_logo_reset'), 'success');
     logoEditing.value = '';
 }
 
@@ -281,18 +307,18 @@ async function onEngineLogoChanged(name: string, logo: string | undefined): Prom
 async function useSiteIcon(name: string, url: string): Promise<void> {
     const host = engineHost(url);
     if (!host) {
-        showToast('这个引擎的地址解析不出域名', 'error');
+        showToast(t('settings_toast_bad_url'), 'error');
         return;
     }
     const dataUrl = await fetchIconDataUrl(siteIconUrl(host, 128));
     if (!dataUrl) {
-        showToast('没抓到站点图标，换个图试试', 'error');
+        showToast(t('settings_toast_no_favicon'), 'error');
         return;
     }
     await useSearch().setEngineLogo(name, undefined);
     await useSearch().setEngineIconImage(name, dataUrl);
     await refreshCustomEngines();
-    showToast('已换成站点图标', 'success');
+    showToast(t('settings_toast_favicon_ok'), 'success');
     logoEditing.value = '';
 }
 
@@ -319,8 +345,8 @@ async function fetchIconDataUrl(url: string): Promise<string | undefined> {
 const builtinEngines = computed(() => useSearch().engines.value.filter(e => !e.isCustom));
 
 /* ---------- 备份与恢复（legacy exportData / importData / setBackupStatus） ---------- */
-const DEFAULT_BACKUP_STATUS =
-    '备份是单个 JSON，含设置、搜索引擎与图标、快捷方式、待办、便签、番茄钟、搜索历史、侧边卡片布局、主题偏好、壁纸（含本地壁纸库）。天气、地理与日出缓存不导出（恢复后自动重新获取）。可下载成文件，也可复制到剪贴板或粘贴文本导入。';
+/** 默认状态文案用 key：语言切换时 backupStatus 里若是 key，渲染点再翻译，旧快照不会卡在旧语言 */
+const DEFAULT_BACKUP_STATUS = 'settings_backup_status_default';
 const backupStatus = ref(DEFAULT_BACKUP_STATUS);
 const backupKind = ref<'' | 'error' | 'success'>('');
 const exportDisabled = ref(false);
@@ -341,14 +367,17 @@ async function exportData(): Promise<void> {
         const result = await exportToFile();
         const kb = (result.bytes / 1024).toFixed(1);
         setBackupStatus(
-            '已导出 ' + result.fileName + '（' + result.stats.keys + ' 项，约 ' + kb + ' KB）',
+            t('settings_exported', { file: result.fileName, keys: result.stats.keys, kb }),
             'success'
         );
-        showToast('备份已导出', 'success');
+        showToast(t('settings_toast_exported'), 'success');
     } catch (error) {
         log.error('导出备份失败:', error);
-        setBackupStatus('导出失败：' + ((error as Error).message || '未知错误'), 'error');
-        showToast('导出备份失败', 'error');
+        setBackupStatus(
+            t('settings_export_failed', { message: (error as Error).message || t('settings_unknown_error') }),
+            'error'
+        );
+        showToast(t('settings_toast_export_fail'), 'error');
     } finally {
         // 成功失败都要解锁按钮，否则一次异常后按钮永久不可用
         exportDisabled.value = false;
@@ -386,14 +415,14 @@ async function applyImportText(text: string): Promise<void> {
             'success'
         );
         pasteText.value = '';
-        showToast('导入成功，正在刷新…', 'success');
+        showToast(t('settings_toast_import_ok'), 'success');
         // 各模块内存里持有旧数据，直接改 storage 不会自动生效，刷新最稳妥
         setTimeout(() => window.location.reload(), 900);
     } catch (error) {
         log.error('导入备份失败:', error);
         const message = (error as Error).message || '未知错误';
         setBackupStatus('导入失败：' + message, 'error');
-        showToast('导入失败：' + (message || '文件不合法'), 'error');
+        showToast(t('settings_toast_import_fail') + (message || t('settings_toast_invalid_file')), 'error');
         importDisabled.value = false;
     }
     // 成功分支不重置按钮：页面即将刷新，避免出现「可再次点击」的瞬时假象
@@ -432,11 +461,11 @@ async function copyBackup(): Promise<void> {
         const kb = (new TextEncoder().encode(text).length / 1024).toFixed(1);
         if (!(await copyText(text))) {
             setBackupStatus('复制失败：剪贴板不可用，请改用「导出备份」下载文件', 'error');
-            showToast('复制备份失败', 'error');
+            showToast(t('settings_toast_copy_fail'), 'error');
             return;
         }
         setBackupStatus('已复制备份（' + built.stats.keys + ' 项，约 ' + kb + ' KB）到剪贴板', 'success');
-        showToast('备份已复制', 'success');
+        showToast(t('settings_toast_copied'), 'success');
     } catch (error) {
         log.error('复制备份失败:', error);
         setBackupStatus('复制失败：' + ((error as Error).message || '未知错误'), 'error');
@@ -463,6 +492,8 @@ async function hydrate(): Promise<void> {
         wallpaperSource.value = getWallpaperSource(s);
         showSideWidgets.value = s.showSideWidgets !== false;
         reduceMotion.value = s.reduceMotion === true;
+        // 语言偏好以 storage 为准回填，避免多标签页各写各的
+        setLocalePref(s.locale);
         applyWallpaperFilters(adj.brightness, adj.blur);
         applySideWidgetsVisibility(showSideWidgets.value);
         await refreshCustomEngines();
@@ -547,7 +578,7 @@ async function save(): Promise<void> {
         // 可能超时重试，所以 fire-and-forget，网络结果回来后各 composable 自行更新状态。
         themePending.value = false;
         log.log('设置已自动保存');
-        showToast('设置已自动保存', 'success', 1500);
+        showToast(t('settings_toast_saved'), 'success', 1500);
         // 联动只跟着真正变化的字段走：没换城市/Key 就不重取天气，没换图源就不重拉壁纸
         if (city !== (current.weatherCity || '') || wKey !== (current.weatherApiKey || '')) {
             void Promise.resolve(onWeatherSettingsSaved(city, wKey)).catch(e =>
@@ -561,7 +592,7 @@ async function save(): Promise<void> {
         }
     } catch (error) {
         log.error('保存设置失败:', error);
-        showToast('保存设置失败，请重试', 'error');
+        showToast(t('settings_toast_save_fail'), 'error');
     }
 }
 
@@ -626,15 +657,15 @@ watch(
                 id="close-settings-btn"
                 class="close-panel-btn"
                 type="button"
-                title="关闭"
-                aria-label="关闭"
+                :title="t('settings_close')"
+                :aria-label="t('settings_close')"
                 @click="closePanel"
             >
                 ✕
             </button>
             <div class="settings-head">
-                <h2 id="settings-panel-title">设置</h2>
-                <p class="settings-autosave" role="status">静置 3s 自动保存</p>
+                <h2 id="settings-panel-title">{{ t('settings_title') }}</h2>
+                <p class="settings-autosave" role="status">{{ t('settings_autosave') }}</p>
             </div>
             <div class="settings-tabs" role="tablist">
                     <button
@@ -647,19 +678,19 @@ watch(
                         :aria-selected="activeTab === tab.id"
                         @click="selectTab(tab.id)"
                     >
-                        {{ tab.label }}
+                        {{ t(tab.labelKey) }}
                     </button>
             </div>
             <div class="settings-scroll" ref="scrollEl">
                 <!-- 搜索 -->
                 <div class="setting-item" v-show="activeTab === 'search'">
-                    <label>自定义搜索引擎</label>
+                    <label>{{ t('settings_engine_custom') }}</label>
                     <div class="custom-engine-row">
                         <input
                             type="text"
                             id="custom-engine-name-input"
                             v-model="engineName"
-                            placeholder="名称，如 知乎"
+                            :placeholder="t('settings_engine_name_placeholder')"
                         />
                         <input
                             type="text"
@@ -668,16 +699,16 @@ watch(
                             placeholder="https://www.zhihu.com/search?type=content&q=%s"
                         />
                         <button id="custom-engine-add-btn" class="settings-btn" @click="addEngine">
-                            添加
+                            {{ t('settings_engine_add') }}
                         </button>
                     </div>
                     <details class="engine-add-picker" :open="!!engineLogo">
-                        <summary>新引擎的图标（可选）</summary>
+                        <summary>{{ t('settings_engine_icon_details') }}</summary>
                         <EngineLogoPicker :name="engineName" @update="engineLogo = $event ?? ''" />
                     </details>
                     <ul id="custom-engine-list" class="custom-engine-list">
                         <li v-if="customEngines.length === 0" class="engine-host">
-                            暂无自定义引擎
+                            {{ t('settings_engine_empty') }}
                         </li>
                         <li
                             v-for="engine in customEngines"
@@ -699,30 +730,30 @@ watch(
                                 >
                                 <button
                                     class="engine-logo-btn"
-                                    title="用站点 favicon 当图标"
+                                    :title="t('settings_engine_favicon')"
                                     @click="useSiteIcon(engine.name, engine.url)"
                                 >
-                                    站点图标
+                                    {{ t('settings_engine_site_icon') }}
                                 </button>
                                 <button
                                     class="engine-logo-btn"
-                                    title="选一张图当图标"
+                                    :title="t('settings_engine_pick_image')"
                                     @click="toggleLogoEditor(engine.name)"
                                 >
-                                    {{ engine.logo ? '换图' : '选图' }}
+                                    {{ engine.logo ? t('settings_engine_change_image') : t('settings_engine_choose_image') }}
                                 </button>
                                 <button
                                     v-if="engine.logo"
                                     class="engine-logo-btn"
-                                    title="清空图标，退回站点 favicon 或首字"
+                                    :title="t('settings_engine_clear_icon')"
                                     @click="onEngineLogoChanged(engine.name, undefined)"
                                 >
-                                    清空
+                                    {{ t('settings_engine_clear') }}
                                 </button>
                                 <button
                                     class="engine-remove"
-                                    title="删除"
-                                    aria-label="删除引擎"
+                                    :title="t('settings_engine_delete')"
+                                    :aria-label="t('settings_engine_delete_aria')"
                                     @click="removeEngine(engine.name)"
                                 >
                                     ×
@@ -737,12 +768,10 @@ watch(
                         </li>
                     </ul>
                     <p class="api-key-description">
-                        搜索链接中用 %s
-                        代表关键词占位符，添加后可在搜索框下拉中选择。自定义引擎可以拖图取景，
-                        不设置时先用站点 favicon，抓不到再用名称首字；内置引擎固定用品牌图标。
+                        {{ t('settings_engine_placeholder_desc') }}
                     </p>
 
-                    <label class="engine-builtin-label">内置引擎</label>
+                    <label class="engine-builtin-label">{{ t('settings_engine_builtin') }}</label>
                     <ul class="custom-engine-list">
                         <li
                             v-for="engine in builtinEngines"
@@ -763,35 +792,35 @@ watch(
                 </div>
 
                 <div class="setting-item" v-show="activeTab === 'home'">
-                    <label for="weather-city-input">天气城市</label>
+                    <label for="weather-city-input">{{ t('settings_weather_city') }}</label>
                     <div class="input-with-icon">
                         <input
                             type="text"
                             id="weather-city-input"
                             v-model="weatherCity"
-                            placeholder="例如: 北京, 上海, 广州"
+                            :placeholder="t('settings_weather_city_placeholder')"
                         />
                     </div>
-                    <p class="api-key-description">留空将自动使用您的位置，或手动输入城市名称。</p>
+                    <p class="api-key-description">{{ t('settings_weather_city_desc') }}</p>
                 </div>
 
                 <div class="setting-item" v-show="activeTab === 'home'">
-                    <label for="tagline-input">首页标语</label>
+                    <label for="tagline-input">{{ t('settings_tagline') }}</label>
                     <div class="input-with-icon">
                         <input
                             type="text"
                             id="tagline-input"
                             v-model="tagline"
                             maxlength="40"
-                            placeholder="例如：今天也要好好写代码"
+                            :placeholder="t('settings_tagline_placeholder')"
                         />
                     </div>
-                    <p class="api-key-description">显示在时钟下方，留空则隐藏。</p>
+                    <p class="api-key-description">{{ t('settings_tagline_desc') }}</p>
                 </div>
 
                 <div class="setting-item" v-show="activeTab === 'wallpaper'">
                     <label for="wallpaper-brightness-input">
-                        壁纸亮度 <span id="brightness-value">{{ brightnessText }}</span>
+                        {{ t('settings_wallpaper_brightness') }} <span id="brightness-value">{{ brightnessText }}</span>
                     </label>
                     <input
                         type="range"
@@ -803,7 +832,7 @@ watch(
                         @input="onAdjustmentInput"
                     />
                     <label for="wallpaper-blur-input">
-                        壁纸模糊 <span id="blur-value">{{ blurText }}</span>
+                        {{ t('settings_wallpaper_blur') }} <span id="blur-value">{{ blurText }}</span>
                     </label>
                     <input
                         type="range"
@@ -815,12 +844,12 @@ watch(
                         @input="onAdjustmentInput"
                     />
                     <p class="api-key-description">
-                        调整壁纸观感，文字更易读。修改后立即生效并自动保存。
+                        {{ t('settings_wallpaper_adjust_desc') }}
                     </p>
                 </div>
 
                 <div class="setting-item" v-show="activeTab === 'wallpaper'">
-                    <label>壁纸图源</label>
+                    <label>{{ t('settings_wallpaper_source') }}</label>
                     <div id="wallpaper-source-options" class="wallpaper-source-options">
                         <label class="source-option">
                             <input
@@ -830,13 +859,8 @@ watch(
                                 v-model="wallpaperSource"
                             />
                             <span class="source-option-text">
-                                <strong>Picsum 精选（默认）</strong>
-                                <small
-                                    >国内直连稳定可达，Unsplash 精选摄影图，无需任何密钥。<strong
-                                        >仅支持按页浏览，不支持按分类 / 关键词筛选</strong
-                                    >；点分类时会自动尝试
-                                    Wallhaven，连不上则退化为浏览模式并给出提示。</small
-                                >
+                                <strong>{{ t('settings_source_picsum') }}</strong>
+                                <small>{{ t('settings_source_picsum_desc') }}</small>
                             </span>
                         </label>
                         <label class="source-option">
@@ -847,22 +871,18 @@ watch(
                                 v-model="wallpaperSource"
                             />
                             <span class="source-option-text">
-                                <strong>Wallhaven（支持分类与关键词）</strong>
-                                <small
-                                    >唯一支持按分类 /
-                                    关键词真正筛选的图源，壁纸质量高；需要能访问境外网络（wallhaven.cc
-                                    国内直连不稳定）。想用分类筛选请选这个。</small
-                                >
+                                <strong>{{ t('settings_source_wallhaven') }}</strong>
+                                <small>{{ t('settings_source_wallhaven_desc') }}</small>
                             </span>
                         </label>
                     </div>
                     <p class="api-key-description">
-                        切换后重新打开壁纸库生效；启动壁纸与「换一张」也会使用所选图源。
+                        {{ t('settings_wallpaper_source_hint') }}
                     </p>
                 </div>
 
                 <div class="setting-item" v-show="activeTab === 'theme'">
-                    <label class="theme-section-label">外观主题</label>
+                    <label class="theme-section-label">{{ t('settings_theme_label') }}</label>
                     <div id="theme-options" class="theme-options">
                         <label class="theme-option">
                             <input
@@ -873,8 +893,8 @@ watch(
                                 @change="previewThemeMode"
                             />
                             <span class="theme-option-text">
-                                <strong>浅色</strong>
-                                <small>始终保持原样：白字浮在壁纸上</small>
+                                <strong>{{ t('settings_theme_light') }}</strong>
+                                <small>{{ t('settings_theme_light_desc') }}</small>
                             </span>
                         </label>
                         <label class="theme-option">
@@ -886,8 +906,8 @@ watch(
                                 @change="previewThemeMode"
                             />
                             <span class="theme-option-text">
-                                <strong>深色</strong>
-                                <small>在原样式基础上压暗壁纸</small>
+                                <strong>{{ t('settings_theme_dark') }}</strong>
+                                <small>{{ t('settings_theme_dark_desc') }}</small>
                             </span>
                         </label>
                         <label class="theme-option">
@@ -899,8 +919,8 @@ watch(
                                 @change="previewThemeMode"
                             />
                             <span class="theme-option-text">
-                                <strong>跟随系统</strong>
-                                <small>按操作系统的浅色/深色偏好切换</small>
+                                <strong>{{ t('settings_theme_system') }}</strong>
+                                <small>{{ t('settings_theme_system_desc') }}</small>
                             </span>
                         </label>
                         <label class="theme-option">
@@ -912,8 +932,8 @@ watch(
                                 @change="previewThemeMode"
                             />
                             <span class="theme-option-text">
-                                <strong>日出日落</strong>
-                                <small>白天浅色、夜晚深色</small>
+                                <strong>{{ t('settings_theme_sun') }}</strong>
+                                <small>{{ t('settings_theme_sun_desc') }}</small>
                             </span>
                         </label>
                     </div>
@@ -922,14 +942,14 @@ watch(
                         class="theme-sun-window"
                         :class="{ 'u-hidden': !isSun }"
                     >
-                        <label for="theme-light-start">白天开始</label>
+                        <label for="theme-light-start">{{ t('settings_theme_light_start') }}</label>
                         <input
                             type="time"
                             id="theme-light-start"
                             v-model="themeLightStart"
                             @change="previewThemeSunWindow"
                         />
-                        <label for="theme-dark-start">夜晚开始</label>
+                        <label for="theme-dark-start">{{ t('settings_theme_dark_start') }}</label>
                         <input
                             type="time"
                             id="theme-dark-start"
@@ -945,51 +965,51 @@ watch(
                         {{ sunStatus }}
                     </p>
                     <p class="api-key-description">
-                        日出日落会自动读取当地日出/日落时刻；拿不到定位或网络时，改用上面的自定义时段。
+                        {{ t('settings_sun_desc') }}
                         <span
                             id="theme-pending-hint"
                             class="theme-pending-hint"
                             :class="{ 'u-hidden': !themePending }"
-                            >已改为预览态，停手 3 秒自动保存</span
+                            >{{ t('settings_theme_motion_preview') }}</span
                         >
                     </p>
                 </div>
 
                 <div class="setting-item" v-show="activeTab === 'theme'">
-                    <label>动效</label>
+                    <label>{{ t('settings_motion') }}</label>
                     <div class="side-card-modes">
                         <div class="side-card-mode side-card-mode-master">
-                            <span class="side-card-mode-label">减少动效</span>
+                            <span class="side-card-mode-label">{{ t('settings_reduce_motion') }}</span>
                             <input
                                 type="checkbox"
                                 id="reduce-motion-toggle"
-                                aria-label="减少动效"
+                                :aria-label="t('settings_reduce_motion')"
                                 v-model="reduceMotion"
                                 @change="onReduceMotionChange"
                             />
                             <small class="side-card-mode-hint">
-                                关闭面板过渡、悬浮位移等动画，降低视觉干扰与重绘开销；系统开启「减少动态效果」时会自动降级，无需打开此开关
+                                {{ t('settings_reduce_motion_desc') }}
                             </small>
                         </div>
                     </div>
                 </div>
 
                 <div class="setting-item" v-show="activeTab === 'theme'">
-                    <label>小组件显示</label>
+                    <label>{{ t('settings_widgets') }}</label>
                     <div class="side-card-modes">
                         <!-- 总开关与四张卡同一玻璃卡族；用 div 不用 label，避开
                              .setting-item label 的 display:block 与 >span 的 float:right -->
                         <div class="side-card-mode side-card-mode-master">
-                            <span class="side-card-mode-label">主页显示小组件</span>
+                            <span class="side-card-mode-label">{{ t('settings_widgets_home') }}</span>
                             <input
                                 type="checkbox"
                                 id="show-side-widgets-toggle"
-                                aria-label="主页显示小组件"
+                                :aria-label="t('settings_widgets_home')"
                                 v-model="showSideWidgets"
                                 @change="onShowSideWidgetsChange"
                             />
                             <small class="side-card-mode-hint">
-                                待办 / 便签 / 番茄钟常驻两侧；关闭后可随时点右上角按钮打开对应面板
+                                {{ t('settings_widgets_desc') }}
                             </small>
                         </div>
                         <div
@@ -997,10 +1017,10 @@ watch(
                             :key="card.id"
                             class="side-card-mode"
                         >
-                            <span class="side-card-mode-label">{{ card.label }}</span>
+                            <span class="side-card-mode-label">{{ t(card.labelKey) }}</span>
                             <select
                                 :id="`side-card-mode-${card.id}`"
-                                :aria-label="card.label"
+                                :aria-label="t(card.labelKey)"
                                 :value="sideCardMode(card.id)"
                                 @change="onSideCardModeChange(card.id, $event)"
                             >
@@ -1009,26 +1029,48 @@ watch(
                                     :key="opt.value"
                                     :value="opt.value"
                                 >
-                                    {{ opt.label }}
+                                    {{ t(opt.labelKey) }}
                                 </option>
                             </select>
-                            <small class="side-card-mode-hint">{{ card.hint }}</small>
+                            <small class="side-card-mode-hint">{{ t(card.hintKey) }}</small>
                         </div>
                     </div>
                     <p class="api-key-description">
-                        四张卡片默认展示，可按需改为「有内容时出现」或「隐藏」；关掉后中间内容会自动收回让出的宽度。
+                        {{ t('settings_side_card_desc') }}
                     </p>
                 </div>
 
                 <!-- 可选增强（高级）：以下两项均无需配置，扩展开箱即用 -->
                 <div class="setting-item" v-show="activeTab === 'advanced'">
-                    <label for="api-key-input">Pexels API 密钥（可选增强）</label>
+                    <label for="locale-select">{{ t('settings_language') }}</label>
+                    <div class="input-with-icon">
+                        <select
+                            id="locale-select"
+                            :value="activeLocalePref"
+                            @change="onLocaleChange($event)"
+                        >
+                            <option value="auto">{{ autoLocaleLabel }}</option>
+                            <option
+                                v-for="loc in SUPPORTED_LOCALES"
+                                :key="loc"
+                                :value="loc"
+                            >
+                                {{ LOCALE_NAMES[loc] }}
+                            </option>
+                        </select>
+                    </div>
+                    <p class="api-key-description">
+                        {{ t('settings_language_desc') }}
+                    </p>
+                </div>
+                <div class="setting-item" v-show="activeTab === 'advanced'">
+                    <label for="api-key-input">{{ t('settings_pexels_key') }}</label>
                     <div class="input-with-icon">
                         <input
                             :type="pexelsHidden ? 'password' : 'text'"
                             id="api-key-input"
                             v-model="pexelsKey"
-                            placeholder="在此输入您的密钥"
+                            :placeholder="t('settings_pexels_placeholder')"
                         />
                         <button
                             id="toggle-api-key-visibility"
@@ -1042,25 +1084,23 @@ watch(
                         ></button>
                     </div>
                     <p class="api-key-description">
-                        可选增强功能：填写后壁纸搜索与分类筛选一律走
-                        Pexels（优先级高于下方「壁纸图源」选择）。不填也完全可用——默认使用 Picsum
-                        免费图库，无需任何密钥，但 Picsum 不支持分类筛选。
+                        {{ t('settings_pexels_desc_part1') }}
                         <a
                             href="https://www.pexels.com/zh-cn/api/documentation/#authorization"
                             target="_blank"
-                            >获取免费密钥</a
+                            >{{ t('settings_get_free_key') }}</a
                         >
                     </p>
                 </div>
 
                 <div class="setting-item" v-show="activeTab === 'advanced'">
-                    <label for="weather-api-key-input">高德地图 Web服务 Key（可选增强）</label>
+                    <label for="weather-api-key-input">{{ t('settings_amap_key') }}</label>
                     <div class="input-with-icon">
                         <input
                             :type="weatherHidden ? 'password' : 'text'"
                             id="weather-api-key-input"
                             v-model="weatherApiKey"
-                            placeholder="在此输入您的高德Web服务Key"
+                            :placeholder="t('settings_amap_placeholder')"
                         />
                         <button
                             id="toggle-weather-key-visibility"
@@ -1074,15 +1114,12 @@ watch(
                         ></button>
                     </div>
                     <p class="api-key-description">
-                        可选：不填时天气功能自动使用 Open-Meteo
-                        免费数据，无需任何密钥。如需高德数据，前往
-                        <a href="https://lbs.amap.com/" target="_blank">高德开放平台</a> 申请
-                        Web服务 Key。
+                        {{ t('settings_amap_desc') }}
                     </p>
                 </div>
 
                 <div class="setting-item" v-show="activeTab === 'advanced'">
-                    <label>数据备份与恢复</label>
+                    <label>{{ t('settings_backup') }}</label>
                     <div class="backup-actions">
                         <button
                             type="button"
@@ -1091,7 +1128,7 @@ watch(
                             :disabled="exportDisabled"
                             @click="exportData"
                         >
-                            导出备份
+                            {{ t('settings_backup_export') }}
                         </button>
                         <button
                             type="button"
@@ -1100,7 +1137,7 @@ watch(
                             :disabled="exportDisabled"
                             @click="copyBackup"
                         >
-                            复制备份
+                            {{ t('settings_backup_copy') }}
                         </button>
                         <button
                             type="button"
@@ -1109,7 +1146,7 @@ watch(
                             :disabled="importDisabled"
                             @click="openImportPicker"
                         >
-                            导入备份
+                            {{ t('settings_backup_import') }}
                         </button>
                         <button
                             type="button"
@@ -1119,7 +1156,7 @@ watch(
                             :aria-expanded="pasteOpen"
                             @click="pasteOpen = !pasteOpen"
                         >
-                            粘贴文本导入
+                            {{ t('settings_backup_paste_import') }}
                         </button>
                         <input
                             type="file"
@@ -1136,8 +1173,8 @@ watch(
                             v-model="pasteText"
                             class="backup-paste-input"
                             spellcheck="false"
-                            placeholder="把备份 JSON 全文粘贴到这里，再点右侧导入"
-                            aria-label="粘贴备份 JSON"
+                            :placeholder="t('settings_backup_paste_placeholder')"
+                            :aria-label="t('settings_backup_paste_aria')"
                         ></textarea>
                         <button
                             type="button"
@@ -1146,7 +1183,7 @@ watch(
                             :disabled="importDisabled || !pasteText.trim()"
                             @click="importFromPasteBox"
                         >
-                            导入
+                            {{ t('settings_backup_import_short') }}
                         </button>
                     </div>
                     <p
@@ -1157,7 +1194,7 @@ watch(
                             'is-success': backupKind === 'success',
                         }"
                     >
-                        {{ backupStatus }}
+                        {{ t(backupStatus) }}
                     </p>
                 </div>
             </div>

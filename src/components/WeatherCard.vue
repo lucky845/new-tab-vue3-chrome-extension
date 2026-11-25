@@ -19,6 +19,7 @@ import {
   useWeather,
 } from '@/src/composables/useWeather';
 import { createIconNode } from '@/src/lib/iconSafe';
+import { t } from '@/src/composables/useI18n';
 
 const { open } = usePanels();
 
@@ -52,8 +53,10 @@ const temperatureText = computed(() => {
 
 const descText = computed(() => {
   const data = weatherData.value;
-  if (data) return data.description;
-  return error.value ? error.value.short : '获取中...';
+  // data.description 存的是 weather_desc_* key（见 useWeather 的天气码表），渲染时翻译
+  if (data) return t(data.description);
+  // error.short 是 i18n key（见 lib/weather-error.ts），渲染时才翻译
+  return error.value ? t(error.value.short) : t('weather_loading');
 });
 
 const descTitle = computed(() => {
@@ -65,8 +68,16 @@ const descTitle = computed(() => {
 // 位置行（country 可能为空，如 Open-Meteo 定位路径）：[city, country].filter(Boolean).join(', ')
 const locationText = computed(() => {
   const data = weatherData.value;
-  if (data) return [data.city, data.country].filter(Boolean).join(', ');
-  return error.value ? error.value.locationHint : '定位中...';
+  // city 可能是 key（weather_current_location）也可能是用户输入的城市名：t() 查不到就原样返回，
+  // 所以这里统一过一遍 t() 即可，不需要区分两种来源。
+  if (data) {
+    const city = String(data.city ?? '');
+    // 「当前位置」以字面量持久化在 cacheKey / weatherCity 里（见 useWeather 的哨兵逻辑），
+    // 语言切换后它仍是中文 —— 这里按字面量识别再译，不依赖 key 转换。
+    const cityText = city === '当前位置' || city === 'weather_current_location' ? t('weather_current_location') : city;
+    return [cityText, data.country].filter(Boolean).join(', ');
+  }
+  return error.value ? t(error.value.locationHint) : t('weather_locating');
 });
 
 // legacy bindWeatherWidgetEvents 设 title='点击刷新天气信息'，但首次成功渲染即被 clearStale 移除，
@@ -151,8 +162,8 @@ onUnmounted(() => stopAutoUpdate());
       <button
         id="weather-settings-btn"
         class="weather-settings-btn"
-        title="天气设置"
-        aria-label="天气设置"
+        :title="t('weather_settings')"
+        :aria-label="t('weather_settings')"
         @click.stop="openWeatherSettings($event)"
       >
         <svg

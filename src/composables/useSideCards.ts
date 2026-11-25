@@ -22,11 +22,15 @@ export type SideCardModes = Record<SideCardId, SideCardMode>;
 
 export const SIDE_CARD_STORAGE_KEY = 'sideCardModes';
 
-export const SIDE_CARD_LABELS: Array<{ id: SideCardId; label: string; hint: string }> = [
-    { id: 'todo', label: '待办', hint: '默认展示；可改为仅在有未完成待办时出现' },
-    { id: 'pomodoro', label: '番茄钟', hint: '默认展示；可改为仅在专注时或今天有记录时出现' },
-    { id: 'notes', label: '便签', hint: '默认展示；可改为仅在有便签时出现' },
-    { id: 'tools', label: '小工具', hint: '小工具是固定内容，默认常驻' },
+/**
+ * 只放 i18n key，不放已翻译的字符串：这里是模块级常量，翻译必须发生在渲染时，
+ * 否则切换语言后卡片名还是旧语言的。
+ */
+export const SIDE_CARD_LABELS: Array<{ id: SideCardId; labelKey: string; hintKey: string }> = [
+    { id: 'todo', labelKey: 'side_card_todo', hintKey: 'side_card_todo_hint' },
+    { id: 'pomodoro', labelKey: 'side_card_pomodoro', hintKey: 'side_card_pomodoro_hint' },
+    { id: 'notes', labelKey: 'side_card_notes', hintKey: 'side_card_notes_hint' },
+    { id: 'tools', labelKey: 'side_card_tools', hintKey: 'side_card_tools_hint' },
 ];
 
 // 默认全部展示：把「要不要出现」的选择权交给用户，而不是默认藏起来让人找。

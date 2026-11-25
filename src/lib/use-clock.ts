@@ -1,4 +1,6 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { locale, t } from '@/src/composables/useI18n';
+import { watch } from 'vue';
 
 /**
  * 时钟：不放进 Vue 的响应式 tick 里统一驱动。
@@ -14,23 +16,25 @@ export function useClock() {
   let timer: number | undefined;
 
   const greetingFor = (hour: number): string => {
-    if (hour < 6) return '夜深了';
-    if (hour < 9) return '早上好';
-    if (hour < 12) return '上午好';
-    if (hour < 14) return '中午好';
-    if (hour < 18) return '下午好';
-    if (hour < 23) return '晚上好';
-    return '夜深了';
+    if (hour < 6) return t('greet_night');
+    if (hour < 9) return t('greet_morning');
+    if (hour < 12) return t('greet_forenoon');
+    if (hour < 14) return t('greet_noon');
+    if (hour < 18) return t('greet_afternoon');
+    if (hour < 23) return t('greet_evening');
+    return t('greet_night');
   };
 
   const tick = () => {
     const now = new Date();
-    time.value = now.toLocaleTimeString('zh-CN', {
+    // 日期/时间格式跟随界面语言（原写死 'zh-CN'，切英文后仍显示「11月25日星期三」）
+    const tag = locale.value === 'en' ? 'en-US' : 'zh-CN';
+    time.value = now.toLocaleTimeString(tag, {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
     });
-    date.value = now.toLocaleDateString('zh-CN', {
+    date.value = now.toLocaleDateString(tag, {
       month: 'long',
       day: 'numeric',
       weekday: 'long',
@@ -50,7 +54,11 @@ export function useClock() {
     }, msToNextMinute);
   });
 
+  // 语言切换后立即重算格式与问候，不必等下一次分钟心跳
+  const stopLocaleWatch = watch(locale, () => tick());
+
   onBeforeUnmount(() => {
+    stopLocaleWatch();
     if (timer !== undefined) window.clearInterval(timer);
   });
 

@@ -54,7 +54,10 @@ function buildProxy(): Record<string, ProxyRule> {
 // WXT 配置：newtab.html 作为 unlisted page 入口，chrome_url_overrides 由入口 html 的
 // <meta name="manifest.chrome_url_overrides"> 决定（见 entrypoints/newtab.html）。
 export default defineConfig({
-    modules: ['@wxt-dev/module-vue'],
+    // @wxt-dev/i18n 把 locales/<lang>.yml 编进 _locales/，并让 manifest 的 __MSG_*__ 与
+    // 运行时取词（#i18n 的 i18n.t）共用同一份文案。注意：它本身只跟随浏览器语言，无运行时切换，
+    // 用户在设置里选语言的逻辑在 src/lib/i18n.ts 里自己实现。
+    modules: ['@wxt-dev/module-vue', '@wxt-dev/i18n/module'],
     srcDir: '.',
     entrypointsDir: 'entrypoints',
     outDir: '.output',

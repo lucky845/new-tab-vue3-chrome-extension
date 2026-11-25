@@ -4,9 +4,18 @@
  * 这些纯函数原本在 TodoCard.vue 与 TodoPanel.vue 各写一份，两处改一处漏的漂移
  * 就是这个模块存在的理由；测试把语义钉死在 lib 层。
  */
-import { describe, it, expect } from 'vitest';
-import { TODO_ICONS, categoryIcon, categoryTitle, categoryClass, dueText } from '@/src/lib/todo-display';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { TODO_ICONS, categoryIcon, categoryTitle, categoryClass, dueText, todoCategoryKey } from '@/src/lib/todo-display';
 import { ICON_TRASH, ICON_CAT_WORK, ICON_CAT_LIFE, ICON_CAT_NORMAL } from '@/src/lib/icons';
+import { registerCatalog, resetLocaleState } from '@/src/composables/useI18n';
+import { catalog } from '@/src/locales/catalog';
+
+// node 测试环境没有 chrome.i18n，locale 会回退到 DEFAULT_LOCALE（zh_CN）；
+// 这里显式注册真实语料，断言的就是用户实际会看到的文案。
+beforeEach(() => {
+  registerCatalog(catalog);
+  resetLocaleState('zh-CN');
+});
 
 describe('todo-display TODO_ICONS', () => {
   it('映射四个本地图标常量，不再由组件各自声明', () => {
@@ -28,12 +37,19 @@ describe('todo-display categoryIcon', () => {
 });
 
 describe('todo-display categoryTitle', () => {
-  it('三类中文文案，缺省与未知都落普通', () => {
+  it('三类文案走 i18n（默认中文），缺省与未知都落普通', () => {
     expect(categoryTitle('work')).toBe('工作');
     expect(categoryTitle('life')).toBe('生活');
     expect(categoryTitle('normal')).toBe('普通');
     expect(categoryTitle(undefined)).toBe('普通');
     expect(categoryTitle('bogus' as 'work')).toBe('普通');
+  });
+
+  it('todoCategoryKey 给出稳定 key，供 <title> 与导出使用', () => {
+    expect(todoCategoryKey('work')).toBe('todo_cat_work');
+    expect(todoCategoryKey('life')).toBe('todo_cat_life');
+    expect(todoCategoryKey('normal')).toBe('todo_cat_normal');
+    expect(todoCategoryKey(undefined)).toBe('todo_cat_normal');
   });
 });
 

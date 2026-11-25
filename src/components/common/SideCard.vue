@@ -10,6 +10,7 @@
  */
 import { useSideCards, type SideCardId } from '@/src/composables/useSideCards';
 import { setPanelOriginFromEvent, usePanels } from '@/src/composables/usePanels';
+import { t } from '@/src/composables/useI18n';
 
 const props = withDefaults(
   defineProps<{
@@ -19,9 +20,10 @@ const props = withDefaults(
     badge?: number | string;
     badgeId?: string;
     expandId: string;
-    expandTitle?: string;
+    /** expand 按钮提示文案的 i18n key（不传则按卡片类型用 side_expand_open）。 */
+    expandTitleKey?: string;
   }>(),
-  { expandTitle: '打开完整面板' },
+  { expandTitleKey: 'side_expand_open' },
 );
 
 const { visible } = useSideCards();
@@ -38,7 +40,7 @@ function openPanel(ev: MouseEvent): void {
     <section v-show="visible(cardId)" class="side-card" :id="elementId">
         <header class="side-card-header">
             <h3>{{ title }}<span v-if="badge !== undefined" :id="badgeId" class="side-badge">{{ badge }}</span></h3>
-            <button :id="expandId" class="side-expand-btn" :title="expandTitle" @click="openPanel">⤢</button>
+            <button :id="expandId" class="side-expand-btn" :title="t(expandTitleKey)" @click="openPanel">⤢</button>
         </header>
         <slot />
     </section>

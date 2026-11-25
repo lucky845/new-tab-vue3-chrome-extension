@@ -29,6 +29,7 @@ import {
     type PomodoroState,
 } from '@/src/lib/pomodoroRuntime';
 import { toast as showToast } from '@/src/composables/useToast';
+import { t } from '@/src/composables/useI18n';
 export { showToast };
 // 状态的类型真源在 lib/pomodoroRuntime（纯函数模块），这里只做对外再导出
 export type { PomodoroActiveState, PomodoroPhaseType, PomodoroState };
@@ -88,10 +89,11 @@ const DEFAULT_STATS: PomodoroStats = {
 };
 
 /** 阶段完成 toast 文案（legacy v1.8.1:js/app.js:2986-2994 的 pm.onPhaseComplete 回调，文案逐字保留） */
+/** 值存 i18n key，渲染时 t() 翻译（切语言才能跟随） */
 const PHASE_MESSAGES: Record<PomodoroPhaseType, string> = {
-    break: '🍅 专注完成！休息一下',
-    longBreak: '🎉 完成一整轮！进入长休息',
-    work: '⏰ 休息结束，开始新一轮专注',
+    break: 'pomodoro_msg_break',
+    longBreak: 'pomodoro_msg_long_break',
+    work: 'pomodoro_msg_work',
 };
 
 // ---------- 纯函数 ----------
@@ -290,7 +292,7 @@ function playChime(): void {
 /** 阶段完成：声音 + toast（legacy pm.onPhaseComplete） */
 function notifyComplete(nextPhase: PomodoroPhaseType): void {
     playChime();
-    showToast(PHASE_MESSAGES[nextPhase], 'success', 4000);
+    showToast(t(PHASE_MESSAGES[nextPhase]), 'success', 4000);
 }
 
 // 标题联动：运行中显示「mm:ss · 状态」，否则恢复（legacy render 的 document.title 分支）
@@ -502,7 +504,7 @@ function applyRuntime(record: PomodoroRuntimeRecord, announce: boolean): void {
     }
 
     if (announce && plan.advancedTo) {
-        showToast(PHASE_MESSAGES[plan.advancedTo], 'success', 4000);
+        showToast(t(PHASE_MESSAGES[plan.advancedTo]), 'success', 4000);
     }
 }
 
@@ -572,19 +574,19 @@ const isRunning = computed<boolean>(() => state.value === 'working' || state.val
 const stateLabel = computed<string>(() => {
     switch (state.value) {
         case 'working':
-            return '专注中';
+            return t('pomodoro_status_focusing');
         case 'resting':
-            return phaseType.value === 'longBreak' ? '长休息中' : '休息中';
+            return phaseType.value === 'longBreak' ? t('pomodoro_status_long_break') : t('pomodoro_status_break');
         case 'paused':
-            return '已暂停';
+            return t('pomodoro_status_paused');
         default:
-            return '专注';
+            return t('pomodoro_phase_work');
     }
 });
 
 /** 开始按钮文案（legacy render：运行中「暂停」/暂停「继续」/空闲「开始」） */
 const startLabel = computed<string>(() =>
-    isRunning.value ? '暂停' : state.value === 'paused' ? '继续' : '开始'
+    isRunning.value ? t('pomodoro_action_pause') : state.value === 'paused' ? t('pomodoro_action_resume') : t('pomodoro_action_start')
 );
 
 /** 当前轮内已完成专注数（legacy renderRounds 的 cycleInRound，用于圆点填充） */

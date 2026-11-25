@@ -11,6 +11,7 @@
 import { onUnmounted } from 'vue';
 import { useNotes, type Note } from '@/src/composables/useNotes';
 import { toast } from '@/src/composables/useToast';
+import { t } from '@/src/composables/useI18n';
 
 export function useNoteCardActions() {
   const { updateNote, removeNote } = useNotes();
@@ -38,7 +39,7 @@ export function useNoteCardActions() {
 
   async function onDelete(id: string): Promise<void> {
     await removeNote(id);
-    toast('便签已删除', 'success', 1500);
+    toast(t('notes_deleted'), 'success', 1500);
   }
 
   onUnmounted(() => {

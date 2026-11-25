@@ -14,6 +14,7 @@ import SideCard from '@/src/components/common/SideCard.vue';
 import { useNotes, formatNoteTime } from '@/src/composables/useNotes';
 import { useNoteCardActions } from '@/src/composables/useNoteCardActions';
 import { ICON_TRASH } from '@/src/lib/icons';
+import { t } from '@/src/composables/useI18n';
 
 const { sortedNotes, stats, togglePin } = useNotes();
 
@@ -29,9 +30,9 @@ const { setTextareaRef, onNoteInput, onDelete } = useNoteCardActions();
 
 <!-- prettier-ignore -->
 <template>
-    <SideCard cardId="notes" elementId="side-card-notes" title="便签" :badge="stats.total" badgeId="notes-card-badge" expandId="notes-card-expand">
+    <SideCard cardId="notes" elementId="side-card-notes" :title="t('side_card_notes')" :badge="stats.total" badgeId="notes-card-badge" expandId="notes-card-expand">
         <ul id="notes-card-list" class="side-notes-list notes-list">
-            <li v-if="sortedNotes.length === 0" class="notes-empty">还没有便签</li>
+            <li v-if="sortedNotes.length === 0" class="notes-empty">{{ t('notes_empty_all') }}</li>
             <template v-else>
                 <li
                     v-for="note in sortedNotes"
@@ -44,16 +45,16 @@ const { setTextareaRef, onNoteInput, onDelete } = useNoteCardActions();
                         <button
                             class="note-pin-btn"
                             :class="{ active: note.pinned }"
-                            :title="note.pinned ? '取消置顶' : '置顶'"
-                            :aria-label="note.pinned ? '取消置顶' : '置顶'"
+                            :title="note.pinned ? t('notes_unpin') : t('notes_pin')"
+                            :aria-label="note.pinned ? t('notes_unpin') : t('notes_pin')"
                             @click="togglePin(note.id)"
                             v-html="ICONS.pin"
                         ></button>
-                        <button class="note-delete-btn" title="删除便签" aria-label="删除便签" @click="onDelete(note.id)" v-html="ICONS.trash"></button>
+                        <button class="note-delete-btn" :title="t('notes_delete')" :aria-label="t('notes_delete')" @click="onDelete(note.id)" v-html="ICONS.trash"></button>
                     </div>
                     <textarea
                         class="note-content"
-                        placeholder="随手记点什么…（自动保存）"
+                        :placeholder="t('notes_input_placeholder')"
                         :value="note.content || ''"
                         :ref="(el) => setTextareaRef(note.id, el)"
                         @input="onNoteInput(note)"

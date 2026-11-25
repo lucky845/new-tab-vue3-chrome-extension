@@ -7,6 +7,7 @@
  */
 import { isHttp, isImageSource } from '@/src/lib/urlSafe';
 import { normalizeHistory } from '@/src/lib/searchHistory';
+import { t } from '@/src/composables/useI18n';
 
 export const APP_ID = 'new-tab-pro';
 export const SCHEMA_VERSION = 2;
@@ -27,27 +28,27 @@ interface RegistryEntry {
 
 /** 键注册表：未登记的键也能被导出（全量减缓存），登记的价值是类型校验与可读名 */
 const registry: Record<string, RegistryEntry> = {
-    settings: { type: 'object', label: '设置', since: 1 },
-    customEngines: { type: 'array', label: '自定义搜索引擎', since: 1 },
-    engineLogos: { type: 'array', label: '搜索引擎图标', since: 2 },
-    quickAccessSites: { type: 'array', label: '快捷方式', since: 1 },
-    todos: { type: 'array', label: '待办', since: 1 },
-    notes: { type: 'array', label: '便签', since: 1 },
-    pomodoroSettings: { type: 'object', label: '番茄钟设置', since: 1 },
-    pomodoroStats: { type: 'object', label: '番茄钟统计', since: 1 },
+    settings: { type: 'object', label: 'backup_label_settings', since: 1 },
+    customEngines: { type: 'array', label: 'backup_label_custom_engines', since: 1 },
+    engineLogos: { type: 'array', label: 'backup_label_engine_logos', since: 2 },
+    quickAccessSites: { type: 'array', label: 'backup_label_quick_access', since: 1 },
+    todos: { type: 'array', label: 'backup_label_todos', since: 1 },
+    notes: { type: 'array', label: 'backup_label_notes', since: 1 },
+    pomodoroSettings: { type: 'object', label: 'backup_label_pomodoro_settings', since: 1 },
+    pomodoroStats: { type: 'object', label: 'backup_label_pomodoro_stats', since: 1 },
     // 运行态存的是绝对截止时间戳，跨设备/隔天恢复只会得到一个立刻到期的假计时器，
     // 因此归为缓存：导出时排除，恢复后由 usePomodoro 首次启动自建基线
-    pomodoroRuntime: { type: 'object', label: '番茄钟运行态', since: 2, cache: true },
-    searchHistory: { type: 'array', label: '搜索历史', since: 1 },
-    engineIcons: { type: 'array', label: '搜索引擎图标缓存', since: 2 },
-    themeSettings: { type: 'object', label: '主题设置', since: 2 },
-    sideCardModes: { type: 'object', label: '侧边卡片显隐设置', since: 2 },
-    localWallpapers: { type: 'array', label: '本地壁纸库', since: 2 },
-    savedWallpaperId: { type: 'string', label: '壁纸 ID', since: 1 },
-    savedWallpaperUrl: { type: 'string', label: '壁纸地址', since: 1 },
-    savedWallpaperData: { type: 'object', label: '壁纸元数据', since: 1 },
-    savedWallpaperBlob: { type: 'string', label: '壁纸本地缓存图', since: 2 },
-    savedWallpaperBlobUrl: { type: 'string', label: '壁纸缓存标记', since: 2 },
+    pomodoroRuntime: { type: 'object', label: 'backup_label_pomodoro_runtime', since: 2, cache: true },
+    searchHistory: { type: 'array', label: 'backup_label_search_history', since: 1 },
+    engineIcons: { type: 'array', label: 'backup_label_engine_icons', since: 2 },
+    themeSettings: { type: 'object', label: 'backup_label_theme_settings', since: 2 },
+    sideCardModes: { type: 'object', label: 'backup_label_side_card_modes', since: 2 },
+    localWallpapers: { type: 'array', label: 'backup_label_local_wallpapers', since: 2 },
+    savedWallpaperId: { type: 'string', label: 'backup_label_wallpaper_id', since: 1 },
+    savedWallpaperUrl: { type: 'string', label: 'backup_label_wallpaper_url', since: 1 },
+    savedWallpaperData: { type: 'object', label: 'backup_label_wallpaper_data', since: 1 },
+    savedWallpaperBlob: { type: 'string', label: 'backup_label_wallpaper_blob', since: 2 },
+    savedWallpaperBlobUrl: { type: 'string', label: 'backup_label_wallpaper_blob_url', since: 2 },
 };
 
 /** 只列确切前缀，不用宽泛模式，避免误丢用户数据键 */
@@ -116,7 +117,9 @@ export async function buildPayload(): Promise<{ payload: BackupPayload; stats: B
     for (const key of Object.keys(data)) {
         const meta = registry[key];
         if (meta) {
-            keyMeta[key] = { type: meta.type, label: meta.label, since: meta.since };
+            // label 是 i18n key（见 i18n key 命名铁律）；导出文件里落成「导出当时语言」的文案，
+            // 这样备份文件自身可读，且不依赖导入方有同款词条。
+            keyMeta[key] = { type: meta.type, label: t(meta.label), since: meta.since };
         } else {
             keyMeta[key] = { type: typeOf(data[key]), label: key, since: null };
             extras.push(key);
@@ -439,7 +442,7 @@ function sanitizeValues(accepted: Record<string, unknown>): number {
 /** 校验并归一化：只对结构性错误抛异常；未知键 / 更高版本一律降级处理 */
 export function validate(raw: unknown): ValidatedBackup {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
-        throw new Error('备份文件格式不正确：顶层必须是对象');
+        throw new Error(t('backup_err_not_object'));
     }
     const obj = raw as Record<string, unknown>;
     const isStandard = typeof obj.app === 'string';
@@ -448,7 +451,7 @@ export function validate(raw: unknown): ValidatedBackup {
     let exportedAt: string | null = null;
     if (isStandard) {
         if (obj.app !== APP_ID) {
-            throw new Error('这不是 New Tab Pro 的备份文件（app 标识不匹配）');
+            throw new Error(t('backup_err_app_mismatch'));
         }
         if (typeof obj.schemaVersion === 'number' && Number.isInteger(obj.schemaVersion)) {
             declaredVersion = obj.schemaVersion;
@@ -461,7 +464,7 @@ export function validate(raw: unknown): ValidatedBackup {
         declaredVersion = 1;
     }
     if (!data || typeof data !== 'object' || Array.isArray(data)) {
-        throw new Error('备份文件里没有可导入的数据');
+        throw new Error(t('backup_err_no_data'));
     }
     // 先迁移到当前版本，再校验
     const migrated = migrate(data as Record<string, unknown>, declaredVersion);
@@ -475,16 +478,14 @@ export function validate(raw: unknown): ValidatedBackup {
             continue;
         }
         if (!SAFE_KEY_RE.test(key)) {
-            throw new Error('字段名 "' + key + '" 不合法');
+            throw new Error(t('backup_err_bad_key', { key }));
         }
         const value = source[key];
         const expected = expectedType(key);
         if (expected) {
             const actual = typeOf(value);
             if (actual !== expected) {
-                throw new Error(
-                    '字段 "' + key + '" 类型不正确：期望 ' + expected + '，实际 ' + actual
-                );
+                throw new Error(t('backup_err_bad_type', { key, expected, actual }));
             }
         } else {
             unknown.push(key);
@@ -494,7 +495,7 @@ export function validate(raw: unknown): ValidatedBackup {
     const droppedLinks = sanitizeLinks(accepted);
     const droppedItems = sanitizeValues(accepted);
     if (Object.keys(accepted).length === 0) {
-        throw new Error('备份文件里没有可导入的数据（未找到已知字段）');
+        throw new Error(t('backup_err_no_known_field'));
     }
     return {
         data: accepted,
@@ -527,19 +528,19 @@ export interface ImportResult {
 /** 从文本导入（先校验，后写入；任一致命错误整体不写） */
 export async function importFromText(text: string): Promise<ImportResult> {
     if (typeof text !== 'string' || !text.trim()) {
-        throw new Error('文件内容为空');
+        throw new Error(t('backup_err_empty_file'));
     }
     // 用字节数而不是字符数：中文一个字占 3 字节
     const bytes = new TextEncoder().encode(text).length;
     if (bytes > MAX_IMPORT_BYTES) {
         const mb = (MAX_IMPORT_BYTES / 1024 / 1024).toFixed(0);
-        throw new Error('备份文件过大（超过 ' + mb + ' MB），已拒绝导入');
+        throw new Error(t('backup_err_too_large', { mb }));
     }
     let raw: unknown;
     try {
         raw = JSON.parse(text);
     } catch (e) {
-        throw new Error('无法解析 JSON：' + (e as Error).message);
+        throw new Error(t('backup_err_bad_json', { detail: (e as Error).message }));
     }
     const checked = validate(raw);
     // 校验全部通过后才写入，避免「导入一半」

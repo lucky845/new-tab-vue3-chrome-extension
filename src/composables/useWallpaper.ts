@@ -23,6 +23,7 @@ import {
   type WallpaperTone,
 } from '@/src/lib/wallpaper-tone';
 import { toast as showToast } from '@/src/composables/useToast';
+import { t } from '@/src/composables/useI18n';
 
 /** 每页壁纸数量（legacy WallpaperManager.WALLPAPERS_PER_PAGE，供分页计算引用）。 */
 export const WALLPAPERS_PER_PAGE = 18;
@@ -46,19 +47,19 @@ export const RANDOM_QUERIES = [
 ] as const;
 /** 推荐分类（legacy CATEGORIES 十二项，字段名 name 与 legacy 一致）。 */
 export const CATEGORIES = [
-  { name: '自然', query: 'Nature' },
-  { name: '城市', query: 'Cityscape' },
-  { name: '科技', query: 'Technology' },
-  { name: '抽象', query: 'Abstract' },
-  { name: '海洋', query: 'Ocean' },
-  { name: '森林', query: 'Forest' },
-  { name: '山脉', query: 'Mountains' },
-  { name: '天空', query: 'Sky' },
-  { name: '动物', query: 'Animals' },
-  { name: '食物', query: 'Food' },
-  { name: '运动', query: 'Sports' },
-  { name: '旅行', query: 'Travel' },
-] as const;
+  { nameKey: 'wallpaper_cat_nature', query: 'Nature' },
+  { nameKey: 'wallpaper_cat_city', query: 'Cityscape' },
+  { nameKey: 'wallpaper_cat_tech', query: 'Technology' },
+  { nameKey: 'wallpaper_cat_abstract', query: 'Abstract' },
+  { nameKey: 'wallpaper_cat_ocean', query: 'Ocean' },
+  { nameKey: 'wallpaper_cat_forest', query: 'Forest' },
+  { nameKey: 'wallpaper_cat_mountain', query: 'Mountains' },
+  { nameKey: 'wallpaper_cat_sky', query: 'Sky' },
+  { nameKey: 'wallpaper_cat_animal', query: 'Animals' },
+  { nameKey: 'wallpaper_cat_food', query: 'Food' },
+  { nameKey: 'wallpaper_cat_sport', query: 'Sports' },
+  { nameKey: 'wallpaper_cat_travel', query: 'Travel' },
+] as const satisfies ReadonlyArray<{ nameKey: string; query: string }>;
 
 /** 三源（Pexels/Wallhaven/Picsum）归一后的壁纸对象，形状与 legacy 完全一致。 */
 export interface WallpaperPhoto {
@@ -168,7 +169,7 @@ interface WallpaperApi {
     options?: { skipCategoryHighlight?: boolean }
   ): Promise<void>;
   handleSearch(): Promise<void>;
-  handleCategoryClick(category: { name: string; query: string }): Promise<void>;
+  handleCategoryClick(category: { nameKey: string; query: string }): Promise<void>;
   goToPage(page: number): Promise<void>;
   handleJumpSubmit(raw: string): Promise<boolean>;
   closeWallpaperPanel(): void;
@@ -278,7 +279,7 @@ function createWallpaperApi(): WallpaperApi {
       if (entry) {
         savedWallpaperId.value = entry.id;
         savedWallpaperUrl.value = entry.id;
-        savedWallpaperData.value = { id: entry.id, url: '', photographer: '本地图片', alt: entry.name };
+        savedWallpaperData.value = { id: entry.id, url: '', photographer: t('wallpaper_local_image'), alt: entry.name };
         savedWallpaperBlob.value = entry.dataUrl;
         savedWallpaperBlobUrl.value = entry.id;
         setWallpaper(entry.dataUrl);
@@ -412,7 +413,7 @@ function createWallpaperApi(): WallpaperApi {
       const wallpaperUrl = 'https://picsum.photos/seed/' + randomSeed + '/1920/1080';
       setWallpaper(wallpaperUrl);
       if (shouldSave) {
-        await cacheWallpaper('pic_random_' + randomSeed, wallpaperUrl, 'Picsum', '随机精选摄影');
+        await cacheWallpaper('pic_random_' + randomSeed, wallpaperUrl, 'Picsum', t('wallpaper_picsum_title'));
       }
       log.log('已应用 Picsum 随机壁纸: ' + wallpaperUrl);
     } catch (error) {
@@ -522,7 +523,7 @@ function createWallpaperApi(): WallpaperApi {
    * （savedWallpaperBlob + BlobUrl 哨兵），重启走 fetchAndSetWallpaper 的 1a 快路径，零网络直出。
    */
   async function setLocalWallpaper(file: File): Promise<{ ok: boolean; message: string }> {
-    if (!file.type.startsWith('image/')) return { ok: false, message: '请选择图片文件' };
+    if (!file.type.startsWith('image/')) return { ok: false, message: 'wallpaper_err_pick_image' };
     let source: ImageBitmap | HTMLImageElement | null = null;
     try {
       source = await decodeLocalImage(file);
@@ -533,24 +534,24 @@ function createWallpaperApi(): WallpaperApi {
           if (baked) break outer;
         }
       }
-      if (!baked) return { ok: false, message: '图片压缩后仍过大，请换一张较小的图片' };
+      if (!baked) return { ok: false, message: 'wallpaper_err_too_large' };
       const added = await addToLocalLibrary(baked, file.name);
       const sentinel = added.id;
       savedWallpaperId.value = sentinel;
       savedWallpaperUrl.value = sentinel;
-      savedWallpaperData.value = { id: sentinel, url: '', photographer: '本地图片', alt: file.name };
+      savedWallpaperData.value = { id: sentinel, url: '', photographer: t('wallpaper_local_image'), alt: file.name };
       savedWallpaperBlob.value = baked;
       savedWallpaperBlobUrl.value = sentinel;
       setWallpaper(baked);
       return {
         ok: true,
         message: added.inLibrary
-          ? '本地壁纸已生效'
-          : '本地壁纸已生效（图片较大，仅本次使用，未存入本地库）',
+          ? t('wallpaper_toast_local_applied')
+          : t('wallpaper_toast_local_applied_tmp'),
       };
     } catch (error) {
       log.error('本地壁纸处理失败:', error);
-      return { ok: false, message: '图片处理失败，请换一张试试' };
+      return { ok: false, message: 'wallpaper_err_process_failed' };
     } finally {
       if (source) disposeLocalImage(source);
     }
@@ -619,7 +620,7 @@ function createWallpaperApi(): WallpaperApi {
     const entry: LocalWallpaperEntry = {
       id: 'local:' + Date.now(),
       dataUrl,
-      name: name || '本地图片',
+      name: name || t('wallpaper_local_image'),
       addedAt: Date.now(),
     };
     if (dataUrl.length > LOCAL_LIBRARY_ENTRY_MAX_CHARS) return { id: entry.id, inLibrary: false }; // 超限不入库，仅当当前壁纸
@@ -646,7 +647,7 @@ function createWallpaperApi(): WallpaperApi {
     if (!entry) return;
     savedWallpaperId.value = entry.id;
     savedWallpaperUrl.value = entry.id;
-    savedWallpaperData.value = { id: entry.id, url: '', photographer: '本地图片', alt: entry.name };
+    savedWallpaperData.value = { id: entry.id, url: '', photographer: t('wallpaper_local_image'), alt: entry.name };
     savedWallpaperBlob.value = entry.dataUrl;
     savedWallpaperBlobUrl.value = entry.id;
     setWallpaper(entry.dataUrl);
@@ -885,7 +886,7 @@ function createWallpaperApi(): WallpaperApi {
         total: 0,
         unauthorized: false,
         source: 'picsum',
-        error: (error as Error).message || '图库加载失败',
+        error: (error as Error).message || t('wallpaper_gallery_failed'),
       };
     }
   }
@@ -933,7 +934,7 @@ function createWallpaperApi(): WallpaperApi {
         total: 0,
         unauthorized: false,
         source: 'wallhaven',
-        error: 'Wallhaven 不可访问。该图源需要能访问境外网络，可在设置中切回 Picsum。',
+        error: t('wallpaper_wallhaven_unreachable'),
       };
     }
   }
@@ -971,7 +972,7 @@ function createWallpaperApi(): WallpaperApi {
     return {
       id: 'pic_' + id,
       photographer: author,
-      alt: author + ' 摄影作品',
+      alt: t('wallpaper_photo_by', { author }),
       avg_color: '#4EC2C6',
       width: 1920,
       height: 1080,
@@ -994,7 +995,7 @@ function createWallpaperApi(): WallpaperApi {
     return {
       id: 'wh_' + String(item.id ?? ''),
       photographer: 'Wallhaven',
-      alt: ('Wallhaven ' + (item.resolution || '') + ' 壁纸').trim(),
+      alt: t('wallpaper_alt_wallhaven', { res: item.resolution || '' }).trim(),
       avg_color: (item.colors && item.colors[0]) || '#4EC2C6',
       width: Number(item.dimension_x ?? 1920),
       height: Number(item.dimension_y ?? 1080),
@@ -1062,7 +1063,7 @@ function createWallpaperApi(): WallpaperApi {
       const result = await searchPhotos(query, page);
       if (result.photos === null) {
         loadFailed.value = true;
-        showToast(result.error || '壁纸加载失败，请检查网络', 'error', 4000);
+        showToast(result.error || t('wallpaper_load_failed'), 'error', 4000);
         return;
       }
       if (result.categorySupported === false && result.requestedCategory) {
@@ -1085,7 +1086,7 @@ function createWallpaperApi(): WallpaperApi {
   }
 
   /** 分类点击：清空搜索框后按分类词搜索（legacy renderWallpaperCategories 的 li onclick）。 */
-  async function handleCategoryClick(category: { name: string; query: string }): Promise<void> {
+  async function handleCategoryClick(category: { nameKey: string; query: string }): Promise<void> {
     wallpaperSearchQuery.value = '';
     await searchWallpapers(category.query, 1);
   }
@@ -1102,7 +1103,7 @@ function createWallpaperApi(): WallpaperApi {
   async function handleJumpSubmit(raw: string): Promise<boolean> {
     const page = parseInt(raw, 10);
     if (!(page >= 1 && page <= totalPages.value)) {
-      showToast('请输入 1 到 ' + totalPages.value + ' 之间的页码。');
+      showToast(t('wallpaper_page_range', { max: totalPages.value }));
       return false;
     }
     await goToPage(page);
@@ -1137,7 +1138,7 @@ function createWallpaperApi(): WallpaperApi {
     const max = totalPages.value * WALLPAPERS_PER_PAGE;
     const shownTotal =
       totalWallpapers.value > max ? '~' + max : String(totalWallpapers.value);
-    return '共 ' + totalPages.value + ' 页 / ' + shownTotal + ' 个';
+    return t('wallpaper_total_info', { pages: totalPages.value, total: shownTotal });
   });
 
   return {

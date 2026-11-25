@@ -2,6 +2,7 @@
 import { computed } from 'vue';
 import { useClock } from '@/src/lib/use-clock';
 import { useStored } from '@/src/lib/storage';
+import { t } from '@/src/composables/useI18n';
 
 /**
  * 时钟块。
@@ -16,7 +17,7 @@ const tagline = computed(() => String((settings.value as { tagline?: unknown })?
 </script>
 
 <template>
-    <section class="clock-container" aria-label="时钟">
+    <section class="clock-container" :aria-label="t('clock_aria_name')">
         <div id="clock-time" class="clock-time">{{ time }}</div>
         <div id="clock-date" class="clock-date">{{ date }}</div>
         <div id="clock-greeting" class="clock-greeting">{{ greeting }}</div>
